@@ -1,0 +1,28 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 700 700" font-family="Inter, Arial, sans-serif" role="img" aria-label="The AI SDLC, idea to production: planning, analysis, design, implementation, testing and integration, maintenance">
+<rect width="700" height="700" fill="#ffffff"/>
+<path d="M229.5,108.4 A270,270 0 0 1 470.5,108.4 L414.7,220.2 A145,145 0 0 0 285.3,220.2 Z" fill="#3B3A7A"/>
+<path d="M390.9,58.9 A294,294 0 0 1 581.7,169.0" fill="none" stroke="#a0a6ae" stroke-width="2.5" marker-end="url(#ah)"/>
+<circle cx="350.0" cy="56.0" r="20" fill="#fff" stroke="#3B3A7A" stroke-width="3"/><text x="350.0" y="63.0" text-anchor="middle" font-size="19" font-weight="800" fill="#3B3A7A">1</text>
+<g fill="#fff" text-anchor="middle"><text x="350.0" y="148.5" font-size="16" font-weight="700">Planning</text><text x="350.0" y="168.5" font-size="12" opacity="0.92">Product-owner agent</text></g>
+<path d="M499.0,124.9 A270,270 0 0 1 619.5,333.5 L494.7,341.1 A145,145 0 0 0 430.0,229.1 Z" fill="#5A4FCF"/>
+<path d="M622.6,239.9 A294,294 0 0 1 622.6,460.1" fill="none" stroke="#a0a6ae" stroke-width="2.5" marker-end="url(#ah)"/>
+<circle cx="604.6" cy="203.0" r="20" fill="#fff" stroke="#5A4FCF" stroke-width="3"/><text x="604.6" y="210.0" text-anchor="middle" font-size="19" font-weight="800" fill="#5A4FCF">2</text>
+<g fill="#fff" text-anchor="middle"><text x="524.5" y="249.3" font-size="16" font-weight="700">Analysis</text><text x="524.5" y="269.3" font-size="12" opacity="0.92">Supervisor + spec</text></g>
+<path d="M619.5,366.5 A270,270 0 0 1 499.0,575.1 L430.0,470.9 A145,145 0 0 0 494.7,358.9 Z" fill="#2F8F9D"/>
+<path d="M581.7,531.0 A294,294 0 0 1 390.9,641.1" fill="none" stroke="#a0a6ae" stroke-width="2.5" marker-end="url(#ah)"/>
+<circle cx="604.6" cy="497.0" r="20" fill="#fff" stroke="#2F8F9D" stroke-width="3"/><text x="604.6" y="504.0" text-anchor="middle" font-size="19" font-weight="800" fill="#2F8F9D">3</text>
+<g fill="#fff" text-anchor="middle"><text x="524.5" y="450.8" font-size="16" font-weight="700">Design</text><text x="524.5" y="470.8" font-size="12" opacity="0.92">Canvas + comments</text></g>
+<path d="M470.5,591.6 A270,270 0 0 1 229.5,591.6 L285.3,479.8 A145,145 0 0 0 414.7,479.8 Z" fill="#3E8E4F"/>
+<path d="M309.1,641.1 A294,294 0 0 1 118.3,531.0" fill="none" stroke="#a0a6ae" stroke-width="2.5" marker-end="url(#ah)"/>
+<circle cx="350.0" cy="644.0" r="20" fill="#fff" stroke="#3E8E4F" stroke-width="3"/><text x="350.0" y="651.0" text-anchor="middle" font-size="19" font-weight="800" fill="#3E8E4F">4</text>
+<g fill="#fff" text-anchor="middle"><text x="350.0" y="551.5" font-size="16" font-weight="700">Implementation</text><text x="350.0" y="571.5" font-size="12" opacity="0.92">Reviewer + worker</text></g>
+<path d="M201.0,575.1 A270,270 0 0 1 80.5,366.5 L205.3,358.9 A145,145 0 0 0 270.0,470.9 Z" fill="#D99A2B"/>
+<path d="M77.4,460.1 A294,294 0 0 1 77.4,239.9" fill="none" stroke="#a0a6ae" stroke-width="2.5" marker-end="url(#ah)"/>
+<circle cx="95.4" cy="497.0" r="20" fill="#fff" stroke="#D99A2B" stroke-width="3"/><text x="95.4" y="504.0" text-anchor="middle" font-size="19" font-weight="800" fill="#D99A2B">5</text>
+<g fill="#1d1d1d" text-anchor="middle"><text x="175.5" y="444.8" font-size="16" font-weight="700">Testing &amp;</text><text x="175.5" y="462.8" font-size="16" font-weight="700">Integration</text><text x="175.5" y="482.8" font-size="12" opacity="0.92">Mutation-tested</text></g>
+<path d="M80.5,333.5 A270,270 0 0 1 201.0,124.9 L270.0,229.1 A145,145 0 0 0 205.3,341.1 Z" fill="#C8553D"/>
+<path d="M118.3,169.0 A294,294 0 0 1 309.1,58.9" fill="none" stroke="#a0a6ae" stroke-width="2.5" marker-end="url(#ah)"/>
+<circle cx="95.4" cy="203.0" r="20" fill="#fff" stroke="#C8553D" stroke-width="3"/><text x="95.4" y="210.0" text-anchor="middle" font-size="19" font-weight="800" fill="#C8553D">6</text>
+<g fill="#fff" text-anchor="middle"><text x="175.5" y="249.2" font-size="16" font-weight="700">Maintenance</text><text x="175.5" y="269.3" font-size="12" opacity="0.92">Human decides</text></g>
+<g text-anchor="middle"><text x="350" y="336" font-size="44" font-weight="800" fill="#1f2340">AI SDLC</text><text x="350" y="368" font-size="16" fill="#555b66" letter-spacing="1">IDEA TO PRODUCTION</text></g>
+</svg>
