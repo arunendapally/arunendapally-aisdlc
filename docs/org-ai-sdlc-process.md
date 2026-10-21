@@ -15,14 +15,16 @@ The CTO agent convenes the experts, triages work, settles disagreements in writi
 | Role | Agent | Model | Leads |
 |---|---|---|---|
 | CTO | `cto` | opus | triage, the process, cross-area decisions |
-| Product owner | `product-owner` | opus | Plan: the graded brief |
+| Product owner | `product-owner` | opus | Plan: asks first, then writes the PRD |
 | UI/UX designer | `ux-designer` | opus | journeys, placement, screens, accessibility |
 | Architect | `architect` | opus | Analyze (supervisor), Design, learning tasks |
 | C4 diagrams | `c4-diagrams-expert` | sonnet | the C4 model as code |
 | Project manager | `project-manager` | sonnet | slices, board, flow numbers, risks |
 | Tech lead | `tech-lead` | opus | Build, Verify, bugs, tasks |
 | Builder | `builder` | sonnet | implementing batches |
-| Pre-reviewer | `pre-reviewer` | opus | reviewing every PR before a human does |
+| Pre-reviewer | `pre-reviewer` | opus | reviewing every PR before a human does, with expert lenses |
+| Design reviewer | `design-reviewer` | opus | chairing the board that cross-questions every design decision |
+| SDET | `sdet` | sonnet | tests at each criterion's level, with data setup and teardown |
 | QA engineer | `qa-engineer` | sonnet | test IDs, strategy, independent verdict |
 | Performance engineer | `performance-engineer` | opus | budgets, benchmarks before and after |
 | DBA | `dba` | opus | data impact, expand-contract migrations, rehearsal |
@@ -71,7 +73,7 @@ A change to migrations or SQL that is not marked as data work cannot pass its ga
 
 | Lane | Stages | Document | Human gates | PR limit | Review deadline |
 |---|---|---|---|---|---|
-| full | Plan, Analyze, Design, Build, Verify, Release | brief, spec, plan, tasks, pr, release | 6 | 400 lines | 24h |
+| full | Plan, Analyze, Design, Build, Verify, Release | prd, spec + facts + acceptance.feature, plan + design-review, tasks, pr + review, release | 6 | 400 lines | 24h |
 | light | as full, without Design | as full, without plan | 5 | 300 | 8h |
 | bug | Build, Verify | `bug.md` (also the PR body) | 1: merge | 200 | 8h |
 | task | Build, Verify | `task.md` (also the PR body) | 1: merge | 200 | 8h |
@@ -148,6 +150,33 @@ Sections 5 to 7 make each repo better. This loop makes the plugin better, for ev
 
 ---
 
+## 7b. Quality gates for requirements, design, testing and review
+
+Each gate refuses work that guesses, skips a question or hides risk, so what reaches a human is already checked.
+
+**Requirements (Plan, Analyze).**
+- The product owner asks the questions that would change the PRD before drafting, and records them with the answers in `## Questions asked`. Every belief without a source is an assumption marked `[confirmed]` or `[unconfirmed]`; every unconfirmed one must be in Open questions.
+- The PRD (`prd.md`) carries problem, users, graded evidence, goals and non-goals, numbered testable requirements (R1, R2 ...), never-claims, scope, an outcome metric with its baseline, stakeholders, dependencies and release criteria.
+- `facts.md` pins what is true about the current system to `file:line` at a commit. A fact whose source changed is stale; a requirement citing an undefined fact is refused.
+- `acceptance.feature` holds every acceptance criterion as Gherkin. The linter enforces a narrative (As a, I want, So that), one When per scenario in Given, When, Then order, an `@AC-n`, the `@Rn` it proves and one test level per scenario, Outlines with matching Examples, behaviour rather than selectors, and that every PRD requirement has a scenario.
+
+**Design.**
+- Every ADR weighs at least two options and names a downside.
+- The design review board (chaired by `design-reviewer`, at least three disciplines) cross-questions every decision in `design-review.md`. The architect answers each question, the asker marks it resolved, and the gate needs `Verdict: accept`.
+- Data work draws a Mermaid ER diagram in the plan, naming the entities it changes on a `%% changed:` line. API work has an `openapi.yaml` (OpenAPI 3, an operationId and responses for every operation, valid `$ref`s); a breaking change against the base branch must be declared. `sdlc api` puts a Swagger viewer beside the file.
+
+**Testing.**
+- `sdlc tests` builds the test matrix: each criterion, its level, and the tests that name it in a file that names the feature. The Verify gate refuses a criterion with no test at its level.
+- The `sdet` agent writes the missing tests from scaffolds for unit (factories), subsystem (Testcontainers, rolled-back transactions), API (Postman with Setup and Teardown folders, run by Newman) and E2E (Playwright fixtures that seed through the API and clean up even on failure).
+- `sdlc gate --repeat N` exposes flaky tests; `dataCheckCommand` fails the gate when tests leave data behind. The plan's `## Test data` section says where data comes from and how it goes away.
+
+**Review.**
+- `sdlc review` builds a review packet: risk signals per file (high-risk paths, schema without an ER update, API contract changes, dependencies, CI, untested code, leftovers), the criteria with no test, and which lenses to run. It is pinned to the commit it was built at and refused when stale.
+- The pre-reviewer runs those lenses in parallel (security, data, performance, test quality, operability, API compatibility) and records every finding in `review.md`: an F or H id, a severity, a `file:line`, a checklist item, a status and a source. The gate refuses malformed rows, open blockers, majors and minors, `fixed` without a commit that changed the file, a wontfix without a reason, and any row that was removed instead of closed. A human approves every ledger change through CODEOWNERS.
+- Findings only humans caught become retro proposals with the measured pre-review recall (reported from five serious findings up), and seeded-bug review evals keep the pre-reviewer honest: it currently catches an SQL injection, a missing ownership check, an off-by-one and a test that asserts nothing.
+
+**Dogfooded on itself.** This work ran through the plugin as the `quality-gates` feature (`specs/quality-gates/`): a PRD with the questions you answered, facts pinned to the code, 19 Gherkin scenarios traced to 26 tests, a design review board on ADR-0001 (11 questions, revise, then accept after code changes), and a pre-review that found 12 defects in the new gates, all fixed with regression tests and recorded in the ledger. The human gates stay waiting for a person.
+
 ## 8. Gates: humans decide, and the platform proves it
 
 - `sdlc.mjs request <feature>` checks the artefact's sections (each must hold real content), the gate run, the PR size and the pre-review, then either passes an automatic or earned gate on checks or marks the gate waiting on its named owner.
@@ -212,7 +241,7 @@ claude plugin install ai-sdlc-autopilot@arunendapally-aisdlc
 
 Then, in a product repo: `/ai-sdlc:start <what you want>`. The first kickoff adds the repo kit (constitution, agent rules, config, autonomy levels, knowledge folder, GitHub workflows and templates, ruleset, CODEOWNERS, C4 workspace, standards) without overwriting anything. A human then sets `gateCommand`, `gateOwners` and `trustOwners` in `.ai-sdlc/config.json`, replaces the teams in CODEOWNERS, sets `BACKUP_REVIEWERS`, applies the ruleset, and gives agents a GitHub App or token with no admin or bypass rights.
 
-**Commands:** `start`, `kickoff`, `plan`, `analyze`, `design`, `build`, `verify`, `release`, `bug`, `hotfix`, `task`, `learn`, `pre-review`, `incident`, `retro`, `status` (all `/ai-sdlc:...`), plus the mod's `/sdlc-board` and `/sdlc-autopilot`.
+**Commands:** `start`, `kickoff`, `plan`, `analyze`, `design`, `design-review`, `build`, `tests`, `verify`, `pre-review`, `release`, `bug`, `hotfix`, `task`, `learn`, `incident`, `retro`, `status` (all `/ai-sdlc:...`), plus the mod's `/sdlc-board` and `/sdlc-autopilot`.
 
 **Typed by humans only:** `sdlc approve | reject <feature> <stage>`, `sdlc lane <feature> light|full`, `sdlc hotfix <slug> <what is broken>`, `sdlc trust | distrust <lane> <stage>`, `sdlc pause | resume`, `sdlc freeze | unfreeze`.
 
@@ -220,8 +249,8 @@ Then, in a product repo: `/ai-sdlc:start <what you want>`. The first kickoff add
 
 ## How it was tested
 
-- `npm test`: 38 tests in throwaway git repos, covering every guard, every lane end to end, the gate chain, review deadlines, PR size, pre-review, kinds, the trust ledger, the knowledge base, the CI scripts, the retro miner, escape charging, both eval runners, and every bypass the two reviews found.
-- `npm run eval:agents`: 3 of 4 pass. The CTO routed an outage to a human-declared hotfix and a schema change to the data kind with a DBA; the pre-reviewer scored risk and flagged the untested branch. The product owner's short brief left out the outcome metric its definition requires. The eval stays strict: that gap is the first input for a retro.
+- `npm test`: 64 tests in throwaway git repos, including 26 for the quality gates below, covering every guard, every lane end to end, the gate chain, review deadlines, PR size, pre-review, kinds, the trust ledger, the knowledge base, the CI scripts, the retro miner, escape charging, both eval runners, and every bypass the two reviews found.
+- `npm run eval:agents`: 7 of 8 pass, including all four seeded-bug review evals. The CTO routed an outage to a human-declared hotfix and a schema change to the data kind with a DBA; the pre-reviewer scored risk and flagged the untested branch. The product owner's short brief left out the outcome metric its definition requires. The eval stays strict: that gap is the first input for a retro.
 - `npm run eval`: 12 golden tasks, all passing, saved as the baseline. The plugin's own CI (`.github/workflows/evals.yml`) runs the tests and the golden evals on every PR.
 - `claude plugin test mods/ai-sdlc-autopilot`: 7 tests of the mod against the engine's test kit: the fix loop (red, green, cap, no-change stop, pause), the system-prompt section, the board's buttons on two surfaces, and the model tool.
 - Guards were mutation-tested: broken on purpose, the matching test failed, then restored. One mutation survived at first (promotion before the threshold); a test was added and it now fails as it should.

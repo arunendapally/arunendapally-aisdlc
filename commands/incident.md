@@ -1,5 +1,5 @@
 ---
-description: Open an incident and its blameless postmortem. Mitigate first; every action re-enters the cycle as a brief, a trap or a check.
+description: Open an incident and its blameless postmortem. Mitigate first; every action re-enters the cycle as a PRD, a trap or a check.
 argument-hint: <incident-slug> [what is happening]
 ---
 

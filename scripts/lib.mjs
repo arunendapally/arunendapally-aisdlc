@@ -5,12 +5,13 @@ import { execSync } from 'node:child_process'
 import { fileURLToPath } from 'node:url'
 
 export const STAGES = {
-  1: { name: 'Plan', artefact: 'brief.md', owner: 'product lead',
-    headings: ['## Problem', '## Evidence', '## Requirements', '## Never', '## Outcome metric', '## Open questions'] },
+  1: { name: 'Plan', artefact: 'prd.md', owner: 'product lead',
+    headings: ['## Problem', '## Users and jobs', '## Questions asked', '## Assumptions', '## Evidence', '## Goals and non-goals', '## Requirements', '## Never', '## Out of scope',
+      '## Outcome metric', '## Stakeholders', '## Dependencies', '## Release criteria', '## Open questions'] },
   2: { name: 'Analyze', artefact: 'spec.md', owner: 'product lead + architect + security owner',
     headings: ['## Lane', '## Requirements', '## User journey', '## Integration decision', '## Acceptance criteria and test IDs', '## Test plan', '## SLOs and error budget', '## Threat model'] },
   3: { name: 'Design', artefact: 'plan.md', owner: 'architect + product lead',
-    headings: ['## Data model', '## Contracts', '## Decisions', '## C4 changes', '## Screens', '## Accessibility checks', '## Test strategy', '## Observability', '## Operability'] },
+    headings: ['## Data model', '## Contracts', '## Decisions', '## C4 changes', '## Screens', '## Accessibility checks', '## Test strategy', '## Test data', '## Observability', '## Operability'] },
   4: { name: 'Build', artefact: 'tasks.md', owner: 'tech lead',
     headings: ['## Baseline', '## Tasks'] },
   5: { name: 'Verify', artefact: 'pr.md', owner: 'CODEOWNER engineer + security owner (QA verdict attached)',
@@ -52,6 +53,8 @@ export const KINDS = {
   greenfield: { headings: { 3: ['## Walking skeleton'] } },
   brownfield: { headings: { 2: ['## Current system'], 4: ['## Characterisation tests'] } },
   perf: { headings: { 2: ['## Performance budget'], 4: ['## Benchmark before'], 5: ['## Benchmark after'] } },
+  // API work: an OpenAPI file is the contract (checked at Design, viewable in Swagger).
+  api: { headings: { 2: ['## API changes'] } },
   data: {
     lane: 'full',
     headings: { 2: ['## Data impact'], 3: ['## Migration plan (expand-contract)', '## Rehearsal'], 6: ['## Backout'] },

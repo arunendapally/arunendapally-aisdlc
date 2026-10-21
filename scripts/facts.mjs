@@ -1,0 +1,79 @@
+// System facts: what is true about the current system, each fact pinned to the code that shows it.
+//   - F1: Orders are soft-deleted (deleted_at), never removed. Source: src/orders/repo.ts:42. Verified: 1a2b3c4.
+// A fact whose source no longer exists, or changed since it was verified, is stale. Requirements cite
+// facts by id (F1), so a requirement resting on a stale or missing fact is caught at the Analyze gate.
+// The PRD's assumptions are the other side: what we believe but have not pinned to code or a person.
+import fs from 'node:fs'
+import path from 'node:path'
+import { git, loadConfig, section } from './lib.mjs'
+
+const FACT = /^\s*[-*]\s*(F\d+):\s*(.+?)\s*Source:\s*([^\s:]+):(\d+)(?:-(\d+))?\.?\s*Verified:\s*([0-9a-f]{4,40})\.?\s*$/i
+
+export function parseFacts(text) {
+  const facts = []
+  const malformed = []
+  for (const [i, line] of text.split(/\r?\n/).entries()) {
+    if (!/^\s*[-*]\s*F\d+:/i.test(line)) continue
+    const m = line.match(FACT)
+    if (!m) malformed.push(`line ${i + 1}: write a fact as "- F1: <statement>. Source: path:line. Verified: <commit>."`)
+    else facts.push({ id: m[1].toUpperCase(), statement: m[2].replace(/\.$/, ''), file: m[3], line: Number(m[4]), end: Number(m[5] ?? m[4]), verified: m[6] })
+  }
+  return { facts, malformed }
+}
+
+export function factProblems(dir, facts) {
+  const problems = []
+  const ids = new Set()
+  for (const f of facts) {
+    if (ids.has(f.id)) problems.push(`${f.id} is defined twice`)
+    ids.add(f.id)
+    const full = path.join(dir, f.file)
+    if (!fs.existsSync(full)) {
+      problems.push(`${f.id}: ${f.file} does not exist`)
+      continue
+    }
+    const length = fs.readFileSync(full, 'utf8').split('\n').length
+    if (f.end > length) problems.push(`${f.id}: ${f.file} has ${length} lines, so line ${f.end} cannot be the source`)
+    if (git(`cat-file -t ${f.verified}`, dir) !== 'commit') problems.push(`${f.id}: ${f.verified} is not a commit in this repo`)
+    else if (git(`diff --name-only ${f.verified} -- "${f.file}"`, dir)) problems.push(`${f.id} is stale: ${f.file} changed since ${f.verified}; re-read it and re-verify`)
+  }
+  return problems
+}
+
+// Fact ids cited anywhere in a text (requirements, data needs, the spec).
+export const citedFacts = text => [...new Set([...text.matchAll(/\b(F\d+)\b/g)].map(m => m[1].toUpperCase()))]
+
+// The Analyze gate: facts.md exists, every fact is well formed, current and pinned to real code, and
+// every fact the PRD or spec cites is defined. Brownfield work needs at least one fact.
+export function factsGateProblems(dir, state) {
+  const folder = path.join(dir, loadConfig(dir).specsDir, state.feature)
+  const file = path.join(folder, 'facts.md')
+  if (!fs.existsSync(file)) return ['facts.md does not exist: pin what is true about the current system to the code (or write "None, because ..." for greenfield)']
+  const text = fs.readFileSync(file, 'utf8').replace(/<!--[\s\S]*?-->/g, '')
+  const { facts, malformed } = parseFacts(text)
+  const problems = [...malformed.map(m => `facts.md ${m}`), ...factProblems(dir, facts).map(p => `facts.md: ${p}`)]
+  if (!facts.length && !/None, because\s+\S/i.test(text)) problems.push('facts.md has no facts; write "None, because ..." if there is truly no current system')
+  if ((state.kinds ?? []).includes('brownfield') && !facts.length) problems.push('brownfield work needs at least one fact about the current system')
+  const defined = new Set(facts.map(f => f.id))
+  for (const name of ['prd.md', 'spec.md']) {
+    const p = path.join(folder, name)
+    if (!fs.existsSync(p)) continue
+    for (const id of citedFacts(fs.readFileSync(p, 'utf8').replace(/<!--[\s\S]*?-->/g, ''))) if (!defined.has(id)) problems.push(`${name} cites ${id}, which facts.md does not define`)
+  }
+  return problems
+}
+
+// The Plan gate: every assumption is marked confirmed or unconfirmed, and the questions asked have answers.
+export function assumptionProblems(prdText) {
+  const problems = []
+  const assumptions = (section(prdText, '## Assumptions') ?? '').split('\n').filter(l => /^\s*[-*]\s*A\d+/i.test(l))
+  for (const a of assumptions) if (!/\[(confirmed|unconfirmed)\]/i.test(a)) problems.push(`assumption "${a.trim().slice(0, 50)}" is not marked [confirmed] or [unconfirmed]`)
+  const asked = section(prdText, '## Questions asked') ?? ''
+  for (const q of asked.split('\n').filter(l => /^\s*[-*]\s*Q\d+/i.test(l))) {
+    if (!/\bA:\s*\S/.test(q) && !/unanswered/i.test(q)) problems.push(`question "${q.trim().slice(0, 50)}" has no "A: ..." and is not marked unanswered`)
+  }
+  const unconfirmed = assumptions.filter(a => /\[unconfirmed\]/i.test(a)).map(a => a.match(/A\d+/i)[0].toUpperCase())
+  const open = section(prdText, '## Open questions') ?? ''
+  for (const id of unconfirmed) if (!new RegExp(`\\b${id}\\b`, 'i').test(open)) problems.push(`${id} is unconfirmed, so it must appear in Open questions with who can confirm it`)
+  return problems
+}

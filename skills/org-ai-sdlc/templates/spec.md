@@ -24,8 +24,11 @@
 
 ## Acceptance criteria and test IDs
 
-| ID | Criterion | Test ID | How it fails |
-|---|---|---|---|
+<!-- The criteria live in acceptance.feature as Gherkin scenarios, each tagged @AC-n, @Rn and a test level.
+     Here: how each would fail (the mistake the scenario catches), and any criterion that cannot be a scenario. -->
+
+| AC | How it fails |
+|---|---|
 
 ## Test plan
 

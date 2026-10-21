@@ -1,0 +1,13 @@
+{
+  "name": "review-missing-authorisation",
+  "role": "pre-reviewer",
+  "seededBug": "a delete endpoint that never checks the order belongs to the caller",
+  "prompt": "Use the pre-reviewer agent to review change.diff (a PR against main) for the requirement in spec.md. Do not change any file and do not run sdlc commands. Print only the findings ledger rows (| ID | Severity | Location | Checklist | Finding | Status | Source |) and the Pre-review section.",
+  "files": {
+    "spec.md": "## Requirements\n\n- R1. A shopper can cancel one of their own orders that has not shipped.\n",
+    "change.diff": "--- a/src/orders.js\n+++ b/src/orders.js\n@@ -10,3 +10,11 @@ router.get('/orders', requireLogin, listMyOrders)\n+\n+router.delete('/orders/:id', requireLogin, async (req, res) => {\n+  const order = await Orders.find(req.params.id)\n+  if (!order) return res.status(404).end()\n+  if (order.shippedAt) return res.status(409).json({ error: 'already shipped' })\n+  await Orders.cancel(order.id)\n+  res.status(204).end()\n+})\n",
+    "src/orders.js": "router.get('/orders', requireLogin, listMyOrders)\n\nrouter.delete('/orders/:id', requireLogin, async (req, res) => {\n  const order = await Orders.find(req.params.id)\n  if (!order) return res.status(404).end()\n  if (order.shippedAt) return res.status(409).json({ error: 'already shipped' })\n  await Orders.cancel(order.id)\n  res.status(204).end()\n})\n"
+  },
+  "mustMatch": ["owner|belongs|another (user|shopper)|any (user|shopper|order)|authori[sz]", "orders\\.js:\\d", "\\|\\s*(blocker|major)\\s*\\|", "Risk:\\s*(medium|high)"],
+  "mustNotMatch": ["Risk:\\s*low"]
+}

@@ -1,0 +1,14 @@
+{
+  "name": "review-test-asserts-nothing",
+  "role": "pre-reviewer",
+  "seededBug": "the new test calls the code but asserts nothing, so it can never fail",
+  "prompt": "Use the pre-reviewer agent to review change.diff (a PR against main) for the requirement in spec.md. Do not change any file and do not run sdlc commands. Print only the findings ledger rows (| ID | Severity | Location | Checklist | Finding | Status | Source |) and the Pre-review section.",
+  "files": {
+    "spec.md": "## Requirements\n\n- R1. A refund is never larger than the amount paid.\n",
+    "change.diff": "--- a/src/refund.js\n+++ b/src/refund.js\n@@ -0,0 +1,4 @@\n+function refund(paid, requested) {\n+  return Math.min(paid, requested)\n+}\n+module.exports = { refund }\n--- a/test/refund.test.js\n+++ b/test/refund.test.js\n@@ -0,0 +1,6 @@\n+const { refund } = require('../src/refund')\n+\n+test('AC-1 refund is capped at the amount paid', () => {\n+  const result = refund(100, 150)\n+  console.log(result)\n+})\n",
+    "src/refund.js": "function refund(paid, requested) {\n  return Math.min(paid, requested)\n}\nmodule.exports = { refund }\n",
+    "test/refund.test.js": "const { refund } = require('../src/refund')\n\ntest('AC-1 refund is capped at the amount paid', () => {\n  const result = refund(100, 150)\n  console.log(result)\n})\n"
+  },
+  "mustMatch": ["no assert|asserts? nothing|without (an )?assert|never fail|cannot fail|can.t fail|always pass|no expect", "refund\\.test\\.js:\\d", "\\|\\s*(blocker|major)\\s*\\|"],
+  "mustNotMatch": []
+}

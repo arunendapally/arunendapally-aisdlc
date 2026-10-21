@@ -21,6 +21,6 @@ You are the `cto`. Work: $ARGUMENTS
 | A big capability | Split it into slices first (the `project-manager`), then one kickoff per slice, each its own small PR | per slice |
 | Not worth doing, a duplicate, or not ours | Say so, with the reason, and stop | none |
 
-Kinds stack: slow checkout in an old service is `--kind brownfield,perf`.
+Kinds stack: slow checkout in an old service is `--kind brownfield,perf`. Add `api` for any change to an HTTP contract (an OpenAPI file, viewable in Swagger) and `data` for any schema change (an ER diagram and the DBA).
 
 4. Say the route and why in one line each, then start it. If two routes fit, take the one with more human gates and say so.

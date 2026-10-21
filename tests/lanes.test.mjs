@@ -4,11 +4,12 @@ import assert from 'node:assert/strict'
 import fs from 'node:fs'
 import path from 'node:path'
 import { makeRepo, switchableGate, plugin } from './helpers.mjs'
+import { STAGES } from '../scripts/lib.mjs'
 
 const ci = name => import(path.join(plugin, 'templates', 'repo', '.github', 'scripts', name).replace(/^([A-Z]):/, 'file:///$1:').split(path.sep).join('/'))
 const BUG_BUILD = ['## Repro', '## Expected and actual', '## Root cause', '## Fix']
 const VERIFY = ['## Test results', '## Pre-review', '## Not verified', '## Review honesty']
-const CLEAN_PRE = '\n## Pre-review\n\nRisk: low, because tests cover it\nOpen findings: 0\nLook here first: src/app.ts:1\n'
+const CLEAN_PRE = '\n## Pre-review\n\nRisk: low, because tests cover it\nOpen findings: 0\nLook here first: src/app.ts:1\nLenses run: correctness, tests\n'
 const hoursAgo = h => new Date(Date.now() - h * 36e5).toISOString()
 
 test('bug lane: repro red, then green, passes Build on checks; the PR review is the only human gate', () => {
@@ -39,6 +40,7 @@ test('bug lane: repro red, then green, passes Build on checks; the PR review is 
   assert.match(early.out, /Test results/)
   r.fill('specs/demo/bug.md', [...BUG_BUILD, '## Test results', '## Not verified', '## Review honesty'], CLEAN_PRE)
   r.sdlc('gate', 'demo')
+  r.sdlc('review', 'demo')
   const verify = r.sdlc('request', 'demo')
   assert.equal(verify.status, 0, verify.out)
   assert.match(verify.out, /Review deadline: 8h/)
@@ -79,7 +81,7 @@ test('a full-lane change to the schema must be marked as data work', () => {
 test('approving needs a request first, because the request runs the checks', () => {
   const r = makeRepo()
   r.sdlc('init', 'demo')
-  r.fill('specs/demo/brief.md', ['## Problem', '## Evidence', '## Requirements', '## Never', '## Outcome metric', '## Open questions'])
+  r.fill('specs/demo/prd.md', STAGES[1].headings)
   assert.match(r.say('sdlc approve demo 1'), /has not been requested/)
   assert.equal(r.state('demo').gates['1'], undefined)
 })
@@ -95,6 +97,7 @@ test('PR size: the Verify gate refuses an oversized full-lane PR', () => {
   r.put('src/huge.ts', 'x\n'.repeat(450))
   gate.green()
   r.sdlc('gate', 'demo')
+  r.sdlc('review', 'demo')
   assert.match(r.sdlc('request', 'demo').out, /over the full lane limit of 400/)
   fs.rmSync(path.join(r.repo, 'src', 'huge.ts'))
   assert.equal(r.sdlc('request', 'demo').status, 0)
@@ -144,6 +147,7 @@ test('hotfix: only a human declares it; it runs Build on checks, two human gates
   assert.match(r.sdlc('request', 'api-down').out, /passed on checks/)
   r.sdlc('advance', 'api-down')
   r.sdlc('gate', 'api-down')
+  r.sdlc('review', 'api-down')
   assert.match(r.sdlc('request', 'api-down').out, /Review deadline: 1h/)
   r.say('sdlc approve api-down 5')
   r.sdlc('advance', 'api-down')
@@ -189,6 +193,7 @@ test('earned autonomy: clean approvals build a streak, a human promotes, rejecti
     r.sdlc('bug', name)
     r.setState(name, { stage: 5, stages: { 5: { enteredAt: hoursAgo(1) } }, baseline: 12, gateRuns: { 5: { ok: true, count: 12 } }, branch: 'bug/b3' })
     r.fill(`specs/${name}/bug.md`, [...BUG_BUILD, '## Test results', '## Not verified', '## Review honesty'], CLEAN_PRE)
+    r.sdlc('review', name)
   }
   for (const name of ['b1', 'b2']) {
     ready(name)

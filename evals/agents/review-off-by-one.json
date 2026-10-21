@@ -1,0 +1,14 @@
+{
+  "name": "review-off-by-one",
+  "role": "pre-reviewer",
+  "seededBug": "pagination returns one row too many, so the first row of the next page repeats",
+  "prompt": "Use the pre-reviewer agent to review change.diff (a PR against main) for the requirement in spec.md and the scenarios in acceptance.feature. Do not change any file and do not run sdlc commands. Print only the findings ledger rows (| ID | Severity | Location | Checklist | Finding | Status | Source |) and the Pre-review section.",
+  "files": {
+    "spec.md": "## Requirements\n\n- R1. Search results come in pages of `size` items; page numbers start at 0.\n",
+    "acceptance.feature": "Feature: Paged search\n  As a shopper\n  I want results in pages\n  So that long result lists stay readable\n\n  @R1 @AC-1 @unit\n  Scenario: Consecutive pages do not repeat items\n    Given 25 matching products\n    When the shopper reads page 0 and page 1 with size 10\n    Then no product appears on both pages\n",
+    "change.diff": "--- a/src/paginate.js\n+++ b/src/paginate.js\n@@ -0,0 +1,4 @@\n+function paginate(items, page, size) {\n+  return items.slice(page * size, page * size + size + 1)\n+}\n+module.exports = { paginate }\n",
+    "src/paginate.js": "function paginate(items, page, size) {\n  return items.slice(page * size, page * size + size + 1)\n}\nmodule.exports = { paginate }\n"
+  },
+  "mustMatch": ["off.by.one|one (item|row|element|result) too many|\\+ ?1|size \\+ 1|11 items|extra (item|row|element)|repeat", "paginate\\.js:\\d", "\\|\\s*(blocker|major)\\s*\\|"],
+  "mustNotMatch": []
+}

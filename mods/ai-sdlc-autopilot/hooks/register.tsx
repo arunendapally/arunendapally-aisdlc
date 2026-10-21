@@ -19,11 +19,11 @@ const SLA: Record<string, number> = { full: 24, light: 8, bug: 8, task: 8, hotfi
 const NEVER_TRUST = ['full:5', 'light:5', 'full:6', 'light:6', 'hotfix:5', 'hotfix:6']
 const EDIT_TOOLS = new Set(['Write', 'Edit', 'MultiEdit', 'NotebookEdit'])
 const RULES: Record<number, string> = {
-  1: 'Plan: write the brief only. No code. Grade every claim Established, Moderate or Preliminary.',
-  2: 'Analyze: check the brief against the real code and schema. No code changes. Every criterion gets a test ID that can fail.',
-  3: 'Design: plan, contracts, ADRs and C4 changes from real components. No code.',
+  1: 'Plan: ask the questions that would change the PRD before drafting it. No code. Grade every claim; mark every assumption confirmed or unconfirmed.',
+  2: 'Analyze: pin system facts to file:line in facts.md, write acceptance.feature in Gherkin covering every requirement. No code changes.',
+  3: 'Design: plan, contracts, ADRs with two options and their downsides, C4 changes; the design review board must accept every decision. No code.',
   4: 'Build: test first, smallest change, run the gate after each batch, never loosen or skip a test, stay under the PR size limit.',
-  5: 'Verify: full gate, mutation-test every guard, pre-review with no open findings, honest PR body. Never merge.',
+  5: 'Verify: every AC tested at its level, gate repeated with no flakes, review packet and findings ledger with nothing open, honest PR body. Never merge.',
   6: 'Release: humans merge and deploy. Probe production read-only. Write what you learned to knowledge/.',
 }
 

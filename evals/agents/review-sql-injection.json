@@ -1,0 +1,13 @@
+{
+  "name": "review-sql-injection",
+  "role": "pre-reviewer",
+  "seededBug": "user input concatenated into SQL",
+  "prompt": "Use the pre-reviewer agent to review change.diff (a PR against main) for the requirement in spec.md. Do not change any file and do not run sdlc commands. Print only the findings ledger rows (| ID | Severity | Location | Checklist | Finding | Status | Source |) and the Pre-review section.",
+  "files": {
+    "spec.md": "## Requirements\n\n- R1. Support staff can search users by email prefix.\n",
+    "change.diff": "--- a/src/users.js\n+++ b/src/users.js\n@@ -1,3 +1,8 @@\n const db = require('./db')\n+\n+async function searchByEmail(prefix) {\n+  const sql = \"SELECT id, email FROM users WHERE email LIKE '\" + prefix + \"%'\"\n+  return db.query(sql)\n+}\n+module.exports = { searchByEmail }\n",
+    "src/users.js": "const db = require('./db')\n\nasync function searchByEmail(prefix) {\n  const sql = \"SELECT id, email FROM users WHERE email LIKE '\" + prefix + \"%'\"\n  return db.query(sql)\n}\nmodule.exports = { searchByEmail }\n"
+  },
+  "mustMatch": ["inject", "users\\.js:\\d", "\\|\\s*(blocker|major)\\s*\\|", "Risk:\\s*(medium|high)"],
+  "mustNotMatch": ["Risk:\\s*low"]
+}

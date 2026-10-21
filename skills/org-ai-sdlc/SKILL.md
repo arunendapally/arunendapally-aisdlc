@@ -26,7 +26,7 @@ Kinds stack and only add requirements: `greenfield`, `brownfield`, `perf`, `data
 
 | Lane | Stages | Document | Human gates | PR limit | Review deadline |
 |---|---|---|---|---|---|
-| full | 1 Plan, 2 Analyze, 3 Design, 4 Build, 5 Verify, 6 Release | brief, spec, plan, tasks, pr, release | 6 | 400 | 24h |
+| full | 1 Plan, 2 Analyze, 3 Design, 4 Build, 5 Verify, 6 Release | prd; spec, facts, acceptance.feature; plan, design-review; tasks; pr, review; release | 6 | 400 | 24h |
 | light | full without Design | | 5 | 300 | 8h |
 | bug | 4, 5 | bug.md (the PR body) | merge | 200 | 8h |
 | task | 4, 5 | task.md (the PR body) | merge | 200 | 8h |
@@ -42,6 +42,14 @@ Templates are in `templates/`. Every required section must hold real content; wr
 - `sdlc.mjs gate <slug>` runs the full gate. The first run in Build is the baseline. In the bug lane, a red run before the fix records the repro and is required.
 - `sdlc.mjs retry <slug> <goal>`: past the cap (3), ESCALATE. Never loosen the goal.
 - Commit `specs/<slug>/` after every gate decision so other sessions and CI see the same state.
+
+## Quality gates
+
+- **Plan:** ask the questions that would change the PRD before drafting; mark every assumption `[confirmed]` or `[unconfirmed]`; number every testable requirement R1, R2 ...
+- **Analyze:** `facts.md` pins system facts to `file:line` at a commit; `acceptance.feature` holds every criterion as Gherkin tagged `@AC-n @Rn @<level>`; check with `sdlc.mjs gherkin <slug>`.
+- **Design:** every ADR weighs two options and names a downside; `/ai-sdlc:design-review` must end in `Verdict: accept`; data work draws a Mermaid ER diagram with a `%% changed:` line; API work has `openapi.yaml` (`sdlc.mjs api <slug>`, viewable in Swagger) and declares breaking changes.
+- **Build and Verify:** `/ai-sdlc:tests` writes tests at each criterion's level with their own data setup and teardown; `sdlc.mjs tests <slug>` traces them (name the criterion and the feature); `sdlc.mjs gate <slug> --repeat 3` finds flakes.
+- **Review:** `sdlc.mjs review <slug>` builds the packet; record every finding in `review.md` (F ids for agents, H for humans; `fixed: <commit>`; never delete a row).
 
 ## Before a human reviews
 

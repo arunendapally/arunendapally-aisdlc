@@ -10,6 +10,12 @@ import { STAGES, root, git, loadConfig, readState, writeState, listFeatures, mis
   KINDS, trustedGates, promotable, readTrust, writeTrust } from './lib.mjs'
 import { check, relevant, writeIndex } from './knowledge.mjs'
 import { collect, analyze, report } from './retro.mjs'
+import { lint, requirementsFrom } from './gherkin.mjs'
+import { packet, packetText, parseLedger, ledgerProblems } from './review.mjs'
+import { boardProblems } from './design-review.mjs'
+import { matrix, matrixText } from './testmatrix.mjs'
+import { factsGateProblems, assumptionProblems } from './facts.mjs'
+import { erProblems, openapiProblems, breakingChanges } from './contracts.mjs'
 
 const dir = root()
 const [cmd, feature, ...rest] = process.argv.slice(2)
@@ -48,6 +54,46 @@ const chargeEscape = (causedBy, bug) => {
   writeTrust(dir, ledger)
   return `Charged to ${causedBy}: gates ${passed.join(', ') || 'none'} lose their streak${passed.some(k => readTrust(dir)[k]?.demotedBy === `escape: bug ${bug}`) ? ' and promotion' : ''}.`
 }
+// The Analyze gate needs acceptance.feature: valid Gherkin that covers every PRD requirement.
+const acceptanceProblems = state => {
+  const folder = path.join(dir, loadConfig(dir).specsDir, state.feature)
+  const file = path.join(folder, 'acceptance.feature')
+  if (!fs.existsSync(file)) return ['acceptance.feature does not exist: write every acceptance criterion as a Gherkin scenario']
+  const prd = path.join(folder, 'prd.md')
+  const reqs = fs.existsSync(prd) ? requirementsFrom(fs.readFileSync(prd, 'utf8')) : []
+  // No parsable requirement ids would switch coverage off, so it is a problem in itself.
+  const noIds = fs.existsSync(prd) && !reqs.length ? ['prd.md has no requirement ids (R1, R2, ...) in "## Requirements", so coverage cannot be checked'] : []
+  return [...noIds, ...lint(fs.readFileSync(file, 'utf8'), reqs.length ? reqs : null).errors.map(e => `acceptance.feature line ${e.line}: ${e.message}`)]
+}
+// Data work shows its ER diagram; API work has a valid OpenAPI file, and any breaking change against
+// the base branch is declared in the plan's Contracts section.
+const openapiFile = state => path.join(dir, loadConfig(dir).specsDir, state.feature, 'openapi.yaml')
+const openapiBreaks = state => {
+  const file = openapiFile(state)
+  const cfg = loadConfig(dir)
+  const base = cfg.protectedBranches.map(b => git(`merge-base ${b} HEAD`, dir)).find(Boolean)
+  const rel = path.relative(dir, file).split(path.sep).join('/')
+  const before = base ? git(`show ${base}:${rel}`, dir) : ''
+  return before ? breakingChanges(before, fs.readFileSync(file, 'utf8')) : []
+}
+const contractProblems = state => {
+  const kinds = state.kinds ?? []
+  const folder = path.join(dir, loadConfig(dir).specsDir, state.feature)
+  const plan = path.join(folder, 'plan.md')
+  const planText = fs.existsSync(plan) ? fs.readFileSync(plan, 'utf8') : ''
+  const problems = []
+  if (kinds.includes('data')) problems.push(...erProblems(planText).map(p => `ER diagram: ${p}`))
+  if (kinds.includes('api')) {
+    const file = openapiFile(state)
+    if (!fs.existsSync(file)) problems.push(`no ${path.relative(dir, file).split(path.sep).join('/')}: API work needs its OpenAPI contract (sdlc api ${state.feature})`)
+    else {
+      problems.push(...openapiProblems(fs.readFileSync(file, 'utf8')).map(p => `openapi.yaml: ${p}`))
+      const contracts = (section(planText, '## Contracts') ?? '').toLowerCase()
+      for (const b of openapiBreaks(state)) if (!contracts.includes('breaking') || !contracts.includes(b.replace(/^removed /, '').split(' no longer')[0].toLowerCase())) problems.push(`openapi.yaml breaks clients (${b}): declare it as breaking in plan.md "## Contracts", with the version bump and migration path`)
+    }
+  }
+  return problems
+}
 const kindNote = () => (kinds().length ? `, ${kinds().join(', ')}` : '')
 const hours = (a, b = new Date().toISOString()) => Math.round((Date.parse(b) - Date.parse(a)) / 36e5 * 10) / 10
 
@@ -57,8 +103,8 @@ const commands = {
     if (!feature || !/^[a-z0-9][a-z0-9-]*$/.test(feature)) fail('Usage: sdlc init <feature-slug> [--branch <name>]')
     if (readState(dir, feature)) fail(`Feature "${feature}" already exists.`)
     createFeature(dir, { feature, lane: 'full', branch: flag('branch'), extra: { kinds: kinds() } })
-    const brief = copyTemplate(dir, feature, 'brief.md')
-    console.log(`Created ${feature} at stage 1 (Plan), full lane${kindNote()}. Brief template: ${brief}`)
+    const prd = copyTemplate(dir, feature, 'prd.md')
+    console.log(`Created ${feature} at stage 1 (Plan), full lane${kindNote()}. PRD template: ${prd}`)
   },
 
   // A small change with no new behaviour to specify (a dependency bump, config, a refactor, docs).
@@ -111,6 +157,12 @@ const commands = {
       if (!run?.ok) missing.push(`the full gate has not passed at this stage. Run: sdlc gate ${feature}`)
       else if (run.count < (state.baseline ?? 0)) missing.push(`${run.count} passing tests is below the baseline of ${state.baseline}`)
     }
+    if (state.stage === 1) {
+      const prd = path.join(dir, cfg.specsDir, feature, 'prd.md')
+      if (fs.existsSync(prd)) missing.push(...assumptionProblems(fs.readFileSync(prd, 'utf8')).map(p => `prd.md: ${p}`))
+    }
+    if (state.stage === 2) missing.push(...acceptanceProblems(state), ...factsGateProblems(dir, state))
+    if (state.stage === 3) missing.push(...boardProblems(dir, feature), ...contractProblems(state))
     if (state.lane === 'bug' && state.stage === 4) {
       if (!state.reproRedAt) missing.push('no failing gate run before the fix: a bug fix starts with a test that reproduces it')
       const forbidden = changedFiles(dir, cfg).filter(f => matches(f.file, cfg.bugForbidPaths)).map(f => f.file)
@@ -122,10 +174,30 @@ const commands = {
       if (lines > max) missing.push(`${lines} changed lines is over the ${state.lane} lane limit of ${max}. Split it into smaller PRs, one slice each`)
     }
     if (state.stage === 5) {
+      const folder = path.join(dir, cfg.specsDir, feature)
+      const packetFile = path.join(folder, 'review-packet.md')
+      if (!fs.existsSync(packetFile)) missing.push(`no review packet: run "sdlc review ${feature}"`)
+      else {
+        // A packet built before later commits is a stale map of the change (finding F10).
+        const built = fs.readFileSync(packetFile, 'utf8').match(/built at ([0-9a-f]+)/)?.[1]
+        if (built !== git('rev-parse --short HEAD', dir)) missing.push(`the review packet was built at ${built ?? 'an unknown commit'}, not HEAD: run "sdlc review ${feature}" again`)
+      }
+      const ledger = path.join(folder, 'review.md')
+      if (!fs.existsSync(ledger)) missing.push('no findings ledger: review.md (from "sdlc review") records every finding, even when there are none')
+      else {
+        // Remember every finding id the gate has seen, so a row cannot be deleted instead of closed.
+        const findings = parseLedger(fs.readFileSync(ledger, 'utf8'))
+        missing.push(...ledgerProblems(dir, findings, state.ledgerIds ?? []).map(p => `review.md: ${p}`))
+        state.ledgerIds = [...new Set([...(state.ledgerIds ?? []), ...findings.map(f => f.id)])]
+        writeState(dir, state)
+      }
+      if (fs.existsSync(path.join(folder, 'acceptance.feature'))) missing.push(...matrix(dir, feature).problems.map(p => `test matrix: ${p}`))
       const file = path.join(dir, cfg.specsDir, feature, spec.artefact)
       const pre = (fs.existsSync(file) && section(fs.readFileSync(file, 'utf8'), '## Pre-review')) || ''
       if (pre && !/Risk:\s*(low|medium|high)\b/i.test(pre)) missing.push('the pre-review gives no "Risk: low|medium|high"')
       if (pre && !/Open findings:\s*0\b/i.test(pre)) missing.push('the pre-review still has open findings ("Open findings: 0" is required)')
+      // A ledger with no rows reads the same as a skipped review, so the pre-review says what ran (F10).
+      if (pre && !/Lenses run:\s*\S/i.test(pre)) missing.push('the pre-review does not say which lenses ran ("Lenses run: ...")')
     }
     if (missing.length) fail(`Gate ${state.stage} cannot be requested:\n- ${missing.join('\n- ')}`)
     const gate = state.gates[state.stage]
@@ -172,18 +244,34 @@ const commands = {
   // In the bug and hotfix lanes, a red run before any green one records the reproduction.
   gate() {
     const state = need()
-    const { gateCommand, testCountPattern } = loadConfig(dir)
+    const { gateCommand, testCountPattern, dataCheckCommand, gateRepeats } = loadConfig(dir)
     if (!gateCommand) fail('No gateCommand in .ai-sdlc/config.json. A human sets it, for example "npm run gate".')
-    const r = spawnSync(gateCommand, { cwd: dir, shell: true, encoding: 'utf8' })
-    const out = `${r.stdout ?? ''}${r.stderr ?? ''}`
-    const counts = [...out.matchAll(new RegExp(testCountPattern, 'gi'))].map(m => Number(m[1] ?? m[2]))
-    const count = counts.length ? counts[counts.length - 1] : 0
-    const ok = r.status === 0
+    // --repeat N (or config gateRepeats) runs the gate N times: a flaky test shows up as a red run or a
+    // changed count. dataCheckCommand (optional) runs after each pass and must exit 0: it proves the
+    // tests tore down their data (for example, no rows left in the test schema).
+    const repeats = Number(flag('repeat') ?? gateRepeats ?? 1)
+    if (!Number.isInteger(repeats) || repeats < 1 || repeats > 20) fail('--repeat takes a whole number from 1 to 20.')
+    const runs = []
+    for (let i = 0; i < repeats; i++) {
+      const r = spawnSync(gateCommand, { cwd: dir, shell: true, encoding: 'utf8' })
+      const out = `${r.stdout ?? ''}${r.stderr ?? ''}`
+      const counts = [...out.matchAll(new RegExp(testCountPattern, 'gi'))].map(m => Number(m[1] ?? m[2]))
+      const leak = dataCheckCommand ? spawnSync(dataCheckCommand, { cwd: dir, shell: true, encoding: 'utf8' }) : null
+      runs.push({ ok: r.status === 0, count: counts.length ? counts[counts.length - 1] : 0, out, leaked: leak ? leak.status !== 0 : false, leakOut: leak ? `${leak.stdout}${leak.stderr}` : '' })
+      if (r.status !== 0 && repeats === 1) break
+    }
+    const out = runs[runs.length - 1].out
+    const count = runs[0].count
+    const flaky = runs.length > 1 && (new Set(runs.map(r => r.ok)).size > 1 || new Set(runs.map(r => r.count)).size > 1)
+    const leaked = runs.some(r => r.leaked)
+    const ok = runs.every(r => r.ok) && !leaked
     const now = new Date().toISOString()
     const hadGreen = state.gateRuns?.[state.stage]?.ok
-    state.gateRuns = { ...state.gateRuns, [state.stage]: { ok, count, at: now } }
+    state.gateRuns = { ...state.gateRuns, [state.stage]: { ok, count, at: now, runs: runs.length, ...(flaky ? { flaky } : {}), ...(leaked ? { leaked } : {}) } }
+    if (flaky) console.log(`FLAKY: ${runs.length} runs gave ${runs.map(r => `${r.ok ? 'green' : 'red'} ${r.count}`).join(', ')}. Quarantine with an owner and a date, or fix it; never retry until green.`)
+    if (leaked) console.log(`TEST DATA LEAKED: the data check failed after a run. Each test must tear down what it creates.\n${runs.find(r => r.leaked).leakOut.trim().slice(0, 400)}`)
     if (state.stage === 4 && state.baseline === undefined) state.baseline = count
-    if (!ok && !hadGreen && !state.reproRedAt && state.stage === 4 && ['bug', 'hotfix'].includes(state.lane)) {
+    if (!ok && !flaky && !leaked && !hadGreen && !state.reproRedAt && state.stage === 4 && ['bug', 'hotfix'].includes(state.lane)) {
       state.reproRedAt = now
       writeState(dir, state)
       return console.log(`Repro recorded: the gate is red before the fix (${count} passing). Now fix it and run the gate again.`)
@@ -259,6 +347,68 @@ const commands = {
     if (invalid.length) fail(invalid.map(i => `INVALID ${i}`).join('\n'))
   },
 
+  // The API contract: start openapi.yaml from the template, lint it, list breaking changes against the
+  // base branch, and put swagger.html beside it so it opens in Swagger UI.
+  api() {
+    const state = need()
+    const folder = path.join(dir, loadConfig(dir).specsDir, feature)
+    const created = !fs.existsSync(path.join(folder, 'openapi.yaml'))
+    copyTemplate(dir, feature, 'openapi.yaml')
+    copyTemplate(dir, feature, 'swagger.html')
+    if (!(state.kinds ?? []).includes('api')) {
+      state.kinds = [...(state.kinds ?? []), 'api']
+      writeState(dir, state)
+    }
+    const problems = openapiProblems(fs.readFileSync(path.join(folder, 'openapi.yaml'), 'utf8'))
+    const breaks = openapiBreaks(state)
+    const where = path.relative(dir, folder).split(path.sep).join('/')
+    if (created) console.log(`Started ${where}/openapi.yaml from the template: replace the example with this change's contract.`)
+    for (const b of breaks) console.log(`BREAKING: ${b}`)
+    console.log(`View it in Swagger: npx --yes http-server ${where} -p 8080, then open http://localhost:8080/swagger.html`)
+    if (problems.length) fail(problems.map(p => `openapi.yaml: ${p}`).join('\n'))
+    console.log(`openapi.yaml is well formed${breaks.length ? `; ${breaks.length} breaking change${breaks.length > 1 ? 's' : ''} to declare in plan.md` : ''}.`)
+  },
+
+  // The test matrix: each Gherkin criterion, its level, and the tests that name it.
+  tests() {
+    need()
+    const m = matrix(dir, feature)
+    const text = matrixText(m)
+    fs.writeFileSync(path.join(dir, loadConfig(dir).specsDir, feature, 'test-matrix.md'), `# Test matrix: ${feature}\n\nGenerated by "sdlc tests". A test proves a criterion by naming its ID (AC-1) in its title.\n\n${text}\n`)
+    console.log(text)
+    if (m.problems.length) fail(`${m.problems.length} criteria are not tested at their level.`)
+  },
+
+  // Build the review packet (the shared map of the change) and start the findings ledger.
+  review() {
+    const state = need()
+    const folder = path.join(dir, loadConfig(dir).specsDir, feature)
+    const text = packetText(packet(dir, state))
+    fs.writeFileSync(path.join(folder, 'review-packet.md'), text)
+    copyTemplate(dir, feature, 'review.md')
+    // Remember the ids already in the ledger, so a row deleted before the gate is caught (finding F3).
+    const ids = parseLedger(fs.readFileSync(path.join(folder, 'review.md'), 'utf8')).map(f => f.id)
+    state.ledgerIds = [...new Set([...(state.ledgerIds ?? []), ...ids])]
+    writeState(dir, state)
+    console.log(text)
+    console.log(`Wrote specs/${feature}/review-packet.md. Record every finding in specs/${feature}/review.md.`)
+  },
+
+  // Lint acceptance.feature against the PRD and print the scenario matrix (criterion, requirements, level).
+  gherkin() {
+    const state = need()
+    const folder = path.join(dir, loadConfig(dir).specsDir, feature)
+    const file = path.join(folder, 'acceptance.feature')
+    if (!fs.existsSync(file)) fail(`No ${path.relative(dir, file)}. Copy the template: it is in the plugin's skills/org-ai-sdlc/templates/.`)
+    const prd = path.join(folder, 'prd.md')
+    const reqs = fs.existsSync(prd) ? requirementsFrom(fs.readFileSync(prd, 'utf8')) : []
+    const { errors, warnings, scenarios } = lint(fs.readFileSync(file, 'utf8'), reqs.length ? reqs : null)
+    for (const s of scenarios) console.log(`${s.ac ?? '(no AC)'}  ${s.level ?? '(no level)'}  ${s.requirements.join(',') || '(no R)'}  ${s.name}`)
+    for (const w of warnings) console.log(`warning line ${w.line}: ${w.message}`)
+    console.log(`${scenarios.length} scenarios, ${errors.length} errors, ${warnings.length} warnings${reqs.length ? `, PRD requirements ${reqs.join(', ')}` : ''}. Lane: ${state.lane}.`)
+    if (errors.length) fail(errors.map(e => `error line ${e.line}: ${e.message}`).join('\n'))
+  },
+
   // Mine this repo (and any others named with --repos a,b) into proposed plugin changes.
   // "sdlc retro [--since <days>] [--repos <paths>] [--json] [--write]"
   retro() {
@@ -293,7 +443,7 @@ const commands = {
     }
   },
 
-  // Open a blameless postmortem. Its actions re-enter the cycle as new briefs or new checks.
+  // Open a blameless postmortem. Its actions re-enter the cycle as new PRDs or new checks.
   incident() {
     if (!feature || !/^[a-z0-9][a-z0-9-]*$/.test(feature)) fail('Usage: sdlc incident <slug>')
     const date = new Date().toISOString().slice(0, 10)
@@ -328,6 +478,6 @@ const commands = {
 }
 
 if (!commands[cmd]) {
-  fail('Usage: sdlc <init|bug|task|kind|request|advance|gate|retry|status|trust|metrics|retro|incident|knowledge|init-repo> [feature] [...]')
+  fail('Usage: sdlc <init|bug|task|kind|request|advance|gate|tests|review|gherkin|api|retry|status|trust|metrics|retro|incident|knowledge|init-repo> [feature] [...]')
 }
 commands[cmd]()

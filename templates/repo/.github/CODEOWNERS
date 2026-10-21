@@ -2,6 +2,9 @@
 *                       @your-org/product-team
 /specs/                 @your-org/product-team @your-org/architects
 /specs/**/state.json    @your-org/security
+# Agents can write these files, so a human must approve every change to them (ADR-0001).
+/specs/**/review.md          @your-org/reviewers
+/specs/**/design-review.md   @your-org/architects
 /docs/adr/              @your-org/architects
 /docs/architecture/     @your-org/architects
 /.github/               @your-org/platform

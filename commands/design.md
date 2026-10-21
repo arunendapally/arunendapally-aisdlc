@@ -6,6 +6,7 @@ argument-hint: <feature-slug>
 Stage 3 for `$ARGUMENTS` (the light lane skips this stage).
 
 - `architect`: `specs/$ARGUMENTS/plan.md` from the template (Spec Kit's plan stage if installed): data model, versioned contracts, and an ADR in `docs/adr/` for each new component, datastore, dependency, schema or contract change. Write each interpretation of the constitution as a judgement.
+- For `--kind data`: the `dba` draws the Mermaid ER diagram in `## Data model`, marking changed entities. For `--kind api`: the `architect` writes `openapi.yaml` with `node "${CLAUDE_PLUGIN_ROOT}/scripts/sdlc.mjs" api $ARGUMENTS` and declares breaking changes. The Design gate checks both.
 - `c4-diagrams-expert`: update `docs/architecture/workspace.dsl`, tagging what is new, changed and removed. Agents appear as actors with what they can write.
 - `ux-designer`: screens from the product's real components only, on a canvas humans comment on. One thread per comment; only a human resolves a thread. List unmatched components and the accessibility checks.
 - `qa-engineer`: the test strategy (levels, synthetic data, performance and accessibility budgets).
@@ -13,6 +14,8 @@ Stage 3 for `$ARGUMENTS` (the light lane skips this stage).
 - `ops-engineer`: operability (environments, IaC modules, secrets needed, cost delta, backup and restore).
 - `safe-ai-sdlc-expert`: check the plan against the threat model.
 
-**Goal:** every requirement maps to a plan element, every contract has a version, every plan section is filled (or says "None, because ..."), and no human comment thread is open. Cap 3 rounds.
+Then run `/ai-sdlc:design-review $ARGUMENTS`: the board cross-questions every decision and the architect answers until each has `Verdict: accept`.
+
+**Goal:** every requirement maps to a plan element, the board accepted every decision, every contract has a version, every plan section is filled (or says "None, because ..."), and no human comment thread is open. Cap 3 rounds.
 
 **Gate:** `node "${CLAUDE_PLUGIN_ROOT}/scripts/sdlc.mjs" request $ARGUMENTS`, then stop. The architect and product lead approve with `sdlc approve $ARGUMENTS 3`.

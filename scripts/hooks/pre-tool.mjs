@@ -74,12 +74,13 @@ const skips = /\b(it|describe|test)\.skip\(|\bxit\(|@pytest\.mark\.skip|@Disable
 if (skips) ask(`${rel} adds a skipped test. A skip needs a quarantine entry with an owner and an expiry date.`)
 
 // Stage gates on the artefact chain: each artefact needs the gate before it.
-const spec = rel.match(new RegExp(`^${cfg.specsDir}/([^/]+)/(spec|plan|tasks)\\.md$`))
+const spec = rel.match(new RegExp(`^${cfg.specsDir}/([^/]+)/(spec|plan|tasks)\\.md$`)) ??
+  rel.match(new RegExp(`^${cfg.specsDir}/([^/]+)/(acceptance)\\.feature$`))?.map((m, i) => (i === 2 ? 'spec' : m))
 if (spec) {
   const state = readState(dir, spec[1])
   const approved = n => state?.gates[n]?.status === 'approved'
   if (state) {
-    if (spec[2] === 'spec' && !approved(1) && state.stage < 2) deny('spec.md needs gate 1 (brief) approved by the product lead first.')
+    if (spec[2] === 'spec' && !approved(1) && state.stage < 2) deny('spec.md needs gate 1 (the PRD) approved by the product lead first.')
     if (spec[2] === 'plan' && state.stage < 3 && !approved(2)) deny('plan.md needs gate 2 (scope, integration, threat model) approved first.')
     if (spec[2] === 'tasks' && state.stage < 4 && !(approved(3) || (state.lane === 'light' && approved(2)))) deny('tasks.md needs the design gate approved first.')
   }

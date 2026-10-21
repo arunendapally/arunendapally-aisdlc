@@ -3,18 +3,120 @@
   "promise": "A bug that escaped shipped work takes back the trust of every gate that work passed.",
   "branch": "bug/demo",
   "steps": [
-    { "config": { "gateCommand": "node gate.cjs", "trustThreshold": 1 } },
-    { "sdlc": ["bug", "demo"], "ok": true },
-    { "setState": ["demo", { "stage": 5, "stages": { "5": { "enteredAt": "2026-10-21T00:00:00Z" } }, "baseline": 12, "gateRuns": { "5": { "ok": true, "count": 12 } } }] },
-    { "fill": ["specs/demo/bug.md", ["## Repro", "## Expected and actual", "## Root cause", "## Fix", "## Test results", "## Not verified", "## Review honesty"], "\n## Pre-review\n\nRisk: low\nOpen findings: 0\n"] },
-    { "sdlc": ["request", "demo"], "ok": true },
-    { "say": "sdlc approve demo 5", "out": "approved gate 5" },
-    { "say": "sdlc trust bug 5", "out": "promoted gate bug:5" },
-    { "trust": ["bug:5", "promoted", true] },
-    { "sdlc": ["bug", "regression", "--caused-by", "demo"], "ok": true, "out": "Charged to demo" },
-    { "trust": ["bug:5", "promoted", false] },
-    { "trust": ["bug:5", "streak", 0] },
-    { "trust": ["bug:5", "escapes", 1] },
-    { "state": ["demo", "escapes.0.bug", "regression"] }
+    {
+      "config": {
+        "gateCommand": "node gate.cjs",
+        "trustThreshold": 1
+      }
+    },
+    {
+      "sdlc": [
+        "bug",
+        "demo"
+      ],
+      "ok": true
+    },
+    {
+      "setState": [
+        "demo",
+        {
+          "stage": 5,
+          "stages": {
+            "5": {
+              "enteredAt": "2026-10-21T00:00:00Z"
+            }
+          },
+          "baseline": 12,
+          "gateRuns": {
+            "5": {
+              "ok": true,
+              "count": 12
+            }
+          }
+        }
+      ]
+    },
+    {
+      "fill": [
+        "specs/demo/bug.md",
+        [
+          "## Repro",
+          "## Expected and actual",
+          "## Root cause",
+          "## Fix",
+          "## Test results",
+          "## Not verified",
+          "## Review honesty"
+        ],
+        "\n## Pre-review\n\nRisk: low\nOpen findings: 0\nLenses run: correctness, tests\n"
+      ]
+    },
+    {
+      "sdlc": [
+        "review",
+        "demo"
+      ],
+      "ok": true
+    },
+    {
+      "sdlc": [
+        "request",
+        "demo"
+      ],
+      "ok": true
+    },
+    {
+      "say": "sdlc approve demo 5",
+      "out": "approved gate 5"
+    },
+    {
+      "say": "sdlc trust bug 5",
+      "out": "promoted gate bug:5"
+    },
+    {
+      "trust": [
+        "bug:5",
+        "promoted",
+        true
+      ]
+    },
+    {
+      "sdlc": [
+        "bug",
+        "regression",
+        "--caused-by",
+        "demo"
+      ],
+      "ok": true,
+      "out": "Charged to demo"
+    },
+    {
+      "trust": [
+        "bug:5",
+        "promoted",
+        false
+      ]
+    },
+    {
+      "trust": [
+        "bug:5",
+        "streak",
+        0
+      ]
+    },
+    {
+      "trust": [
+        "bug:5",
+        "escapes",
+        1
+      ]
+    },
+    {
+      "state": [
+        "demo",
+        "escapes.0.bug",
+        "regression"
+      ]
+    }
   ]
 }

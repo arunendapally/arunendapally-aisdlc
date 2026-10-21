@@ -6,6 +6,7 @@ import os from 'node:os'
 import path from 'node:path'
 import { execFileSync, spawnSync } from 'node:child_process'
 import { fileURLToPath } from 'node:url'
+import { STAGES } from '../scripts/lib.mjs'
 
 const plugin = path.join(path.dirname(fileURLToPath(import.meta.url)), '..')
 const hook = name => path.join(plugin, 'scripts', 'hooks', `${name}.mjs`)
@@ -81,7 +82,7 @@ test('the gate chain: only a human prompt approves, and code waits for Build', (
   assert.notEqual(sdlc('request', 'demo').status, 0, 'template comments do not count as content')
   assert.notEqual(sdlc('advance', 'demo').status, 0, 'cannot advance without approval')
 
-  fill('brief.md', ['## Problem', '## Evidence', '## Requirements', '## Never', '## Outcome metric', '## Open questions'])
+  fill('prd.md', STAGES[1].headings)
   assert.equal(sdlc('request', 'demo').status, 0)
   assert.equal(state().gates['1'].status, 'waiting')
 
@@ -95,7 +96,7 @@ test('the gate chain: only a human prompt approves, and code waits for Build', (
 
 test('rejection needs a reason and counts as rework', () => {
   sdlc('init', 'demo')
-  fill('brief.md', ['## Problem', '## Evidence', '## Requirements', '## Never', '## Outcome metric', '## Open questions'])
+  fill('prd.md', STAGES[1].headings)
   assert.match(say('sdlc reject demo 1'), /needs a reason/)
   assert.match(say('sdlc reject demo 1 evidence is thin'), /rejected/)
   assert.equal(state().gates['1'].rejections, 1)
@@ -137,7 +138,7 @@ test('gate owners: only a listed owner can approve', () => {
   fs.mkdirSync(path.join(repo, '.ai-sdlc'))
   fs.writeFileSync(path.join(repo, '.ai-sdlc', 'config.json'), JSON.stringify({ gateOwners: { 1: ['Alice'] } }))
   sdlc('init', 'demo')
-  fill('brief.md', ['## Problem', '## Evidence', '## Requirements', '## Never', '## Outcome metric', '## Open questions'])
+  fill('prd.md', STAGES[1].headings)
   assert.match(say('sdlc approve demo 1'), /not an owner/)
   assert.equal(state().gates['1'], undefined)
 })

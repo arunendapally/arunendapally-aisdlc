@@ -3,9 +3,11 @@
 import fs from 'node:fs'
 import path from 'node:path'
 import { listFeatures, loadConfig, readTrust, promotable } from './lib.mjs'
+import { parseLedger, humanCatches } from './review.mjs'
 
 export const STAGE_COMMAND = { 1: 'commands/plan.md', 2: 'commands/analyze.md', 3: 'commands/design.md', 4: 'commands/build.md', 5: 'commands/verify.md', 6: 'commands/release.md' }
 const CHECKLIST = 'skills/ai-sdlc/standards/code-review-checklist.md'
+export const MIN_RECALL_SAMPLE = 5
 const STOP = new Set(['about', 'after', 'again', 'also', 'because', 'before', 'being', 'does', 'from', 'have', 'into', 'just', 'missed', 'missing', 'more', 'needs', 'only', 'other', 'should', 'some', 'that', 'their', 'there', 'these', 'this', 'when', 'where', 'which', 'with', 'without', 'would', 'still', 'what', 'were', 'will', 'been', 'than', 'then', 'they', 'them', 'your'])
 
 const median = xs => {
@@ -45,6 +47,10 @@ export function collect(dir, sinceMs = 0) {
     sla: loadConfig(dir).reviewSlaHours,
     cap: loadConfig(dir).retryCap,
     features: listFeatures(dir).filter(s => after(s.updatedAt ?? s.createdAt)),
+    reviews: listFeatures(dir).filter(s => after(s.updatedAt ?? s.createdAt)).flatMap(s => {
+      const file = path.join(dir, loadConfig(dir).specsDir, s.feature, 'review.md')
+      return fs.existsSync(file) ? parseLedger(fs.readFileSync(file, 'utf8')).map(f => ({ ...f, feature: s.feature })) : []
+    }),
     audit: readAudit(dir).filter(e => after(e.at)),
     traps: readTraps(dir),
     promotable: promotable(dir),
@@ -178,6 +184,34 @@ export function analyze(evidence) {
     })
   }
 
+  // 5b. Review findings only a human caught: what the pre-review misses, by checklist item.
+  const reviews = evidence.flatMap(e => e.reviews ?? [])
+  const serious = reviews.filter(f => ['blocker', 'major'].includes(f.severity))
+  const missed = humanCatches(reviews)
+  if (missed.length) {
+    const byItem = {}
+    for (const f of missed) byItem[f.checklist || 'no checklist item'] = [...(byItem[f.checklist || 'no checklist item'] ?? []), f]
+    // Recall means little on a handful of findings (design review ADR-0001 Q7, Q9): below the minimum
+    // sample the retro says so instead of printing a number.
+    const recall = serious.length >= MIN_RECALL_SAMPLE
+      ? `pre-review recall ${Math.round(((serious.length - missed.length) / serious.length) * 100)}% of ${serious.length}`
+      : `too few serious findings (${serious.length}) to measure recall`
+    for (const [item, list] of Object.entries(byItem)) {
+      add({
+        kind: 'review-miss', severity: list.length >= 2 || list.some(f => f.severity === 'blocker') ? 'high' : 'medium',
+        title: `Humans caught ${list.length} serious finding${list.length > 1 ? 's' : ''} the pre-review missed (checklist ${item}); ${recall}`,
+        evidence: list.map(f => `${f.feature} ${f.id} (${f.severity}) ${f.location}: ${f.finding}`),
+        change: {
+          target: item === 'no checklist item' ? CHECKLIST : 'agents/pre-reviewer.md',
+          what: item === 'no checklist item'
+            ? 'Add a checklist item for this kind of defect, so every review looks for it.'
+            : `Teach the pre-reviewer to check item ${item} with the concrete pattern from these findings, or add a lens that does.`,
+        },
+        verify: 'Add a seeded-bug review eval (evals/agents/review-*.json) with this defect; the pre-reviewer must find it.',
+      })
+    }
+  }
+
   // 6. Traps whose guard is only words: a rule in prose is a request.
   const weak = evidence.flatMap(e => e.traps.filter(t => !/\b(tests?|hooks?|lint|ci|ruleset|workflow|assert(ion)?s?)\b/i.test(t.guard)))
   if (weak.length) {
@@ -214,6 +248,8 @@ export function analyze(evidence) {
       escapes: Object.values(escapes).flat().length,
       guardEvents: Object.values(friction).reduce((a, b) => a + b, 0),
       traps: evidence.reduce((n, e) => n + e.traps.length, 0),
+      reviewFindings: reviews.length,
+      humanCatches: missed.length,
     },
     proposals,
   }
