@@ -2,6 +2,13 @@
 
 *October 2026.*
 
+> **New in 0.2.0: the same cycle for teams.** This repo is now a Claude Code plugin, `ai-sdlc`. It brings a CTO agent and 20 expert agents, and lanes from hotfix to full feature with a named human at every gate. It also has checked PRDs, Gherkin criteria, design review boards, a test matrix, structured code review, and agents that earn autonomy over time.
+> - **Start here:** [docs/getting-started.md](docs/getting-started.md)
+> - **How it works:** [docs/org-ai-sdlc-process.md](docs/org-ai-sdlc-process.md)
+> - **What changed:** [CHANGELOG.md](CHANGELOG.md)
+>
+> The article below is the original one-developer story the plugin grew from.
+
 ![The AI software development cycle: 1 Planning, product-owner agent. 2 Analysis, supervisor and spec. 3 Design, canvas and comments. 4 Implementation, reviewer and worker. 5 Testing and integration, mutation-tested. 6 Maintenance, human decides.](images/ai-sdlc-cycle.svg)
 
 The software development cycle has six stages, and every one of them is still needed now that we build with agents: planning, analysis, design, implementation, testing and integration, maintenance. What has changed is who does the work at each stage, and where the human stands.
