@@ -8,13 +8,78 @@
   <style>body { margin: 0; background: #fff; }</style>
 </head>
 <body>
-  <!-- Opens openapi.yaml from this folder in Swagger UI. Browsers block files opened directly from disk,
-       so serve the folder: npx --yes http-server <this folder> -p 8080, then open
-       http://localhost:8080/swagger.html -->
+  <!-- Shows openapi.yaml in Swagger UI. "sdlc api <feature>" rewrites this page with the current
+       openapi.yaml embedded below, so it opens straight from disk. Served over HTTP, it reads the live
+       openapi.yaml beside it instead. -->
   <div id="swagger"></div>
+  <script id="openapi" type="text/plain">
+/*OPENAPI_YAML_START*/
+openapi: 3.1.0
+info:
+  title: Orders API
+  version: 1.4.0
+  description: The contract for this change. Every operation has an operationId and its responses. Open it in Swagger with swagger.html.
+paths:
+  /orders/{orderId}:
+    get:
+      operationId: getOrder
+      summary: Read one of the caller's orders
+      parameters:
+        - name: orderId
+          in: path
+          required: true
+          schema:
+            type: string
+      responses:
+        '200':
+          description: The order
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Order'
+        '404':
+          description: No such order for this caller
+    delete:
+      operationId: cancelOrder
+      summary: Cancel the caller's order before it ships
+      parameters:
+        - name: orderId
+          in: path
+          required: true
+          schema:
+            type: string
+      responses:
+        '204':
+          description: Cancelled
+        '403':
+          description: Not the caller's order
+        '409':
+          description: Already shipped
+components:
+  schemas:
+    Order:
+      type: object
+      required: [id, status, total]
+      properties:
+        id:
+          type: string
+        status:
+          type: string
+          enum: [open, shipped, cancelled]
+        total:
+          type: number
+/*OPENAPI_YAML_END*/
+  </script>
   <script src="https://unpkg.com/swagger-ui-dist@5.17.14/swagger-ui-bundle.js"></script>
+  <script src="https://unpkg.com/js-yaml@4.1.0/dist/js-yaml.min.js"></script>
   <script>
-    window.ui = SwaggerUIBundle({ url: './openapi.yaml', dom_id: '#swagger', deepLinking: true })
+    const embedded = document.getElementById('openapi').textContent
+      .split('/*OPENAPI_YAML_START*/')[1].split('/*OPENAPI_YAML_END*/')[0]
+    const options = { dom_id: '#swagger', deepLinking: true }
+    // Only a page served over HTTP can fetch the file beside it; opened from disk, a preview pane or an
+    // attachment (file:, data:, blob:), it uses the copy embedded above.
+    if (/^https?:$/.test(location.protocol)) window.ui = SwaggerUIBundle({ ...options, url: './openapi.yaml' })
+    else window.ui = SwaggerUIBundle({ ...options, spec: jsyaml.load(embedded) })
   </script>
 </body>
 </html>

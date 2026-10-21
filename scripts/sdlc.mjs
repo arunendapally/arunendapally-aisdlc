@@ -354,7 +354,11 @@ const commands = {
     const folder = path.join(dir, loadConfig(dir).specsDir, feature)
     const created = !fs.existsSync(path.join(folder, 'openapi.yaml'))
     copyTemplate(dir, feature, 'openapi.yaml')
-    copyTemplate(dir, feature, 'swagger.html')
+    // Rewrite the viewer each run with the current contract embedded, so it opens straight from disk.
+    const yaml = fs.readFileSync(path.join(folder, 'openapi.yaml'), 'utf8').replace(/<\/script/gi, '<\\/script')
+    const viewer = fs.readFileSync(path.join(TEMPLATES, 'swagger.html'), 'utf8')
+      .replace(/\/\*OPENAPI_YAML_START\*\/[\s\S]*?\/\*OPENAPI_YAML_END\*\//, () => `/*OPENAPI_YAML_START*/\n${yaml.trimEnd()}\n/*OPENAPI_YAML_END*/`)
+    fs.writeFileSync(path.join(folder, 'swagger.html'), viewer)
     if (!(state.kinds ?? []).includes('api')) {
       state.kinds = [...(state.kinds ?? []), 'api']
       writeState(dir, state)
@@ -364,7 +368,7 @@ const commands = {
     const where = path.relative(dir, folder).split(path.sep).join('/')
     if (created) console.log(`Started ${where}/openapi.yaml from the template: replace the example with this change's contract.`)
     for (const b of breaks) console.log(`BREAKING: ${b}`)
-    console.log(`View it in Swagger: npx --yes http-server ${where} -p 8080, then open http://localhost:8080/swagger.html`)
+    console.log(`View it in Swagger: open ${where}/swagger.html (the contract is embedded; run "sdlc api ${feature}" again after editing openapi.yaml), or serve the folder to read the live file: npx --yes http-server ${where} -p 8080`)
     if (problems.length) fail(problems.map(p => `openapi.yaml: ${p}`).join('\n'))
     console.log(`openapi.yaml is well formed${breaks.length ? `; ${breaks.length} breaking change${breaks.length > 1 ? 's' : ''} to declare in plan.md` : ''}.`)
   },
