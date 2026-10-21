@@ -1,0 +1,1 @@
+{ "name": "ai-sdlc-autopilot", "version": "0.1.0", "description": "AI SDLC autopilot: a gate board pane, stage rules and knowledge in every turn, a test-and-fix loop, a state tool for the model, and review-deadline nudges.", "author": { "name": "Arun Endapally" }, "types": "./types/index.d.ts" }

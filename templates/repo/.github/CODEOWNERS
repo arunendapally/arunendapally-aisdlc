@@ -1,0 +1,13 @@
+# Every path needs a human owner. Replace the teams with your own.
+*                       @your-org/product-team
+/specs/                 @your-org/product-team @your-org/architects
+/specs/**/state.json    @your-org/security
+/docs/adr/              @your-org/architects
+/docs/architecture/     @your-org/architects
+/.github/               @your-org/platform
+/.claude/               @your-org/platform
+/.ai-sdlc/              @your-org/platform @your-org/security
+/infra/                 @your-org/platform @your-org/security
+**/auth/                @your-org/security
+**/payments/            @your-org/security
+**/migrations/          @your-org/architects

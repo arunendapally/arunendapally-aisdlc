@@ -1,0 +1,8 @@
+{
+  "name": "ai-sdlc",
+  "private": true,
+  "type": "module",
+  "scripts": {
+    "test": "node --test tests/hooks.test.mjs tests/lanes.test.mjs"
+  }
+}

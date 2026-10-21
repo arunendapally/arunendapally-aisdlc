@@ -1,0 +1,22 @@
+# Review deadlines: every hour, escalate PRs waiting on review past their lane's deadline
+# (full 24h, light and bug 8h, hotfix 1h), once per PR. Set BACKUP_REVIEWERS to a team handle.
+name: review-sla
+on:
+  schedule:
+    - cron: "17 * * * *"
+  workflow_dispatch:
+permissions:
+  contents: read
+  pull-requests: write
+  issues: write
+jobs:
+  escalate:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - name: Escalate overdue reviews
+        env:
+          GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+          REPO: ${{ github.repository }}
+          BACKUP_REVIEWERS: ${{ vars.BACKUP_REVIEWERS }}
+        run: node .github/scripts/check-review-sla.mjs

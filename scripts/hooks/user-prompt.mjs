@@ -1,0 +1,118 @@
+// UserPromptSubmit: the only place a gate approval, a rejection or the kill switch is recorded.
+// It fires on what a human typed, so an agent cannot approve its own work.
+import fs from 'node:fs'
+import path from 'node:path'
+import { STAGES, root, git, loadConfig, readState, writeState, missingHeadings, isFrozen, createFeature, copyTemplate,
+  readTrust, writeTrust, promotable, readStdin, audit } from '../lib.mjs'
+
+const input = readStdin()
+const dir = root(input.cwd)
+const text = (input.prompt ?? '').trim()
+const say = msg => {
+  console.log(JSON.stringify({ hookSpecificOutput: { hookEventName: 'UserPromptSubmit', additionalContext: `[ai-sdlc] ${msg}` } }))
+  process.exit(0)
+}
+
+const m = text.match(/^sdlc\s+(approve|reject|lane|hotfix|trust|distrust|pause|resume|freeze|unfreeze)\b\s*(\S+)?\s*(\d)?\s*(.*)$/is)
+if (!m) process.exit(0)
+const [, verb, feature, stageText, note] = m
+const who = git('config user.name', dir) || process.env.USERNAME || process.env.USER || 'unknown human'
+
+// Earned autonomy: a human promotes a gate that has earned it, or demotes any gate.
+if (verb === 'trust' || verb === 'distrust') {
+  const cfg = loadConfig(dir)
+  const key = `${feature}:${stageText}`
+  if (cfg.trustOwners.length && !cfg.trustOwners.includes(who)) say(`${who} cannot change autonomy (${cfg.trustOwners.join(', ')} can). Nothing recorded.`)
+  const ledger = readTrust(dir)
+  if (verb === 'distrust') {
+    ledger[key] = { ...ledger[key], streak: 0, promoted: false, demotedAt: new Date().toISOString(), demotedBy: who }
+    writeTrust(dir, ledger)
+    audit(dir, { event: 'distrust', gate: key, by: who })
+    say(`${who} demoted gate ${key}: a human approves it again.`)
+  }
+  if (cfg.neverTrust.includes(key)) say(`Gate ${key} is never promoted (merging a full feature, and every release, stay with humans). Nothing recorded.`)
+  if (!promotable(dir).some(p => p.key === key)) say(`Gate ${key} has ${ledger[key]?.streak ?? 0} clean approvals; it needs ${cfg.trustThreshold}. Nothing recorded.`)
+  ledger[key] = { ...ledger[key], promoted: true, promotedAt: new Date().toISOString(), promotedBy: who }
+  writeTrust(dir, ledger)
+  audit(dir, { event: 'trust', gate: key, by: who })
+  say(`${who} promoted gate ${key}: it now runs on checks. Any rejection, "sdlc distrust ${feature} ${stageText}" or an error-budget freeze hands it back to a human.`)
+}
+
+// Only a human declares a hotfix: it skips planning and design because production is hurting.
+if (verb === 'hotfix') {
+  if (!feature || !/^[a-z0-9][a-z0-9-]*$/.test(feature)) say('Usage: sdlc hotfix <slug> <what is broken in production>. Nothing recorded.')
+  if (!note.trim()) say(`A hotfix needs the incident: sdlc hotfix ${feature} <what is broken>. Nothing recorded.`)
+  if (readState(dir, feature)) say(`"${feature}" already exists. Nothing recorded.`)
+  createFeature(dir, { feature, lane: 'hotfix', extra: { incident: note.trim(), declaredBy: who } })
+  const doc = copyTemplate(dir, feature, 'hotfix.md')
+  audit(dir, { event: 'hotfix', feature, by: who, incident: note.trim() })
+  say(`${who} declared hotfix ${feature}: "${note.trim()}". It starts at Build on branch hotfix/${feature}, cut from main. Fill ${doc}, fix, run the gate, then request. Review deadline ${loadConfig(dir).reviewSlaHours.hotfix}h.`)
+}
+
+// Repo-wide flags only a human sets: the kill switch, and the error-budget freeze.
+const flags = {
+  pause: ['PAUSED', true, 'paused all agents. Every write and command is refused until a human types "sdlc resume".'],
+  resume: ['PAUSED', false, 'resumed agents.'],
+  freeze: ['BUDGET_FROZEN', true, 'froze the light lane: the error budget is spent, so only reliability work advances.'],
+  unfreeze: ['BUDGET_FROZEN', false, 'lifted the error-budget freeze.'],
+}
+if (flags[verb]) {
+  const [name, on, msg] = flags[verb]
+  const flagFile = path.join(dir, '.ai-sdlc', name)
+  fs.mkdirSync(path.dirname(flagFile), { recursive: true })
+  if (on) fs.writeFileSync(flagFile, `${who} ${new Date().toISOString()} ${feature ?? ''} ${note}\n`)
+  else fs.rmSync(flagFile, { force: true })
+  audit(dir, { event: verb, by: who })
+  say(`${who} ${msg}`)
+}
+
+const state = feature && readState(dir, feature)
+if (!state) say(`No feature "${feature}" to ${verb}. Nothing recorded.`)
+
+// The lane decides whether the Design gate runs, so a human sets it, before Build.
+if (verb === 'lane') {
+  const lane = note.trim().toLowerCase()
+  if (!['full', 'light'].includes(lane)) say('Usage: sdlc lane <feature> full|light. Nothing recorded.')
+  if (state.stage > 2) say(`${feature} is past Analyze; its lane is fixed. Nothing recorded.`)
+  if (lane === 'light' && isFrozen(dir)) say('The error budget is frozen, so only the full lane is open. Nothing recorded.')
+  state.lane = lane
+  state.laneSetBy = who
+  writeState(dir, state)
+  audit(dir, { event: 'lane', feature, lane, by: who })
+  say(`${who} set ${feature} to the ${lane} lane.`)
+}
+
+const stage = Number(stageText)
+if (state.closedAt) say(`${feature} is complete. Nothing recorded.`)
+if (stage !== state.stage) say(`${feature} is at stage ${state.stage}, not ${stageText}. Nothing recorded.`)
+const owners = loadConfig(dir).gateOwners[stage] ?? []
+if (owners.length && !owners.includes(who)) say(`${who} is not an owner of gate ${stage} (${owners.join(', ')}). Nothing recorded.`)
+
+const now = new Date().toISOString()
+const gate = state.gates[stage] ?? {}
+if (verb === 'approve') {
+  // Approving needs a request first, because the request runs the checks (gate, PR size, pre-review).
+  if (gate.status !== 'waiting') say(`Gate ${stage} has not been requested, so its checks have not run. Ask the agent to run "sdlc request ${feature}" first. Nothing recorded.`)
+  const missing = missingHeadings(dir, state, stage)
+  if (missing.length) say(`Gate ${stage} not approved, the artefact is incomplete: ${missing.join('; ')}.`)
+  state.gates[stage] = { ...gate, status: 'approved', by: who, approvedAt: now, requestedAt: gate.requestedAt ?? now, note: note || undefined }
+  writeState(dir, state)
+  // A first-time approval with no rework adds to the gate's clean streak.
+  const ledger = readTrust(dir)
+  const key = `${state.lane}:${stage}`
+  const clean = !gate.rejections
+  ledger[key] = { ...ledger[key], streak: clean ? (ledger[key]?.streak ?? 0) + 1 : 0, promoted: ledger[key]?.promoted ?? false }
+  writeTrust(dir, ledger)
+  audit(dir, { event: 'approve', feature, stage, by: who, note })
+  say(`${who} approved gate ${stage} (${STAGES[stage].name}) for ${feature}. Run "node <plugin>/scripts/sdlc.mjs advance ${feature}" and continue.`)
+}
+if (!note) say(`A rejection needs a reason: sdlc reject ${feature} ${stage} <reason>. Nothing recorded.`)
+state.gates[stage] = { ...gate, status: 'rejected', by: who, rejectedAt: now, reason: note, rejections: (gate.rejections ?? 0) + 1 }
+writeState(dir, state)
+// A rejection resets the gate's streak and takes back any promotion.
+const ledger = readTrust(dir)
+const key = `${state.lane}:${stage}`
+ledger[key] = { ...ledger[key], streak: 0, promoted: false, ...(ledger[key]?.promoted ? { demotedAt: now, demotedBy: `rejection by ${who}` } : {}) }
+writeTrust(dir, ledger)
+audit(dir, { event: 'reject', feature, stage, by: who, reason: note })
+say(`${who} rejected gate ${stage} for ${feature}: "${note}". Rework the artefact, then request the gate again.`)
