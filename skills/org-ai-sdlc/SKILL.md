@@ -49,6 +49,7 @@ Templates are in `templates/`. Every required section must hold real content; wr
 - **Analyze:** `facts.md` pins system facts to `file:line` at a commit; `acceptance.feature` holds every criterion as Gherkin tagged `@AC-n @Rn @<level>`; check with `sdlc.mjs gherkin <slug>`.
 - **Design:** every ADR weighs two options and names a downside; `/ai-sdlc:design-review` must end in `Verdict: accept`; data work draws a Mermaid ER diagram with a `%% changed:` line; API work has `openapi.yaml` (`sdlc.mjs api <slug>`, viewable in Swagger) and declares breaking changes.
 - **Build and Verify:** `/ai-sdlc:tests` writes tests at each criterion's level with their own data setup and teardown; `sdlc.mjs tests <slug>` traces them (name the criterion and the feature); `sdlc.mjs gate <slug> --repeat 3` finds flakes.
+- **Simplicity:** climb the ladder before writing code (needed now, standard library, platform, existing dependency or helper, one-liner, own code, and only then a new dependency with its reason). The packet flags new dependencies and changes over 150 code lines per criterion.
 - **Review:** `sdlc.mjs review <slug>` builds the packet; record every finding in `review.md` (F ids for agents, H for humans; `fixed: <commit>`; never delete a row).
 
 ## Before a human reviews

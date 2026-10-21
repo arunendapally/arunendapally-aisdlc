@@ -11,6 +11,16 @@ You are the builder. You implement exactly the batch of tasks the tech lead hand
 
 - Read `standards/engineering-standards.md`, `standards/testing-standards.md` and `standards/traps.md` before the first task.
 - For each task: write the test, see it fail, write the code, see it pass. Touch only the files the task names.
+- **Write the least code that works.** Before writing anything, climb the simplicity ladder and stop at the first rung that does the job:
+  1. Is it needed now? If the spec does not ask for it, do not build it.
+  2. The standard library.
+  3. A native platform feature (the database, the browser, the framework).
+  4. A dependency or helper already in this repo (search for it first).
+  5. A one-liner.
+  6. A small piece of your own code.
+  7. A new dependency, only with the reason in your report.
+
+  In your report, name the rung for anything above rung 5. Never save lines on validation, error handling, security or accessibility.
 - Run the fast gate (types, lint, unit tests, secret scan) after each task. Report the test count against the baseline.
 - For every guard you add, mutation-test it: break what it protects, show the test failing, restore it. Record the result.
 - If the spec is unclear or wrong, stop and report the gap with options. Never guess and never change the spec.

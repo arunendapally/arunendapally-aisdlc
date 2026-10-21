@@ -23,6 +23,32 @@ export const SEVERITIES = ['blocker', 'major', 'minor', 'nit']
 export const SOURCES = /^(pre-review|human|lens:[a-z-]+)$/
 
 // Lines added per file on this branch, with their line numbers in the new file.
+// Dependency names declared in a manifest, so the packet can name exactly what a change adds.
+// null means the format is not understood here; the file still gets the generic dependency signal.
+export function dependencyNames(file, text) {
+  if (!text) return []
+  const name = path.basename(file).toLowerCase()
+  if (name === 'package.json') {
+    try {
+      const pkg = JSON.parse(text)
+      return ['dependencies', 'devDependencies', 'peerDependencies', 'optionalDependencies'].flatMap(k => Object.keys(pkg[k] ?? {}))
+    } catch {
+      return null
+    }
+  }
+  if (/^requirements[^/]*\.txt$/.test(name)) {
+    return text.split(/\r?\n/).map(l => l.replace(/#.*/, '').trim()).filter(l => l && !l.startsWith('-'))
+      .map(l => l.split(/[<>=!~;\[\s]/)[0].toLowerCase())
+  }
+  if (name === 'go.mod') {
+    return [...text.matchAll(/^\s*(?:require\s+)?([\w.-]+\.[\w./-]+)\s+v[\d.]+/gm)].map(m => m[1]).filter(m => !/^module\b/.test(m))
+  }
+  return null
+}
+
+// Changes that do more than the requirement asks: more code lines per acceptance criterion than this.
+export const OVERSIZED_PER_CRITERION = 150
+
 function addedLines(dir, base) {
   const out = {}
   let file = null
@@ -78,17 +104,40 @@ export function packet(dir, state) {
   }).sort((a, b) => b.score - a.score)
 
   // Acceptance criteria with no test at their level, scoped to this feature (finding F1).
-  const untested = matrix(dir, state.feature).rows.filter(r => !r.traced)
+  const traceRows = matrix(dir, state.feature).rows
+  const untested = traceRows.filter(r => !r.traced)
 
   const all = rows.flatMap(r => r.signals)
-  const lenses = ['correctness against the spec (pre-reviewer)', 'test quality (qa-engineer)']
+  // Simplicity: what new dependencies this change adds, and whether it is large for what it delivers.
+  const newDeps = files.filter(f => DEPENDENCY.test(f.file)).flatMap(f => {
+    const now = fs.existsSync(path.join(dir, f.file)) ? fs.readFileSync(path.join(dir, f.file), 'utf8') : ''
+    const before = base ? git(`show ${base}:${f.file}`, dir) : ''
+    const after = dependencyNames(f.file, now)
+    if (after === null) return []
+    const had = new Set(dependencyNames(f.file, before) ?? [])
+    return after.filter(d => !had.has(d)).map(d => ({ manifest: f.file, name: d }))
+  })
+  for (const r of rows) {
+    const mine = newDeps.filter(d => d.manifest === r.file).map(d => d.name)
+    if (mine.length) {
+      r.signals.push(`new dependenc${mine.length > 1 ? 'ies' : 'y'}: ${mine.join(', ')}`)
+      r.score += 3
+    }
+  }
+  rows.sort((a, b) => b.score - a.score)
+  const codeLines = files.filter(f => !TEST_FILE.test(f.file) && !/\.(md|json|ya?ml|txt|feature|lock)$/i.test(f.file)).reduce((n, f) => n + f.lines, 0)
+  const criteria = traceRows.length
+  const oversized = criteria && codeLines / criteria > OVERSIZED_PER_CRITERION
+    ? { codeLines, criteria, perCriterion: Math.round(codeLines / criteria) } : null
+
+  const lenses = ['correctness against the spec (pre-reviewer)', 'simplicity: the ladder, checklist G (pre-reviewer)', 'test quality (qa-engineer)']
   if (all.some(s => /high-risk|dependency|CI or infra/.test(s))) lenses.push('security (safe-ai-sdlc-expert)')
   if (all.includes('schema or data change')) lenses.push('data (dba)')
   if (all.includes('API contract change')) lenses.push('API contract, compatibility and consumers (architect)')
   if ((state.kinds ?? []).includes('perf')) lenses.push('performance (performance-engineer)')
   if (all.includes('CI or infrastructure')) lenses.push('operability (ops-engineer)')
 
-  return { feature: state.feature, lane: state.lane, head: git('rev-parse --short HEAD', dir), files: rows, code: code.length, tests: tests.length, deletedTests, untested, lenses }
+  return { feature: state.feature, lane: state.lane, head: git('rev-parse --short HEAD', dir), files: rows, code: code.length, tests: tests.length, deletedTests, untested, lenses, newDeps, oversized, codeLines, criteria }
 }
 
 export function packetText(p) {
@@ -102,6 +151,15 @@ export function packetText(p) {
     '',
     ...(p.files.filter(f => f.signals.length).slice(0, 5).map(f => `- \`${f.file}\` (${f.lines} lines): ${f.signals.join('; ')}`)),
     ...(p.files.some(f => f.signals.length) ? [] : ['- No risk signals. Review against the spec and the checklist.']),
+    '',
+    '## Simplicity',
+    '',
+    ...(p.newDeps.length
+      ? p.newDeps.map(d => `- New dependency \`${d.name}\` in \`${d.manifest}\`: check the ladder first (needed now? standard library, platform, a dependency or helper already here, a one-liner).`)
+      : ['- No new dependencies.']),
+    p.oversized
+      ? `- OVERSIZED: ${p.oversized.codeLines} code lines for ${p.oversized.criteria} acceptance criteria (${p.oversized.perCriterion} per criterion, more than ${OVERSIZED_PER_CRITERION}). Look for speculative options, abstractions and hand-rolled code.`
+      : `- ${p.codeLines} code lines${p.criteria ? ` for ${p.criteria} acceptance criteria` : ''}.`,
     '',
     '## Lenses to run',
     '',

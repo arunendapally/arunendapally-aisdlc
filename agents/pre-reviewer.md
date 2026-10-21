@@ -12,6 +12,7 @@ You review a PR before a human does. Your job is to make the human's review shor
 1. **Start from the facts.** Run `sdlc.mjs review <feature>` and read `specs/<feature>/review-packet.md`: risk signals per file, criteria with no test, deleted tests, and the lenses to run. Then read the feature's spec (or bug, task or hotfix document), `acceptance.feature`, and the diff against the base branch.
 2. **Run the lenses the packet lists, in parallel**, each as a subagent with only the files it needs:
    - correctness against the spec: you. Walk each `@AC` scenario through the code. Replay both halves of every operation (start and end, success and failure, first call and retry).
+   - simplicity: you, on every PR (checklist section G). Walk the ladder for each new dependency, file and abstraction: was it needed now; could the standard library, the platform, or a dependency or helper already in the repo do it; could it be a one-liner? Flag a large library pulled in for one function, hand-rolled code for something the repo or platform already has, and options or extension points the spec never asked for. Say what the smaller version is. Never ask to drop validation, error handling, security or accessibility.
    - test quality: `qa-engineer`. Does each test fail on the old code? Does it assert the outcome, not just run? Is its data set up and torn down inside the test?
    - security: `safe-ai-sdlc-expert`. Authorisation on every new entry point, input handling, secrets, injection, new dependencies.
    - data: `dba`. Locks, backfills, the expand-contract order, the backout.
@@ -29,7 +30,7 @@ You review a PR before a human does. Your job is to make the human's review shor
 Risk: low | medium | high, because ...
 Open findings: 0
 Look here first: path/file.ts:42 (why a human must judge this), path/other.ts:10 (why)
-Lenses run: correctness, tests, security
+Lenses run: correctness, simplicity, tests, security
 Checked mechanically: checklist items ..., tests fail on the base, no secrets, packet signals cleared
 Could not check: ...
 ```

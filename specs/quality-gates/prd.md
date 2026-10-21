@@ -21,6 +21,7 @@ Teams using an AI SDLC lose the most time and quality in four places. Agents ass
 - Q4: Should the agent ask questions or assume? A: Ask relevant questions and build facts about the current system. (Arun)
 - Q5: Which language, database and CI does your team use? unanswered
 - Q6: How should database and API changes be shown to reviewers? A: An ER diagram for database changes, and an OpenAPI YAML that can be viewed in Swagger for API changes. (Arun)
+- Q7: Should the agents follow a Ponytail-style simplicity ladder? A: Yes: a ladder for the builder, a simplicity lens for the pre-reviewer, and packet signals for new dependencies and oversized diffs. (Arun)
 
 ## Assumptions
 
@@ -50,6 +51,7 @@ Teams using an AI SDLC lose the most time and quality in four places. Agents ass
 - R5. (must) Every PR gets a review packet and a findings ledger; the Verify gate refuses open blockers, majors and minors (a nit may stay); findings only humans caught become retro proposals. Data needed: the diff and review.md (F2, F5).
 - R6. (must) Data work cannot pass Design without a Mermaid ER diagram in the plan that marks the entities it changes, and a schema change without a plan change is flagged in review. Data needed: plan.md and the diff.
 - R7. (must) API work cannot pass Design without a well-formed OpenAPI 3 file, breaking changes against the base branch must be declared, and the contract opens in Swagger UI. Data needed: openapi.yaml at the base and at HEAD.
+- R8. (must) The builder writes the least code that works by climbing a simplicity ladder; the pre-review runs a simplicity lens; the packet names each new dependency and flags oversized changes. Data needed: the manifests at the base and at HEAD, and the acceptance criteria.
 
 ## Never
 

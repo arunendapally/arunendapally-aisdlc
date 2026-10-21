@@ -1,0 +1,14 @@
+{
+  "name": "review-over-engineering",
+  "role": "pre-reviewer",
+  "seededBug": "a new lodash dependency for one uniq call that a Set does, and a hand-rolled deep copy that structuredClone does",
+  "prompt": "Use the pre-reviewer agent to review change.diff (a PR against main) for the requirement in spec.md, including its simplicity lens. Do not change any file and do not run sdlc commands. Print only the findings ledger rows (| ID | Severity | Location | Checklist | Finding | Status | Source |) and the Pre-review section.",
+  "files": {
+    "spec.md": "## Requirements\n\n- R1. The basket shows each product once, and saving a basket copy does not change the live basket. Runtime: Node 22.\n",
+    "package.json": "{\n  \"name\": \"shop\",\n  \"version\": \"1.0.0\",\n  \"dependencies\": {\n    \"express\": \"^4.21.0\",\n    \"lodash\": \"^4.17.21\"\n  }\n}\n",
+    "change.diff": "--- a/package.json\n+++ b/package.json\n@@ -3,5 +3,6 @@\n   \"version\": \"1.0.0\",\n   \"dependencies\": {\n-    \"express\": \"^4.21.0\"\n+    \"express\": \"^4.21.0\",\n+    \"lodash\": \"^4.17.21\"\n   }\n }\n--- a/src/basket.js\n+++ b/src/basket.js\n@@ -0,0 +1,22 @@\n+const _ = require('lodash')\n+\n+function uniqueProducts(items) {\n+  return _.uniq(items)\n+}\n+\n+function deepCopy(value) {\n+  if (value === null || typeof value !== 'object') return value\n+  if (Array.isArray(value)) return value.map(deepCopy)\n+  const out = {}\n+  for (const key of Object.keys(value)) out[key] = deepCopy(value[key])\n+  return out\n+}\n+\n+function saveCopy(basket) {\n+  return deepCopy(basket)\n+}\n+\n+module.exports = { uniqueProducts, saveCopy }\n",
+    "src/basket.js": "const _ = require('lodash')\n\nfunction uniqueProducts(items) {\n  return _.uniq(items)\n}\n\nfunction deepCopy(value) {\n  if (value === null || typeof value !== 'object') return value\n  if (Array.isArray(value)) return value.map(deepCopy)\n  const out = {}\n  for (const key of Object.keys(value)) out[key] = deepCopy(value[key])\n  return out\n}\n\nfunction saveCopy(basket) {\n  return deepCopy(basket)\n}\n\nmodule.exports = { uniqueProducts, saveCopy }\n"
+  },
+  "mustMatch": ["lodash", "\\bSet\\b", "structuredClone", "(package\\.json|basket\\.js):\\d", "\\|\\s*(major|minor)\\s*\\|", "Lenses run:[^\\n]*simplicity"],
+  "mustNotMatch": []
+}

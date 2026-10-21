@@ -412,6 +412,38 @@ test('AC-19 sdlc api starts the contract and puts a Swagger viewer beside it', (
   assert.match(packet, /API contract, compatibility and consumers \(architect\)/)
 })
 
+test('AC-20 the review packet names each new dependency, and not version bumps or the package version', () => {
+  const r = makeRepo()
+  r.put('package.json', JSON.stringify({ name: 'shop', version: '1.0.0', dependencies: { express: '^4.19.0' } }, null, 2))
+  r.put('requirements.txt', 'requests==2.31.0\n')
+  r.git('add', '.')
+  r.git('commit', '-m', 'deps')
+  r.git('branch', '-f', 'main')
+  r.sdlc('init', 'demo')
+  r.put('package.json', JSON.stringify({ name: 'shop', version: '1.1.0', dependencies: { express: '^4.21.0', lodash: '^4.17.21' }, devDependencies: { 'left-pad': '^1.3.0' } }, null, 2))
+  r.put('requirements.txt', 'requests==2.32.0\npendulum>=3.0  # dates\n')
+  const out = r.sdlc('review', 'demo').out
+  assert.match(out, /New dependency `lodash` in `package\.json`: check the ladder first/)
+  assert.match(out, /New dependency `left-pad` in `package\.json`/)
+  assert.match(out, /New dependency `pendulum` in `requirements\.txt`/)
+  assert.doesNotMatch(out, /New dependency `(express|requests|version|shop)`/, 'a version bump is not a new dependency')
+  assert.match(out, /\| `package\.json` \|[^\n]*new dependencies: lodash, left-pad/)
+  assert.match(out, /simplicity: the ladder, checklist G \(pre-reviewer\)/)
+})
+
+test('AC-21 a change far larger than its criteria is flagged as oversized', () => {
+  const r = makeRepo()
+  r.sdlc('init', 'demo')
+  r.put('specs/demo/acceptance.feature', FEATURE('    Given a\n    When b\n    Then c'))
+  r.put('src/small.ts', 'export const a = 1\n'.repeat(40))
+  let out = r.sdlc('review', 'demo').out
+  assert.doesNotMatch(out, /OVERSIZED/)
+  assert.match(out, /- 41 code lines for 1 acceptance criteria\./)
+  r.put('src/framework.ts', 'export const option = 1\n'.repeat(300))
+  out = r.sdlc('review', 'demo').out
+  assert.match(out, /OVERSIZED: 342 code lines for 1 acceptance criteria \(342 per criterion, more than 150\)/)
+})
+
 test('AC-15 repeated gate runs expose flaky tests', () => {
   const r = makeRepo()
   r.put('flaky.cjs', "const fs=require('fs');const n=fs.existsSync('n')?Number(fs.readFileSync('n','utf8')):0;fs.writeFileSync('n',String(n+1));console.log((n%2?11:12)+' passing');process.exit(n%2)\n")

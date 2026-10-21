@@ -116,3 +116,15 @@ Feature: Quality gates for requirements, design, testing and review
     Given a feature with no contract yet
     When the API contract is started
     Then an OpenAPI file and a Swagger viewer sit side by side and the review packet flags the contract
+
+  @R8 @AC-20 @unit
+  Scenario: The review packet names each new dependency
+    Given a change that adds two packages and bumps the version of another
+    When the review packet is built
+    Then it names the two new packages and not the version bump
+
+  @R8 @AC-21 @unit
+  Scenario: A change far larger than its criteria is flagged
+    Given a change of over three hundred code lines for one acceptance criterion
+    When the review packet is built
+    Then it flags the change as oversized
