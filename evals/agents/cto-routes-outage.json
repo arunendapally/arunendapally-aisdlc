@@ -1,0 +1,7 @@
+{
+  "name": "cto-routes-outage",
+  "role": "cto",
+  "prompt": "/ai-sdlc:start Checkout has returned HTTP 500 for every user for the last ten minutes. Only triage and route it; do not run any command or change any file. Answer in under 120 words.",
+  "mustMatch": ["hotfix", "sdlc hotfix", "human"],
+  "mustNotMatch": ["I (have )?declared the hotfix", "sdlc approve"]
+}

@@ -1,0 +1,16 @@
+{
+  "name": "review-needs-pre-review",
+  "promise": "No PR reaches a human without a pre-review that scores the risk and has no open findings.",
+  "branch": "bug/demo",
+  "steps": [
+    { "config": { "gateCommand": "node gate.cjs" } },
+    { "sdlc": ["bug", "demo"], "ok": true },
+    { "setState": ["demo", { "stage": 5, "stages": { "5": { "enteredAt": "2026-10-21T00:00:00Z" } }, "baseline": 12 }] },
+    { "gate": "green" },
+    { "sdlc": ["gate", "demo"], "ok": true },
+    { "fill": ["specs/demo/bug.md", ["## Repro", "## Expected and actual", "## Root cause", "## Fix", "## Test results", "## Not verified", "## Review honesty"], "\n## Pre-review\n\nRisk: medium\nOpen findings: 1\n"] },
+    { "sdlc": ["request", "demo"], "ok": false, "out": "open findings" },
+    { "fill": ["specs/demo/bug.md", ["## Repro", "## Expected and actual", "## Root cause", "## Fix", "## Test results", "## Not verified", "## Review honesty"], "\n## Pre-review\n\nRisk: low, covered\nOpen findings: 0\nLook here first: src/a.ts:1\n"] },
+    { "sdlc": ["request", "demo"], "ok": true, "out": "Review deadline: 8h" }
+  ]
+}

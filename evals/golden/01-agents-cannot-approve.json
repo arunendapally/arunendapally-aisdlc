@@ -1,0 +1,15 @@
+{
+  "name": "agents-cannot-approve",
+  "promise": "Only a human prompt records a gate decision, and only after the gate's checks ran.",
+  "steps": [
+    { "sdlc": ["init", "demo"], "ok": true },
+    { "fill": ["specs/demo/brief.md", ["## Problem", "## Evidence", "## Requirements", "## Never", "## Outcome metric", "## Open questions"]] },
+    { "bash": "claude -p \"sdlc approve demo 1\"", "expect": "deny", "why": "an agent typing for a human" },
+    { "bash": "echo sdlc trust bug 5", "expect": "deny" },
+    { "write": ["specs/demo/state.json", "{}"], "expect": "deny", "why": "hand-editing state" },
+    { "say": "sdlc approve demo 1", "out": "has not been requested", "why": "approval before the checks ran" },
+    { "sdlc": ["request", "demo"], "ok": true },
+    { "say": "sdlc approve demo 1", "out": "approved gate 1" },
+    { "state": ["demo", "gates.1.by", "Test Human"] }
+  ]
+}

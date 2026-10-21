@@ -136,6 +136,18 @@ What one session learns, the next one must not have to learn again.
 
 ---
 
+## 7a. The plugin improves itself, from evidence
+
+Sections 5 to 7 make each repo better. This loop makes the plugin better, for every team.
+
+- **Evidence is recorded as the work runs:** rejection reasons, goals that escalated past the retry cap, how long each gate waited, guards that fired (the audit log), traps and how they are guarded, and escaped bugs. A bug that escaped shipped work is recorded with `sdlc bug <slug> --caused-by <feature>`, which also takes back the streak and any promotion of every gate that feature passed.
+- **`sdlc retro`** mines one or more repos (`--repos a,b`) over a window (`--since 30`) and ranks proposals: a rejection theme seen twice at the same gate becomes a checklist or command change; an escalating goal, a command change; a gate waiting past its deadline, a pre-review and PR-size change; a guard firing again and again, an agent rule or a narrower guard; an escape, a new Verify check; a trap guarded only by prose, a hook or test. One event is never a pattern.
+- **`/ai-sdlc:retro`** takes at most three proposals, changes the named plugin files on a `retro/<date>` branch, adds an eval for each that fails before the change and passes after, and opens a PR with the before and after numbers. It never loosens a guard, gate, limit or approval rule. A human platform owner merges it.
+- **Golden-task evals** (`evals/golden/`, `npm run eval`) are the promises the process makes, one per file, replayed in throwaway repos: agents cannot approve, a bug needs a repro, bugs stay small, only humans declare hotfixes, no PR without a pre-review, data work is detected, no merge, push or deploy, guardrails hold, the kill switch works, escapes cost trust, knowledge goes stale, code waits for Build. CI fails on any task that passed in `evals/baseline.json` and fails now.
+- **Agent evals** (`evals/agents/`, `npm run eval:agents`) run real agents through `claude -p` on small fixed tasks and score the answers: the CTO routes an outage to a human-declared hotfix and a schema change to the data kind, the pre-reviewer scores risk and finds the untested branch, the product owner grades its evidence. They cost tokens, so they run by hand and in every retro.
+
+---
+
 ## 8. Gates: humans decide, and the platform proves it
 
 - `sdlc.mjs request <feature>` checks the artefact's sections (each must hold real content), the gate run, the PR size and the pre-review, then either passes an automatic or earned gate on checks or marks the gate waiting on its named owner.
@@ -200,7 +212,7 @@ claude plugin install ai-sdlc-autopilot@arunendapally-aisdlc
 
 Then, in a product repo: `/ai-sdlc:start <what you want>`. The first kickoff adds the repo kit (constitution, agent rules, config, autonomy levels, knowledge folder, GitHub workflows and templates, ruleset, CODEOWNERS, C4 workspace, standards) without overwriting anything. A human then sets `gateCommand`, `gateOwners` and `trustOwners` in `.ai-sdlc/config.json`, replaces the teams in CODEOWNERS, sets `BACKUP_REVIEWERS`, applies the ruleset, and gives agents a GitHub App or token with no admin or bypass rights.
 
-**Commands:** `start`, `kickoff`, `plan`, `analyze`, `design`, `build`, `verify`, `release`, `bug`, `hotfix`, `task`, `learn`, `pre-review`, `incident`, `status` (all `/ai-sdlc:...`), plus the mod's `/sdlc-board` and `/sdlc-autopilot`.
+**Commands:** `start`, `kickoff`, `plan`, `analyze`, `design`, `build`, `verify`, `release`, `bug`, `hotfix`, `task`, `learn`, `pre-review`, `incident`, `retro`, `status` (all `/ai-sdlc:...`), plus the mod's `/sdlc-board` and `/sdlc-autopilot`.
 
 **Typed by humans only:** `sdlc approve | reject <feature> <stage>`, `sdlc lane <feature> light|full`, `sdlc hotfix <slug> <what is broken>`, `sdlc trust | distrust <lane> <stage>`, `sdlc pause | resume`, `sdlc freeze | unfreeze`.
 
@@ -208,7 +220,9 @@ Then, in a product repo: `/ai-sdlc:start <what you want>`. The first kickoff add
 
 ## How it was tested
 
-- `npm test`: 32 tests in throwaway git repos, covering every guard, every lane end to end, the gate chain, review deadlines, PR size, pre-review, kinds, the trust ledger, the knowledge base, the CI scripts, and every bypass the two reviews found.
+- `npm test`: 38 tests in throwaway git repos, covering every guard, every lane end to end, the gate chain, review deadlines, PR size, pre-review, kinds, the trust ledger, the knowledge base, the CI scripts, the retro miner, escape charging, both eval runners, and every bypass the two reviews found.
+- `npm run eval:agents`: 3 of 4 pass. The CTO routed an outage to a human-declared hotfix and a schema change to the data kind with a DBA; the pre-reviewer scored risk and flagged the untested branch. The product owner's short brief left out the outcome metric its definition requires. The eval stays strict: that gap is the first input for a retro.
+- `npm run eval`: 12 golden tasks, all passing, saved as the baseline. The plugin's own CI (`.github/workflows/evals.yml`) runs the tests and the golden evals on every PR.
 - `claude plugin test mods/ai-sdlc-autopilot`: 7 tests of the mod against the engine's test kit: the fix loop (red, green, cap, no-change stop, pause), the system-prompt section, the board's buttons on two surfaces, and the model tool.
 - Guards were mutation-tested: broken on purpose, the matching test failed, then restored. One mutation survived at first (promotion before the threshold); a test was added and it now fails as it should.
 
@@ -218,5 +232,7 @@ Then, in a product repo: `/ai-sdlc:start <what you want>`. The first kickoff add
 - The mod's `prompt.compose` hook does not run where an organisation manages Claude Code unless the organisation lists the mod in managed settings; there, the stage rules arrive only through session start.
 - The GitHub workflows and ruleset are templates that have not run in a real repository. The Confluence publish step has a placeholder for your publisher.
 - The hooks match text, so a determined agent could still get round them locally. GitHub's ruleset, CODEOWNERS and required checks are the enforcement.
-- The golden-task eval runner for agents is policy, not built. Nothing yet detects a defect after merge and charges it to the gate that let it through; rejections and freezes are the only demotion signals today.
+- Escaped bugs are charged only when someone names the cause with `--caused-by`; nothing finds the causing feature automatically.
+- `/ai-sdlc:retro` has not yet been run end to end to open a real PR on the plugin repo; its miner and evals are tested, the command's flow is not.
+- The theme detector groups rejections by shared words, so it can miss a pattern described in different words.
 - No real feature, bug or hotfix has gone through the whole process yet.

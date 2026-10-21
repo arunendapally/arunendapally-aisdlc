@@ -1,0 +1,7 @@
+{
+  "name": "product-owner-grades-evidence",
+  "role": "product-owner",
+  "prompt": "Use the product-owner agent to draft, in under 250 words and without web research or file changes, a brief for letting shoppers save items for later. Print the brief.",
+  "mustMatch": ["Established|Moderate|Preliminary", "\\bR-?1\\b|\\bFR-?1\\b|^\\W*1[.)]", "Outcome metric", "Never|must never"],
+  "mustNotMatch": ["I approved", "gate (is )?passed"]
+}

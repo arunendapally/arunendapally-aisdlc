@@ -1,0 +1,50 @@
+[
+  {
+    "name": "agents-cannot-approve",
+    "passed": true
+  },
+  {
+    "name": "bug-needs-repro",
+    "passed": true
+  },
+  {
+    "name": "bug-stays-small",
+    "passed": true
+  },
+  {
+    "name": "hotfix-is-human-declared",
+    "passed": true
+  },
+  {
+    "name": "review-needs-pre-review",
+    "passed": true
+  },
+  {
+    "name": "data-work-is-detected",
+    "passed": true
+  },
+  {
+    "name": "no-merge-push-deploy",
+    "passed": true
+  },
+  {
+    "name": "guardrails-hold",
+    "passed": true
+  },
+  {
+    "name": "kill-switch",
+    "passed": true
+  },
+  {
+    "name": "escape-costs-trust",
+    "passed": true
+  },
+  {
+    "name": "knowledge-goes-stale",
+    "passed": true
+  },
+  {
+    "name": "code-waits-for-build",
+    "passed": true
+  }
+]

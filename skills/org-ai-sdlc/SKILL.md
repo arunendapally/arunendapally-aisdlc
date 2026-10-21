@@ -52,6 +52,10 @@ Run `/ai-sdlc:pre-review`. The `pre-reviewer` writes `## Pre-review` with `Risk:
 - Clean human approvals build each gate's streak in the trust ledger; at the threshold a human may type `sdlc trust <lane> <stage>` and that gate then passes on checks. Rejections, `sdlc distrust` and `sdlc freeze` take it back. Feature merges and every release never move.
 - The autopilot mod (`/sdlc-autopilot`) runs the gate after each editing turn in Build or Verify and starts the next fix turn until green or the cap. When it says the gate is red: fix the cause, never skip, weaken or delete a test.
 
+## Improving the plugin
+
+When a bug turns out to come from shipped work, create it with `sdlc.mjs bug <slug> --caused-by <feature>`: that is the evidence the retro learns most from. `/ai-sdlc:retro` turns the recorded evidence into at most three plugin changes, each proven by a golden or agent eval, as a PR a human merges. It never loosens a guard.
+
 ## Knowledge
 
 Before changing an area: `sdlc.mjs knowledge for <files>` and read what it lists. After learning something durable: write or update a page in `knowledge/` (frontmatter: name, description, type, sources, verified commit, confidence). `sdlc.mjs knowledge check` flags stale pages; re-verify the ones you touch.

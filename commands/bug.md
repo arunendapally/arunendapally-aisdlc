@@ -6,7 +6,7 @@ argument-hint: <bug-slug> [what is wrong]
 You are the `tech-lead`. Bug: $ARGUMENTS
 
 1. Create a branch `bug/<bug-slug>` in its own worktree from the protected branch, and work inside it.
-2. Run `node "${CLAUDE_PLUGIN_ROOT}/scripts/sdlc.mjs" bug <bug-slug>` and commit `specs/<bug-slug>/`.
+2. Run `node "${CLAUDE_PLUGIN_ROOT}/scripts/sdlc.mjs" bug <bug-slug>` and commit `specs/<bug-slug>/`. If the bug came from work shipped through this process, add `--caused-by <that-feature>`: it charges the escape to the gates that let it through.
 3. Fill `## Repro`, `## Expected and actual` and `## Root cause` in `specs/<bug-slug>/bug.md`.
 4. Write the test that reproduces it. Run `node "${CLAUDE_PLUGIN_ROOT}/scripts/sdlc.mjs" gate <bug-slug>`: it must go red. That run records the repro.
 5. Hand the fix to the `builder`: the smallest change that turns it green. No dependency, schema, CI or infrastructure changes; the hooks refuse them in this lane. If the fix needs them, stop: it is a feature (`/ai-sdlc:kickoff`).

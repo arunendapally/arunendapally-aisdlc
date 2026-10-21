@@ -1,0 +1,20 @@
+{
+  "name": "bug-stays-small",
+  "promise": "A bug fix touches no dependencies, schema, CI or infra, and stays under its line limit.",
+  "branch": "bug/demo",
+  "steps": [
+    { "config": { "gateCommand": "node gate.cjs" } },
+    { "sdlc": ["bug", "demo"], "ok": true },
+    { "write": ["package.json", "{}"], "expect": "deny" },
+    { "write": ["db/migrations/003.sql", "x"], "expect": "deny" },
+    { "write": [".github/workflows/ci.yml", "x"], "expect": "deny" },
+    { "write": ["src/fix.ts", "x"], "expect": "allow" },
+    { "fill": ["specs/demo/bug.md", ["## Repro", "## Expected and actual", "## Root cause", "## Fix"]] },
+    { "gate": "red" },
+    { "sdlc": ["gate", "demo"] },
+    { "gate": "green" },
+    { "sdlc": ["gate", "demo"], "ok": true },
+    { "put": ["src/big.ts", "x\nx\nx\nx\nx\nx\nx\nx\nx\nx\nx\nx\nx\nx\nx\nx\nx\nx\nx\nx\nx\nx\nx\nx\nx\nx\nx\nx\nx\nx\nx\nx\nx\nx\nx\nx\nx\nx\nx\nx\nx\nx\nx\nx\nx\nx\nx\nx\nx\nx\nx\nx\nx\nx\nx\nx\nx\nx\nx\nx\nx\nx\nx\nx\nx\nx\nx\nx\nx\nx\nx\nx\nx\nx\nx\nx\nx\nx\nx\nx\nx\nx\nx\nx\nx\nx\nx\nx\nx\nx\nx\nx\nx\nx\nx\nx\nx\nx\nx\nx\nx\nx\nx\nx\nx\nx\nx\nx\nx\nx\nx\nx\nx\nx\nx\nx\nx\nx\nx\nx\nx\nx\nx\nx\nx\nx\nx\nx\nx\nx\nx\nx\nx\nx\nx\nx\nx\nx\nx\nx\nx\nx\nx\nx\nx\nx\nx\nx\nx\nx\nx\nx\nx\nx\nx\nx\nx\nx\nx\nx\nx\nx\nx\nx\nx\nx\nx\nx\nx\nx\nx\nx\nx\nx\nx\nx\nx\nx\nx\nx\nx\nx\nx\nx\nx\nx\nx\nx\nx\nx\nx\nx\nx\nx\nx\nx\nx\nx\nx\nx\nx\nx\nx\nx\nx\nx\nx\nx\nx\nx\nx\nx\nx\nx\nx\nx\nx\nx\nx\nx\nx\nx\nx\nx\nx\nx\nx\nx\nx\nx\nx\nx\n"] },
+    { "sdlc": ["request", "demo"], "ok": false, "out": "over the bug lane limit" }
+  ]
+}

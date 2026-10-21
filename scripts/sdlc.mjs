@@ -7,8 +7,9 @@ import { fileURLToPath } from 'node:url'
 import { spawnSync } from 'node:child_process'
 import { STAGES, root, git, loadConfig, readState, writeState, listFeatures, missingHeadings, nextStage, isFrozen,
   stageSpec, section, matches, changedFiles, changedLines, createFeature, copyTemplate, TEMPLATES, overdueGates, overduePostmortems,
-  KINDS, trustedGates, promotable, readTrust } from './lib.mjs'
+  KINDS, trustedGates, promotable, readTrust, writeTrust } from './lib.mjs'
 import { check, relevant, writeIndex } from './knowledge.mjs'
+import { collect, analyze, report } from './retro.mjs'
 
 const dir = root()
 const [cmd, feature, ...rest] = process.argv.slice(2)
@@ -30,6 +31,22 @@ const kinds = () => {
   const unknown = list.filter(k => !KINDS[k])
   if (unknown.length) fail(`Unknown kind ${unknown.join(', ')}. Kinds: ${Object.keys(KINDS).join(', ')}`)
   return list
+}
+// A bug that escaped a shipped feature is evidence against every gate that feature passed: each
+// one loses its clean streak and any promotion. This only ever tightens, so agents may record it.
+const chargeEscape = (causedBy, bug) => {
+  const source = readState(dir, causedBy)
+  const now = new Date().toISOString()
+  source.escapes = [...(source.escapes ?? []), { bug, at: now }]
+  writeState(dir, source)
+  const ledger = readTrust(dir)
+  const passed = Object.entries(source.gates).filter(([, g]) => g.status === 'approved').map(([stage]) => `${source.lane}:${stage}`)
+  for (const key of passed) {
+    const was = ledger[key] ?? {}
+    ledger[key] = { ...was, streak: 0, promoted: false, escapes: (was.escapes ?? 0) + 1, ...(was.promoted ? { demotedAt: now, demotedBy: `escape: bug ${bug}` } : {}) }
+  }
+  writeTrust(dir, ledger)
+  return `Charged to ${causedBy}: gates ${passed.join(', ') || 'none'} lose their streak${passed.some(k => readTrust(dir)[k]?.demotedBy === `escape: bug ${bug}`) ? ' and promotion' : ''}.`
 }
 const kindNote = () => (kinds().length ? `, ${kinds().join(', ')}` : '')
 const hours = (a, b = new Date().toISOString()) => Math.round((Date.parse(b) - Date.parse(a)) / 36e5 * 10) / 10
@@ -71,9 +88,12 @@ const commands = {
     if (!feature || !/^[a-z0-9][a-z0-9-]*$/.test(feature)) fail('Usage: sdlc bug <bug-slug>')
     if (readState(dir, feature)) fail(`"${feature}" already exists.`)
     if (kinds().includes('data')) fail('A bug that needs a data change is a feature. Use: sdlc init <slug> --kind data')
-    createFeature(dir, { feature, lane: 'bug', branch: flag('branch'), extra: { kinds: kinds() } })
+    const causedBy = flag('caused-by')
+    if (causedBy && !readState(dir, causedBy)) fail(`No feature "${causedBy}" to charge this bug to.`)
+    createFeature(dir, { feature, lane: 'bug', branch: flag('branch'), extra: { kinds: kinds(), ...(causedBy ? { causedBy } : {}) } })
     const doc = copyTemplate(dir, feature, 'bug.md')
     console.log(`Created bug ${feature} at stage 4 (Build). Write the repro test first and run "sdlc gate ${feature}": it must fail before the fix. Document: ${doc}`)
+    if (causedBy) console.log(chargeEscape(causedBy, feature))
   },
 
   // Check the artefact and the lane's rules. Checks pass an automatic gate; any other waits for its human owner.
@@ -239,6 +259,29 @@ const commands = {
     if (invalid.length) fail(invalid.map(i => `INVALID ${i}`).join('\n'))
   },
 
+  // Mine this repo (and any others named with --repos a,b) into proposed plugin changes.
+  // "sdlc retro [--since <days>] [--repos <paths>] [--json] [--write]"
+  retro() {
+    const args = [feature, ...rest].filter(Boolean)
+    const opt = name => {
+      const i = args.indexOf(`--${name}`)
+      return i === -1 ? undefined : args[i + 1]
+    }
+    const days = Number(opt('since') ?? 30)
+    const sinceMs = Date.now() - days * 864e5
+    const repos = [dir, ...(opt('repos') ?? '').split(',').filter(Boolean).map(p => root(path.resolve(p)))]
+    const result = analyze(repos.map(r => collect(r, sinceMs)))
+    if (args.includes('--json')) return console.log(JSON.stringify(result, null, 2))
+    const text = report(result)
+    if (args.includes('--write')) {
+      const file = path.join(dir, 'docs', 'retro', `${new Date().toISOString().slice(0, 10)}.md`)
+      fs.mkdirSync(path.dirname(file), { recursive: true })
+      fs.writeFileSync(file, text)
+      console.log(`Wrote ${path.relative(dir, file).split(path.sep).join('/')}`)
+    }
+    console.log(text)
+  },
+
   // The four flow numbers: lead time, cycle time per stage, gate wait, rework.
   metrics() {
     for (const s of feature ? [need()] : listFeatures(dir)) {
@@ -285,6 +328,6 @@ const commands = {
 }
 
 if (!commands[cmd]) {
-  fail('Usage: sdlc <init|bug|task|kind|request|advance|gate|retry|status|trust|metrics|incident|knowledge|init-repo> [feature] [...]')
+  fail('Usage: sdlc <init|bug|task|kind|request|advance|gate|retry|status|trust|metrics|retro|incident|knowledge|init-repo> [feature] [...]')
 }
 commands[cmd]()

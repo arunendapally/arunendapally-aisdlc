@@ -196,12 +196,13 @@ The cycle is the same one we've always had. My job now is to design the system t
 | [`docs/first-principles.md`](docs/first-principles.md) | A companion post: the first principles behind the cycle |
 | [`docs/org-ai-sdlc-process.md`](docs/org-ai-sdlc-process.md) | The same cycle for an organisation: every kind of work routed to the lightest safe lane, human gates, earned autonomy, a test-and-fix loop, and a knowledge base agents learn from |
 | [`agents/`](agents/) | The CTO and 18 expert subagents: product owner, UI/UX, architect, C4, project manager, tech lead, builder, pre-reviewer, QA, performance, DBA, SRE, ops, safe AI SDLC, AI agents, agentic AI, GitHub, Confluence |
-| [`commands/`](commands/) | `/ai-sdlc:start` to triage any work, the stages (`kickoff`, `plan`, `analyze`, `design`, `build`, `verify`, `release`), the small lanes (`bug`, `hotfix`, `task`), `learn`, `pre-review`, `incident`, `status` |
+| [`commands/`](commands/) | `/ai-sdlc:start` to triage any work, the stages (`kickoff`, `plan`, `analyze`, `design`, `build`, `verify`, `release`), the small lanes (`bug`, `hotfix`, `task`), `learn`, `pre-review`, `incident`, `retro`, `status` |
 | [`hooks/`](hooks/) and [`scripts/`](scripts/) | Guardrail hooks and the `sdlc.mjs` CLI: human-only approvals, lanes, PR size, review deadlines, the trust ledger, the knowledge base, the kill switch |
 | [`skills/org-ai-sdlc/`](skills/org-ai-sdlc/) | The working summary agents follow, plus a template for every artefact |
 | [`templates/repo/`](templates/repo/) | The kit a product repo gets on first kickoff: constitution, agent rules, config, autonomy levels, knowledge folder, GitHub workflows (gate, PR size, review deadlines, docs), ruleset, CODEOWNERS, C4 workspace |
 | [`mods/ai-sdlc-autopilot/`](mods/ai-sdlc-autopilot/) | A mod for what hooks and MCP cannot do: a gate board pane, stage rules and knowledge in every turn, a test-and-fix loop, a state tool for the model, review-deadline nudges |
-| [`tests/`](tests/) | Tests for every hook, guard, lane and CI script (`npm test`); the mod's own tests run with `claude plugin test mods/ai-sdlc-autopilot` |
+| [`evals/`](evals/) | How the plugin improves itself safely: golden tasks for every promise the process makes (`npm run eval`, checked against a baseline in CI) and agent evals that score real agents' answers (`npm run eval:agents`); `/ai-sdlc:retro` uses both to prove its proposed changes |
+| [`tests/`](tests/) | Tests for every hook, guard, lane, CI script, the retro miner and the eval runners (`npm test`); the mod's own tests run with `claude plugin test mods/ai-sdlc-autopilot` |
 
 ## Use the plugin (teams)
 

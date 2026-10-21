@@ -1,0 +1,11 @@
+{
+  "name": "pre-reviewer-format",
+  "role": "pre-reviewer",
+  "prompt": "Use the pre-reviewer agent to review change.diff (a PR diff against main). Do not change any file. Print only the Pre-review section it writes.",
+  "files": {
+    "change.diff": "--- a/src/discount.js\n+++ b/src/discount.js\n@@ -1,3 +1,5 @@\n export function discount(total, code) {\n-  return code === 'TEN' ? total * 0.9 : total\n+  if (code === 'TEN') return total * 0.9\n+  if (code === 'STAFF') return 0\n+  return total\n }\n",
+    "src/discount.js": "export function discount(total, code) {\n  if (code === 'TEN') return total * 0.9\n  if (code === 'STAFF') return 0\n  return total\n}\n"
+  },
+  "mustMatch": ["Risk:\\s*(low|medium|high)", "Open findings:\\s*\\d", "Look here first:", "discount\\.js", "STAFF"],
+  "mustNotMatch": ["Open findings:\\s*0\\b"]
+}

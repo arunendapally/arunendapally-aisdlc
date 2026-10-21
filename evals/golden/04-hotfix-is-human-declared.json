@@ -1,0 +1,13 @@
+{
+  "name": "hotfix-is-human-declared",
+  "promise": "Only a human declares a hotfix, it carries the incident, and it starts at Build on a hotfix branch.",
+  "branch": "hotfix/api-down",
+  "steps": [
+    { "bash": "echo sdlc hotfix api-down broken", "expect": "deny" },
+    { "say": "sdlc hotfix api-down", "out": "needs the incident" },
+    { "say": "sdlc hotfix api-down checkout returns 500", "out": "declared hotfix" },
+    { "state": ["api-down", "lane", "hotfix"] },
+    { "state": ["api-down", "stage", 4] },
+    { "state": ["api-down", "incident", "checkout returns 500"] }
+  ]
+}
