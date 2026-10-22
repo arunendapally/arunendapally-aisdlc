@@ -97,7 +97,7 @@ export const DEFAULT_CONFIG = {
   deployPatterns: ['vercel\\b.*(--prod|--target[= ]production|\\bpromote\\b|\\balias\\b)', 'terraform\\s+apply', 'netlify\\s+deploy\\b.*--prod', 'fly(ctl)?\\s+deploy\\b',
     'firebase\\s+deploy\\b', 'wrangler\\s+(deploy|publish)\\b', '(npm|pnpm|yarn)\\s+(run\\s+)?deploy\\b', 'kubectl\\s+(apply|delete|rollout)', 'helm\\s+(install|upgrade)', 'npm\\s+publish',
     'gh\\s+pr\\s+merge', 'gh\\s+release\\s+create', 'gh\\s+(ruleset|secret|repo\\s+edit)\\b', 'gh\\s+api\\b.*(-X|--method)\\s*(?!GET\\b)[A-Z]+', 'git\\s+config\\b.*\\balias\\.',
-    '\\bsdlc\\s+(approve|reject|lane|hotfix|trust|distrust|resume|unfreeze)\\b'],
+    '\\bsdlc\\s+(approve|reject|lane|hotfix|trust|distrust|resume|unfreeze|close)\\b'],
   // Production is touched only by read-only probes: a command matching these must also be a probe.
   prodPatterns: ['\\b(aws|gcloud|az)\\b.*\\bprod(uction)?\\b', 'kubectl\\b.*--context[= ]\\S*prod'],
   // House-style text bans apply to these files. A repo can widen it, for example to "**".
@@ -115,6 +115,8 @@ export const DEFAULT_CONFIG = {
   // human types. A repo can lower denialCap, never raise it.
   retryCap: 3,
   denialCap: 2,
+  // Review has to converge (ADR-0005): after this many refused Verify requests, step back and rethink.
+  reviewRoundCap: 3,
   // A Read (or a cat) of a file bigger than this, without a slice, is refused with the sliced call.
   maxReadLines: 1500,
   maxReadBytes: 100000,
@@ -128,13 +130,14 @@ export const DEFAULT_CONFIG = {
   // Hours a human gate may wait before it is overdue and escalated, by lane.
   reviewSlaHours: { full: 24, light: 8, bug: 8, task: 8, hotfix: 1 },
   // Earned autonomy is optional (ADR-0003): with trust on, after this many clean human approvals in a
-  // row a gate may be promoted to run on checks. These gates are never promoted: the merge of a
-  // feature and every release.
+  // row a gate may be promoted to run on checks. These gates are never promoted: every merge and every
+  // release. Bug and task merges joined them in ADR-0005, because nothing counts their reverts yet;
+  // risk tiers, not streaks, are how merges may later need fewer people.
   trust: false,
   trustThreshold: 10,
   // Who may promote or demote a gate, by git user.name. Empty means anyone at the keyboard.
   trustOwners: [],
-  neverTrust: ['full:5', 'light:5', 'full:6', 'light:6', 'hotfix:5', 'hotfix:6'],
+  neverTrust: ['full:5', 'light:5', 'full:6', 'light:6', 'hotfix:5', 'hotfix:6', 'bug:5', 'task:5'],
   // A bug fix that needs these is not a bug fix: open a feature instead.
   bugForbidPaths: ['**/package.json', '**/requirements*.txt', '**/pyproject.toml', '**/go.mod', '**/cargo.toml', '**/pom.xml', '**/build.gradle*', '**/migrations/**', '.github/**', 'infra/**', 'terraform/**'],
   // Days after a hotfix ships by which its postmortem must exist.

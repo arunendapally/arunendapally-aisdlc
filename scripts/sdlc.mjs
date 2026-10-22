@@ -16,7 +16,7 @@ import { boardProblems } from './design-review.mjs'
 import { matrix, matrixText } from './testmatrix.mjs'
 import { factsGateProblems, assumptionProblems } from './facts.mjs'
 import { erProblems, openapiProblems, breakingChanges } from './contracts.mjs'
-import { runProof, proofProblems, releaseProblems, advanceFeature, overdueOutcomes, readTriggers, addTrigger, clearTriggers, repeatedFindings } from './loop.mjs'
+import { runProof, proofProblems, releaseProblems, advanceFeature, overdueOutcomes, riskTier, gateFingerprint, unreviewedChanges, contentHashes, readTriggers, addTrigger, clearTriggers, repeatedFindings } from './loop.mjs'
 
 const dir = root()
 const [cmd, feature, ...rest] = process.argv.slice(2)
@@ -204,15 +204,23 @@ const commands = {
       if (lines > max) missing.push(`${lines} changed lines is over the ${state.lane} lane limit of ${max}. Split it into smaller PRs, one slice each`)
     }
     if (state.stage === 5) {
+      // Review has to converge (ADR-0005): past the round cap, step back instead of another round.
+      if ((state.reviewRounds ?? 0) >= cfg.reviewRoundCap) fail(`Gate 5 has been refused ${state.reviewRounds} times. Stop fixing finding by finding: step back, rethink the approach, and ask a human. They reset it by typing: sdlc reject ${feature} 5 rethink: <the new approach>`)
       const folder = path.join(dir, cfg.specsDir, feature)
       const file = path.join(folder, spec.artefact)
       const pre = (fs.existsSync(file) && section(fs.readFileSync(file, 'utf8'), '## Pre-review')) || ''
-      const highRisk = /Risk:\s*high\b/i.test(pre)
+      // The change sets the risk tier; the pre-review's label may raise it, never lower it.
+      const risk = riskTier(dir, changedFiles(dir, cfg).map(f => f.file), pre, cfg)
+      if (risk.label && risk.label !== risk.tier) missing.push(`the pre-review says "Risk: ${risk.label}", but the change is ${risk.tier}: ${risk.why.join('; ')}`)
+      state.riskTier = risk.tier
+      const highRisk = risk.tier === 'high'
       // A packet built before later commits is a stale map of the change: rebuild it rather than refuse.
       const packetFile = path.join(folder, 'review-packet.md')
       const built = fs.existsSync(packetFile) ? fs.readFileSync(packetFile, 'utf8').match(/built at ([0-9a-f]+)/)?.[1] : null
       if (built !== git('rev-parse --short HEAD', dir)) {
-        fs.writeFileSync(packetFile, packetText(packet(dir, state)))
+        const p = packet(dir, state)
+        fs.writeFileSync(packetFile, packetText(p))
+        state.lastPacketHead = p.head
         copyTemplate(dir, feature, 'review.md')
         console.log(`Rebuilt ${cfg.specsDir}/${feature}/review-packet.md at HEAD.`)
       }
@@ -227,6 +235,7 @@ const commands = {
       if (pre && !/Open findings:\s*0\b/i.test(pre)) missing.push('the pre-review still has open findings ("Open findings: 0" is required)')
       // A ledger with no rows reads the same as a skipped review, so the pre-review says what ran (F10).
       if (pre && !/Lenses run:\s*\S/i.test(pre)) missing.push('the pre-review does not say which lenses ran ("Lenses run: ...")')
+      if (pre && !/Revert:\s*\S/i.test(pre)) missing.push('the pre-review does not say how to undo this ("Revert: <command or flag>")')
       const proof = proofProblems(dir, state, fs.existsSync(file) ? fs.readFileSync(file, 'utf8') : '', cfg)
       if (proof.warning) warnings.push(proof.warning)
       missing.push(...proof.problems)
@@ -238,8 +247,16 @@ const commands = {
       const release = releaseProblems(dir, state, fs.existsSync(file) ? fs.readFileSync(file, 'utf8') : '', cfg)
       missing.push(...release.problems)
       warnings.push(...release.warnings)
+      const unreviewed = unreviewedChanges(dir, state, cfg)
+      if (unreviewed.length) missing.push(`${unreviewed.slice(0, 5).join(', ')} changed after Verify reviewed ${state.reviewedSha.slice(0, 7)}: that code never reached a reviewer. Request gate 5 again`)
     }
     for (const w of warnings) console.log(`WARNING: ${w}`)
+    if (state.stage === 5) {
+      // A round is a request the review itself refused (the ledger, the pre-review or its risk), not a red gate.
+      if (missing.some(m => m.startsWith('review.md:') || m.startsWith('the pre-review'))) state.reviewRounds = (state.reviewRounds ?? 0) + 1
+      writeState(dir, state)
+      console.log(`Risk tier: ${state.riskTier}. Review round ${state.reviewRounds ?? 0} of ${cfg.reviewRoundCap}.`)
+    }
     if (missing.length) fail(`Gate ${state.stage} cannot be requested:\n- ${missing.join('\n- ')}`)
     const gate = state.gates[state.stage]
     if (gate?.status === 'approved') fail(`Gate ${state.stage} is already approved. Run: sdlc advance ${feature}`)
@@ -249,13 +266,15 @@ const commands = {
       state.reviewedSha = git('rev-parse HEAD', dir)
       // After the merge the branch shows no diff against main, so Release reads what was reviewed.
       state.reviewedFiles = changedFiles(dir, cfg).map(f => f.file)
+      state.reviewedHashes = contentHashes(dir, state.reviewedFiles.filter(f => !f.startsWith(`${cfg.specsDir}/`) && !f.startsWith('.ai-sdlc/')))
     }
     if (spec.isAuto) {
       const earned = trustedGates(dir).includes(`${state.lane}:${state.stage}`) ? 'earned trust' : spec.owner
       state.gates[state.stage] = { status: 'approved', by: `checks: ${earned}`, requestedAt: now, approvedAt: now, auto: true }
       return console.log(`Gate ${state.stage} (${spec.name}) passed on checks (${earned}) in the ${state.lane} lane. ${advanceFeature(dir, state)}`)
     }
-    state.gates[state.stage] = { status: 'waiting', requestedAt: now }
+    // The approval covers what was checked: the gate lapses if that changes before a human approves.
+    state.gates[state.stage] = { status: 'waiting', requestedAt: now, fingerprint: gateFingerprint(dir, state, state.stage, cfg) }
     writeState(dir, state)
     const sla = cfg.reviewSlaHours[state.lane] ?? cfg.reviewSlaHours.full
     console.log(`Gate ${state.stage} (${spec.name}) is waiting on: ${spec.owner}. Review deadline: ${sla}h.\nArtefact: ${cfg.specsDir}/${feature}/${spec.artefact}\nThe owner approves by typing: sdlc approve ${feature} ${state.stage}`)
@@ -342,7 +361,8 @@ const commands = {
         const due = noPostmortem.includes(s.feature) ? `, POSTMORTEM OVERDUE (due ${s.postmortemDue.slice(0, 10)}${noProof})` : ''
         const open = s.outcome?.status === 'open' ? `, OUTCOME ${lateOutcomes.includes(s.feature) ? 'OVERDUE' : 'DUE'} ${s.outcome.due.slice(0, 10)} (${s.outcome.owner})` : ''
         const outcome = open || (s.outcome ? `, outcome ${s.outcome.status}` : '')
-        console.log(`${s.feature}: complete (${s.lane} lane)${due}${outcome}`)
+        const how = s.closedReason ? `closed at stage ${s.stage} by ${s.closedBy}: ${s.closedReason}` : 'complete'
+        console.log(`${s.feature}: ${how} (${s.lane} lane)${due}${outcome}`)
         continue
       }
       const gate = s.gates[s.stage]
@@ -472,8 +492,10 @@ const commands = {
   review() {
     const state = need()
     const folder = path.join(dir, loadConfig(dir).specsDir, feature)
-    const text = packetText(packet(dir, state))
+    const p = packet(dir, state)
+    const text = packetText(p)
     fs.writeFileSync(path.join(folder, 'review-packet.md'), text)
+    state.lastPacketHead = p.head
     copyTemplate(dir, feature, 'review.md')
     // Remember the ids already in the ledger, so a row deleted before the gate is caught (finding F3).
     const ids = parseLedger(fs.readFileSync(path.join(folder, 'review.md'), 'utf8')).map(f => f.id)
@@ -533,7 +555,10 @@ const commands = {
       const rework = Object.values(s.retries).reduce((a, b) => a + b, 0) + Object.values(s.gates).filter(g => g.rejections).reduce((a, g) => a + g.rejections, 0)
       // Closed but not done: the outcome follow-up's age is a flow number of its own.
       const outcome = s.outcome ? `\n  outcome ${s.outcome.status} after ${hours(s.outcome.openedAt, s.outcome.closedAt)}h` : ''
-      console.log(`${s.feature}\n  lead time ${hours(s.createdAt)}h\n  cycle ${cycle}\n  gate wait ${waits}\n  rework ${rework}${outcome}`)
+      // Review convergence (ADR-0005): rounds the review refused, and work retired without shipping.
+      const rounds = s.reviewRounds !== undefined ? `\n  review rounds ${s.reviewRounds}${s.riskTier ? ` (risk ${s.riskTier})` : ''}` : ''
+      const closed = s.closedReason ? `\n  closed without shipping: ${s.closedReason}` : ''
+      console.log(`${s.feature}\n  lead time ${hours(s.createdAt)}h\n  cycle ${cycle}\n  gate wait ${waits}\n  rework ${rework}${rounds}${outcome}${closed}`)
     }
   },
 

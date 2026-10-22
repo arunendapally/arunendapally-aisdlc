@@ -1,25 +1,31 @@
 {
   "feature": "quality-gates",
   "lane": "full",
-  "stage": 1,
+  "stage": 3,
   "branch": "dogfood/quality-gates",
   "createdAt": "2026-10-21T10:05:20.780Z",
   "stages": {
     "1": {
-      "enteredAt": "2026-10-21T10:05:20.780Z"
+      "enteredAt": "2026-10-21T10:05:20.780Z",
+      "leftAt": "2026-10-22T17:26:37.652Z"
+    },
+    "3": {
+      "enteredAt": "2026-10-22T17:26:37.652Z"
     }
   },
   "gates": {
     "1": {
-      "status": "waiting",
-      "requestedAt": "2026-10-21T16:36:45.725Z"
+      "status": "approved",
+      "requestedAt": "2026-10-21T16:36:45.725Z",
+      "by": "Arun Endapally",
+      "approvedAt": "2026-10-22T17:26:37.644Z"
     }
   },
   "retries": {},
   "kinds": [
     "brownfield"
   ],
-  "updatedAt": "2026-10-21T16:40:43.010Z",
+  "updatedAt": "2026-10-22T17:26:37.652Z",
   "ledgerIds": [
     "F1",
     "F2",

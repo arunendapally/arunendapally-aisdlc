@@ -137,7 +137,7 @@ test('lesson owed: an escaped bug cannot merge until a trap names it with a guar
   r.sdlc('bug', 'double-charge', '--caused-by', 'checkout')
   assert.equal(r.state('double-charge').lessonOwed, true)
   r.setState('double-charge', { stage: 5, stages: { 5: { enteredAt: hoursAgo(1) } }, baseline: 12 })
-  r.fill('specs/double-charge/bug.md', ['## Repro', '## Expected and actual', '## Root cause', '## Fix', '## Test results', '## Not verified'], '\n## Pre-review\n\nRisk: low\nOpen findings: 0\nLenses run: correctness\n')
+  r.fill('specs/double-charge/bug.md', ['## Repro', '## Expected and actual', '## Root cause', '## Fix', '## Test results', '## Not verified'], '\n## Pre-review\n\nRisk: medium\nOpen findings: 0\nLenses run: correctness\nRevert: git revert the merge commit\n')
   gate.green()
   r.sdlc('gate', 'double-charge')
   assert.match(r.sdlc('request', 'double-charge').out, /a lesson is owed: add a trap to standards\/traps\.md with "- \*\*Source:\*\* double-charge"/)

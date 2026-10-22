@@ -1,0 +1,6 @@
+# The plugin's runtime state when it runs on this repo: local to each machine, never committed.
+.ai-sdlc/audit.jsonl
+.ai-sdlc/denials.json
+.ai-sdlc/retro-due.json
+.ai-sdlc/PAUSED
+node_modules/

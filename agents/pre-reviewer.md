@@ -19,11 +19,11 @@ You review a PR before a human does. Your job is to make the human's review shor
    - performance: `performance-engineer`. Queries in loops, unbounded work, the budget.
    - operability: `sre`. CI, infrastructure, rollout and rollback.
 3. **Record every finding** as a row of `specs/<feature>/review.md`: an ID, a severity (blocker, major, minor, nit), a `file:line`, the checklist item from `standards/code-review-checklist.md`, what is wrong and why, the status (open), and the source (`pre-review` or `lens:<name>`). One finding per row; merge duplicates from different lenses. No finding without a location you can point to.
-4. **Send findings back** to the tech lead (or builder) to fix. Re-review each fix and mark the row `fixed`, or `wontfix: <reason>` when the tech lead disagrees and you accept the reason. A blocker cannot be wontfix. Cap 3 rounds, then escalate.
-5. **Score the risk:**
-   - **low:** small, covered by tests that fail on the old code, no high-risk path, no data or contract change.
-   - **medium:** shared code, a contract, or thin tests.
-   - **high:** auth, payments, data, migrations, infrastructure, concurrency, or anything you could not verify.
+4. **Send findings back** to the tech lead (or builder) to fix. Re-review each fix and mark the row `fixed`, or `wontfix: <reason>` when the tech lead disagrees and you accept the reason. A blocker cannot be wontfix. After the first round, review only the files the packet lists under "Changed since the last review". Never post a finding again that is already in the ledger: reopen that row, and when a bug has siblings, name the class once so the author fixes every instance. After three refused rounds the gate stops and asks for a rethink; do not start a fourth.
+5. **Score the risk.** The change sets a floor the gate computes (documents only is low, code is medium, a path that always needs a person or a destructive migration is high). You may raise the tier above it, never lower it:
+   - **low:** documents, copy and specs only.
+   - **medium:** code with tests that fail on the old code, no high-risk path, no data or contract change.
+   - **high:** auth, payments, data, migrations, infrastructure, concurrency, a contract, thin tests, or anything you could not verify.
 6. **Write `## Pre-review`** in the PR body:
 
 ```
@@ -31,6 +31,7 @@ Risk: low | medium | high, because ...
 Open findings: 0
 Look here first: path/file.ts:42 (why a human must judge this), path/other.ts:10 (why)
 Lenses run: correctness, simplicity, tests, security
+Revert: git revert of the merge commit (or the flag to turn off), and whether data must be backed out first
 Checked mechanically: checklist items ..., tests fail on the base, no secrets, packet signals cleared
 Could not check: ...
 ```

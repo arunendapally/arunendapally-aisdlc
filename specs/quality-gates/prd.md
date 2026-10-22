@@ -79,6 +79,14 @@ Node 22 and git on every machine and CI runner; Claude Code for the agents.
 
 All must requirements' scenarios pass; npm test and the golden evals green; the seeded-bug review evals pass.
 
+## Current system
+
+What exists before this change, from `facts.md` (read at 75b1643):
+- Only a human prompt approves a gate, after the agent requested it (F1), recorded under the git user name (F2).
+- Knowledge pages already go stale against a verified commit, so facts can reuse that (F3).
+- The Stop hook checks added lines only (F4); agent evals score answers with must and must-not rules (F5).
+- Not there yet: a structured record of review findings (the pre-review was free text), and any link from acceptance criteria to tests.
+
 ## Proposed lane
 
 full, because it changes every gate of the full lane.

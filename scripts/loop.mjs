@@ -11,7 +11,7 @@ import os from 'node:os'
 import path from 'node:path'
 import crypto from 'node:crypto'
 import { spawnSync } from 'node:child_process'
-import { STAGES, stageSpec, git, gitOk, loadConfig, section, changedFiles, listFeatures, nextStage, writeState } from './lib.mjs'
+import { STAGES, stageSpec, git, gitOk, loadConfig, section, changedFiles, listFeatures, nextStage, writeState, matches, destructiveMigrations } from './lib.mjs'
 import { matrix } from './testmatrix.mjs'
 import { check as knowledgeCheck, pages as knowledgePages } from './knowledge.mjs'
 import { parseFacts, factProblems } from './facts.mjs'
@@ -314,4 +314,53 @@ export function advanceFeature(dir, state) {
   state.stages[state.stage] = { enteredAt: now }
   writeState(dir, state)
   return `${state.feature} is now at stage ${state.stage} (${STAGES[state.stage].name}).`
+}
+
+// The risk tier of a change (ADR-0005), set by what it touches, never by who wrote it. The pre-review's
+// "Risk:" label can raise it, never lower it, so an agent cannot talk its own work down.
+const TIERS = ['low', 'medium', 'high']
+const DOCS_ONLY = ['**/*.md', 'docs/**', '**/*.txt', 'specs/**']
+const ALWAYS_A_PERSON = ['.github/**', '**/migrations/**']
+export function riskTier(dir, all, preText = '', cfg = loadConfig(dir)) {
+  const why = []
+  // The plugin's own state and settings are not part of the change: agents cannot write them at all.
+  const files = all.filter(f => !f.startsWith('.ai-sdlc/'))
+  const high = files.filter(f => matches(f, [...cfg.highRiskPaths, ...cfg.askPaths, ...ALWAYS_A_PERSON]))
+  if (high.length) why.push(`${high.slice(0, 3).join(', ')} ${high.length > 1 ? 'are' : 'is'} on a path that always needs a person`)
+  const destructive = destructiveMigrations(dir, cfg)
+  if (destructive.length) why.push(`${destructive.join(', ')} alters or drops data`)
+  const code = files.filter(f => !matches(f, DOCS_ONLY))
+  const rule = why.length ? 'high' : code.length ? 'medium' : 'low'
+  if (rule === 'medium') why.push(`it changes code (${code.slice(0, 3).join(', ')})`)
+  if (rule === 'low') why.push('it changes only documents and specs')
+  const label = preText.match(/Risk:\s*(low|medium|high)\b/i)?.[1]?.toLowerCase() ?? null
+  const tier = TIERS[Math.max(TIERS.indexOf(rule), label ? TIERS.indexOf(label) : 0)]
+  return { tier, rule, label, why }
+}
+
+// What a gate's approval covers (ADR-0005): the spec's text at Plan, the plan at Design, and otherwise
+// the content of every file the change touches. Committing, amending or rebasing the same content does
+// not lapse it; any new content does.
+export function gateFingerprint(dir, state, stage, cfg = loadConfig(dir)) {
+  const folder = path.join(dir, cfg.specsDir, state.feature)
+  const read = f => (fs.existsSync(path.join(folder, f)) ? fs.readFileSync(path.join(folder, f), 'utf8').replace(/\r\n/g, '\n') : '')
+  if (stage === 1) return sha256(read('prd.md') + read('acceptance.feature'))
+  if (stage === 3) return sha256(read('plan.md'))
+  const files = changedFiles(dir, cfg).map(f => f.file).filter(f => !f.startsWith(`${cfg.specsDir}/`) && !f.startsWith('.ai-sdlc/')).sort()
+  const hashes = contentHashes(dir, files)
+  return sha256(files.map(f => `${f}:${hashes[f] ?? 'deleted'}`).join('\n'))
+}
+
+// What Verify reviewed, file by file, so Release can tell reviewed code from code added later.
+export const contentHashes = (dir, files) => Object.fromEntries(files.filter(f => fs.existsSync(path.join(dir, f)) && fs.statSync(path.join(dir, f)).isFile())
+  .map(f => [f, sha256(fs.readFileSync(path.join(dir, f), 'utf8').replace(/\r\n/g, '\n'))]))
+
+// Code that changed after Verify reviewed it never reached a reviewer (ADR-0005). A file committed
+// later with the content the review saw is not new.
+export function unreviewedChanges(dir, state, cfg = loadConfig(dir)) {
+  if (!state.reviewedSha || git(`cat-file -t ${state.reviewedSha}`, dir) !== 'commit') return []
+  const reviewed = state.reviewedHashes ?? {}
+  return git(`diff --name-only ${state.reviewedSha} HEAD`, dir).split('\n')
+    .filter(f => f && !f.startsWith(`${cfg.specsDir}/`) && !f.startsWith('.ai-sdlc/'))
+    .filter(f => !(f in reviewed) || contentHashes(dir, [f])[f] !== reviewed[f])
 }

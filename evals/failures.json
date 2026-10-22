@@ -13,5 +13,10 @@
     "id": "F3",
     "name": "a branch deploy erased by the next merge",
     "source": "docs/feedback.md, 2026-10-22"
+  },
+  {
+    "id": "F4",
+    "name": "a review loop that never converges",
+    "source": "How the Claude Code team does code review (claude.dev, 2026-10-15): one PR went through more than fifty review and fix rounds overnight"
   }
 ]

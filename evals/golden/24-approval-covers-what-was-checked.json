@@ -1,0 +1,144 @@
+{
+  "name": "approval-covers-what-was-checked",
+  "promise": "An approval covers what the request checked: new code after the request lapses it, and the change, not its author, sets the risk tier.",
+  "branch": "bug/demo",
+  "steps": [
+    {
+      "config": {
+        "gateCommand": "node gate.cjs"
+      }
+    },
+    {
+      "sdlc": [
+        "bug",
+        "demo"
+      ],
+      "ok": true
+    },
+    {
+      "setState": [
+        "demo",
+        {
+          "stage": 5,
+          "stages": {
+            "5": {
+              "enteredAt": "2026-10-22T00:00:00Z"
+            }
+          },
+          "baseline": 12
+        }
+      ]
+    },
+    {
+      "put": [
+        "src/total.ts",
+        "export const total = 1\n"
+      ]
+    },
+    {
+      "gate": "green"
+    },
+    {
+      "sdlc": [
+        "gate",
+        "demo"
+      ],
+      "ok": true
+    },
+    {
+      "fill": [
+        "specs/demo/bug.md",
+        [
+          "## Repro",
+          "## Expected and actual",
+          "## Root cause",
+          "## Fix",
+          "## Test results",
+          "## Not verified"
+        ],
+        "\n## Pre-review\n\nRisk: low\nOpen findings: 0\nLenses run: correctness, tests\nRevert: git revert the merge commit\n"
+      ]
+    },
+    {
+      "sdlc": [
+        "request",
+        "demo"
+      ],
+      "ok": false,
+      "out": "says \"Risk: low\", but the change is medium",
+      "why": "an agent cannot label its own work low"
+    },
+    {
+      "fill": [
+        "specs/demo/bug.md",
+        [
+          "## Repro",
+          "## Expected and actual",
+          "## Root cause",
+          "## Fix",
+          "## Test results",
+          "## Not verified"
+        ],
+        "\n## Pre-review\n\nRisk: medium\nOpen findings: 0\nLenses run: correctness, tests\n"
+      ]
+    },
+    {
+      "sdlc": [
+        "request",
+        "demo"
+      ],
+      "ok": false,
+      "out": "how to undo this"
+    },
+    {
+      "fill": [
+        "specs/demo/bug.md",
+        [
+          "## Repro",
+          "## Expected and actual",
+          "## Root cause",
+          "## Fix",
+          "## Test results",
+          "## Not verified"
+        ],
+        "\n## Pre-review\n\nRisk: medium\nOpen findings: 0\nLenses run: correctness, tests\nRevert: git revert the merge commit\n"
+      ]
+    },
+    {
+      "sdlc": [
+        "request",
+        "demo"
+      ],
+      "ok": true,
+      "out": "waiting on"
+    },
+    {
+      "put": [
+        "src/total.ts",
+        "export const total = 2\n"
+      ]
+    },
+    {
+      "say": "sdlc approve demo 5",
+      "out": "has lapsed"
+    },
+    {
+      "state": [
+        "demo",
+        "gates.5.status",
+        "lapsed"
+      ]
+    },
+    {
+      "sdlc": [
+        "request",
+        "demo"
+      ],
+      "ok": true
+    },
+    {
+      "say": "sdlc approve demo 5",
+      "out": "approved gate 5"
+    }
+  ]
+}
