@@ -440,7 +440,7 @@ const commands = {
     const created = !fs.existsSync(path.join(folder, 'openapi.yaml'))
     copyTemplate(dir, feature, 'openapi.yaml')
     // Rewrite the viewer each run with the current contract embedded, so it opens straight from disk.
-    const yaml = fs.readFileSync(path.join(folder, 'openapi.yaml'), 'utf8').replace(/<\/script/gi, '<\\/script')
+    const yaml = fs.readFileSync(path.join(folder, 'openapi.yaml'), 'utf8').replace(/\r\n/g, '\n').replace(/<\/script/gi, '<\\/script')
     const viewer = fs.readFileSync(path.join(TEMPLATES, 'swagger.html'), 'utf8')
       .replace(/\/\*OPENAPI_YAML_START\*\/[\s\S]*?\/\*OPENAPI_YAML_END\*\//, () => `/*OPENAPI_YAML_START*/\n${yaml.trimEnd()}\n/*OPENAPI_YAML_END*/`)
     fs.writeFileSync(path.join(folder, 'swagger.html'), viewer)

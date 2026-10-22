@@ -12,7 +12,8 @@ import { parseFacts, assumptionProblems } from '../scripts/facts.mjs'
 import { analyze } from '../scripts/retro.mjs'
 import { STAGES } from '../scripts/lib.mjs'
 
-const template = name => fs.readFileSync(new URL(`../skills/org-ai-sdlc/templates/${name}`, import.meta.url), 'utf8')
+// Templates are read with LF line endings, whatever the checkout used.
+const template = name => fs.readFileSync(new URL(`../skills/org-ai-sdlc/templates/${name}`, import.meta.url), 'utf8').replace(/\r\n/g, '\n')
 const messages = r => r.errors.map(e => e.message).join('\n')
 // Style is advice since ADR-0003: it warns, and only the AC and R tags are errors.
 const warns = r => r.warnings.map(w => w.message).join('\n')
@@ -373,7 +374,7 @@ test('AC-17 data work shows an ER diagram that marks the entities it changes', (
 
 test('AC-18 API work has a valid OpenAPI contract, and breaking changes must be declared', () => {
   const r = makeRepo()
-  const ok = fs.readFileSync(new URL('../skills/org-ai-sdlc/templates/openapi.yaml', import.meta.url), 'utf8')
+  const ok = template('openapi.yaml')
   r.sdlc('init', 'orders', '--kind', 'api')
   r.put('specs/orders/openapi.yaml', ok)
   r.git('add', '.')

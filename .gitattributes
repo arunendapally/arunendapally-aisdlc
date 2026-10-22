@@ -1,0 +1,4 @@
+# Check out text files with LF on every platform, so templates, tests and CI see the same bytes.
+* text=auto eol=lf
+*.png binary
+*.svg text eol=lf
