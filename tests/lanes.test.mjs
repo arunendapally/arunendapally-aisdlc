@@ -3,13 +3,13 @@ import { test } from 'node:test'
 import assert from 'node:assert/strict'
 import fs from 'node:fs'
 import path from 'node:path'
-import { makeRepo, switchableGate, plugin } from './helpers.mjs'
+import { makeRepo, switchableGate, plugin, READY_PRD, READY_FEATURE } from './helpers.mjs'
 import { STAGES, stageSpec, trustedGates } from '../scripts/lib.mjs'
 
 const ci = name => import(path.join(plugin, 'templates', 'repo', '.github', 'scripts', name).replace(/^([A-Z]):/, 'file:///$1:').split(path.sep).join('/'))
 const BUG_BUILD = ['## Repro', '## Expected and actual', '## Root cause', '## Fix']
 const VERIFY = ['## Test results', '## Pre-review', '## Not verified', '## Review honesty']
-const CLEAN_PRE = '\n## Pre-review\n\nRisk: low, because tests cover it\nOpen findings: 0\nLook here first: src/app.ts:1\nLenses run: correctness, tests\n'
+const CLEAN_PRE = '\n## Pre-review\n\nRisk: medium, because it changes code the tests cover\nOpen findings: 0\nLook here first: src/app.ts:1\nLenses run: correctness, tests\nRevert: git revert the merge commit\n'
 const hoursAgo = h => new Date(Date.now() - h * 36e5).toISOString()
 
 test('bug lane: repro red, then green, passes Build on checks; the PR review is the only human gate', () => {
@@ -239,28 +239,25 @@ test('earned autonomy is off unless the repo turns it on', () => {
   assert.deepEqual(trustedGates(r.repo), ['bug:5'])
 })
 
-test('earned autonomy: clean approvals build a streak, a human promotes, rejection or freeze takes it back', () => {
-  const r = makeRepo('bug/b3')
-  const gate = switchableGate(r)
-  r.config({ gateCommand: 'node gate.cjs', trustThreshold: 2, trust: true })
-  gate.green()
+test('earned autonomy: clean approvals build a streak, a human promotes, rejection or freeze takes it back; merges never move', () => {
+  const r = makeRepo()
+  r.config({ trustThreshold: 2, trust: true })
   const ready = name => {
-    r.sdlc('bug', name)
-    r.setState(name, { stage: 5, stages: { 5: { enteredAt: hoursAgo(1) } }, baseline: 12, gateRuns: { 5: { ok: true, count: 12 } }, branch: 'bug/b3' })
-    r.fill(`specs/${name}/bug.md`, [...BUG_BUILD, '## Test results', '## Not verified', '## Review honesty'], CLEAN_PRE)
-    r.sdlc('review', name)
+    r.sdlc('init', name)
+    r.put(`specs/${name}/prd.md`, READY_PRD)
+    r.put(`specs/${name}/acceptance.feature`, READY_FEATURE)
   }
   for (const name of ['b1', 'b2']) {
     ready(name)
     r.sdlc('request', name)
-    r.say(`sdlc approve ${name} 5`)
-    if (name === 'b1') assert.match(r.say('sdlc trust bug 5'), /has 1 clean approvals; it needs 2/, 'no promotion before the threshold')
+    r.say(`sdlc approve ${name} 1`)
+    if (name === 'b1') assert.match(r.say('sdlc trust light 1'), /has 1 clean approvals; it needs 2/, 'no promotion before the threshold')
   }
-  assert.match(r.say('sdlc trust bug 4'), /needs 2/)
-  assert.match(r.say('sdlc trust full 5'), /never promoted/)
-  assert.match(r.sdlc('trust').out, /READY: bug:5/)
-  assert.equal(r.bash('echo sdlc trust bug 5'), 'deny', 'agents cannot promote themselves')
-  assert.match(r.say('sdlc trust bug 5'), /promoted gate bug:5/)
+  assert.match(r.say('sdlc trust full 1'), /needs 2/)
+  for (const merge of ['full 5', 'bug 5', 'task 5']) assert.match(r.say(`sdlc trust ${merge}`), /never promoted/, `${merge}: a merge always needs a person`)
+  assert.match(r.sdlc('trust').out, /READY: light:1/)
+  assert.equal(r.bash('echo sdlc trust light 1'), 'deny', 'agents cannot promote themselves')
+  assert.match(r.say('sdlc trust light 1'), /promoted gate light:1/)
 
   ready('b3')
   assert.match(r.sdlc('request', 'b3').out, /passed on checks \(earned trust\)/)
@@ -269,8 +266,9 @@ test('earned autonomy: clean approvals build a streak, a human promotes, rejecti
   r.say('sdlc freeze')
   assert.match(r.sdlc('request', 'b4').out, /waiting on/, 'a freeze suspends promotions')
   r.say('sdlc unfreeze')
-  r.say('sdlc reject b4 5 missed an edge case')
-  assert.match(r.sdlc('trust').out, /bug:5: 0 clean in a row/)
+  r.say('sdlc reject b4 1 the outcome metric has no baseline')
+  assert.match(r.sdlc('trust').out, /light:1: 0 clean in a row/)
+  r.say('sdlc unfreeze')
   ready('b5')
   assert.match(r.sdlc('request', 'b5').out, /waiting on/, 'a rejection demotes the gate')
 })

@@ -4,6 +4,27 @@ All notable changes to this repository. The format follows [Keep a Changelog](ht
 
 ## [Unreleased]
 
+### Review that converges, and risk set by the change ([ADR-0005](docs/adr/0005-review-converges-and-risk-is-set-by-the-change.md))
+
+From the article "How the Claude Code team does code review" and a council of five agents; record in [docs/decisions/2026-10-22-code-review-at-scale.md](docs/decisions/2026-10-22-code-review-at-scale.md).
+
+#### Added
+
+- **Review rounds are capped.** After three Verify requests refused by the review, the gate stops and asks for a rethink; a human resets it with `sdlc reject <f> 5 rethink: ...`. `reviewRoundCap`, default 3.
+- **Re-review only the new diff.** The packet lists files changed since the last review; a ledger row that repeats a closed finding is refused.
+- **An approval covers what was checked.** Each request stores a fingerprint of its content; a change before approval lapses the gate. Release refuses code changed after Verify reviewed it.
+- **Risk is set by the change.** Low, medium or high from the files touched; the pre-review's label can raise it, never lower it, and a lower label is refused. `sdlc metrics` shows review rounds and the tier.
+- **`sdlc close <feature> <reason>`**, human-only, to retire work that will not ship.
+- Every pre-review needs `Revert:`. One PR template for the plugin, the repo kit and this repo, with risk definitions.
+- Failure F4 (a review loop that never converges) and two golden tasks (24 in all); `tests/review.test.mjs`.
+
+#### Changed
+
+- **Every merge needs a person:** `bug:5` and `task:5` joined `neverTrust`. Earned trust no longer promotes any merge.
+- **Fixed:** a pre-review that said "Risk: low" turned off the strict ledger rules for its own change.
+- The repo kit ignores the plugin's runtime files (`audit.jsonl`, `denials.json`, `retro-due.json`).
+
+
 ### Gates that catch the real failures ([ADR-0004](docs/adr/0004-gates-that-catch-real-failures.md))
 
 Feedback (`docs/feedback.md`) set the test: a lifecycle that would not have caught the last three real failures is ceremony. Before this, the plugin caught one of three, late. The council record is in [docs/decisions/2026-10-22-gates-are-the-product.md](docs/decisions/2026-10-22-gates-are-the-product.md).

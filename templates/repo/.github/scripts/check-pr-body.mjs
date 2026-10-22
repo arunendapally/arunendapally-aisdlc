@@ -34,6 +34,7 @@ export function problems(body = '') {
   const pre = section(body, '## Pre-review') ?? ''
   if (pre && !/Risk:\s*(low|medium|high)\b/i.test(pre)) out.push('pre-review gives no "Risk: low|medium|high"')
   if (pre && !/Open findings:\s*0\b/i.test(pre)) out.push('pre-review has open findings')
+  if (pre && !/Revert:\s*\S/i.test(pre)) out.push('pre-review does not say how to undo this ("Revert: ...")')
   return out
 }
 

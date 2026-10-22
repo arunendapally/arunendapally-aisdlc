@@ -3,8 +3,8 @@
 import fs from 'node:fs'
 import path from 'node:path'
 import { STAGES, root, git, loadConfig, readState, writeState, missingHeadings, isFrozen, createFeature, copyTemplate,
-  readTrust, writeTrust, promotable, readStdin, audit } from '../lib.mjs'
-import { advanceFeature } from '../loop.mjs'
+  readTrust, writeTrust, promotable, readStdin, audit, lessonPaid, overduePostmortems } from '../lib.mjs'
+import { advanceFeature, gateFingerprint } from '../loop.mjs'
 
 const input = readStdin()
 const dir = root(input.cwd)
@@ -26,7 +26,7 @@ if (fs.existsSync(denialsFile)) {
   }
 }
 
-const m = text.match(/^sdlc\s+(approve|reject|lane|hotfix|trust|distrust|pause|resume|freeze|unfreeze)\b\s*(\S+)?\s*(\d)?\s*(.*)$/is)
+const m = text.match(/^sdlc\s+(approve|reject|lane|hotfix|trust|distrust|pause|resume|freeze|unfreeze|close)\b\s*(\S+)?\s*(\d)?\s*(.*)$/is)
 if (!m) process.exit(0)
 const [, verb, feature, stageText, note] = m
 const who = git('config user.name', dir) || process.env.USERNAME || process.env.USER || 'unknown human'
@@ -85,6 +85,26 @@ if (!state) say(`No feature "${feature}" to ${verb}. Nothing recorded.`)
 
 // The lane decides whether the Design gate runs, so a human sets it. Moving to full during Build sends
 // the feature back to Design; light is only open before Build.
+// A human retires work that will not go further: finished elsewhere, abandoned or superseded. It keeps
+// its history and leaves the board; nothing is released, so no outcome or postmortem opens.
+if (verb === 'close') {
+  const reason = `${stageText ?? ''} ${note}`.trim()
+  if (!reason) say(`Closing needs a reason: sdlc close ${feature} <why>. Nothing recorded.`)
+  if (state.closedAt && !state.postmortemDue) say(`${feature} is already complete. Nothing recorded.`)
+  // Closing never buries an escape: a lesson owed or an open postmortem has to be paid first (ADR-0004).
+  if (state.lessonOwed && !lessonPaid(dir, feature)) say(`${feature} owes a lesson: add its trap to standards/traps.md first. Nothing recorded.`)
+  if (overduePostmortems(dir, Infinity).some(s => s.feature === feature)) say(`${feature}'s postmortem is not done. Nothing recorded.`)
+  if (state.closedAt) say(`${feature} is already complete. Nothing recorded.`)
+  const now = new Date().toISOString()
+  if (state.stages[state.stage]) state.stages[state.stage].leftAt = now
+  state.closedAt = now
+  state.closedBy = who
+  state.closedReason = reason
+  writeState(dir, state)
+  audit(dir, { event: 'close', feature, by: who, reason })
+  say(`${who} closed ${feature} at stage ${state.stage}: "${reason}". It keeps its history and leaves the board.`)
+}
+
 if (verb === 'lane') {
   const lane = note.trim().toLowerCase()
   if (!['full', 'light'].includes(lane)) say('Usage: sdlc lane <feature> full|light. Nothing recorded.')
@@ -116,6 +136,13 @@ if (verb === 'approve') {
   if (gate.status !== 'waiting') say(`Gate ${stage} has not been requested, so its checks have not run. Ask the agent to run "sdlc request ${feature}" first. Nothing recorded.`)
   const missing = missingHeadings(dir, state, stage)
   if (missing.length) say(`Gate ${stage} not approved, the artefact is incomplete: ${missing.join('; ')}.`)
+  // An approval covers what the request checked (ADR-0005). If that changed since, the gate lapses.
+  if (gate.fingerprint && gate.fingerprint !== gateFingerprint(dir, state, stage)) {
+    state.gates[stage] = { ...gate, status: 'lapsed', lapsedAt: now }
+    writeState(dir, state)
+    audit(dir, { event: 'lapse', feature, stage, by: who })
+    say(`Gate ${stage} not approved: what it checked has changed since the request, so it has lapsed. Ask the agent to run "sdlc request ${feature}" again, then review what changed.`)
+  }
   state.gates[stage] = { ...gate, status: 'approved', by: who, approvedAt: now, requestedAt: gate.requestedAt ?? now, note: note || undefined }
   writeState(dir, state)
   // A first-time approval with no rework adds to the gate's clean streak.
@@ -129,6 +156,8 @@ if (verb === 'approve') {
 }
 if (!note) say(`A rejection needs a reason: sdlc reject ${feature} ${stage} <reason>. Nothing recorded.`)
 state.gates[stage] = { ...gate, status: 'rejected', by: who, rejectedAt: now, reason: note, rejections: (gate.rejections ?? 0) + 1 }
+// A person has looked and given direction, so the review rounds start again (ADR-0005).
+if (stage === 5) state.reviewRounds = 0
 writeState(dir, state)
 // A rejection resets the gate's streak and takes back any promotion.
 const ledger = readTrust(dir)

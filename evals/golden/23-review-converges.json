@@ -1,0 +1,135 @@
+{
+  "name": "review-converges",
+  "promise": "Review converges: after three refused rounds the gate stops and asks for a rethink, only a human resets it, and a finding that repeats a closed one is refused.",
+  "branch": "bug/demo",
+  "catches": [
+    "F4"
+  ],
+  "steps": [
+    {
+      "config": {
+        "gateCommand": "node gate.cjs"
+      }
+    },
+    {
+      "sdlc": [
+        "bug",
+        "demo"
+      ],
+      "ok": true
+    },
+    {
+      "setState": [
+        "demo",
+        {
+          "stage": 5,
+          "stages": {
+            "5": {
+              "enteredAt": "2026-10-22T00:00:00Z"
+            }
+          },
+          "baseline": 12
+        }
+      ]
+    },
+    {
+      "put": [
+        "src/total.ts",
+        "export const total = 1\n"
+      ]
+    },
+    {
+      "gate": "green"
+    },
+    {
+      "sdlc": [
+        "gate",
+        "demo"
+      ],
+      "ok": true
+    },
+    {
+      "fill": [
+        "specs/demo/bug.md",
+        [
+          "## Repro",
+          "## Expected and actual",
+          "## Root cause",
+          "## Fix",
+          "## Test results",
+          "## Not verified"
+        ],
+        "\n## Pre-review\n\nRisk: medium\nOpen findings: 2\nLenses run: correctness, tests\nRevert: git revert the merge commit\n"
+      ]
+    },
+    {
+      "sdlc": [
+        "request",
+        "demo"
+      ],
+      "ok": false,
+      "out": "Review round 1 of 3"
+    },
+    {
+      "sdlc": [
+        "request",
+        "demo"
+      ],
+      "ok": false,
+      "out": "Review round 2 of 3"
+    },
+    {
+      "sdlc": [
+        "request",
+        "demo"
+      ],
+      "ok": false,
+      "out": "Review round 3 of 3"
+    },
+    {
+      "sdlc": [
+        "request",
+        "demo"
+      ],
+      "ok": false,
+      "out": "step back, rethink the approach"
+    },
+    {
+      "bash": "echo sdlc reject demo 5 rethink",
+      "expect": "deny",
+      "why": "an agent cannot reset its own rounds"
+    },
+    {
+      "say": "sdlc reject demo 5 rethink: fix the retry at its source"
+    },
+    {
+      "state": [
+        "demo",
+        "reviewRounds",
+        0
+      ]
+    },
+    {
+      "fill": [
+        "specs/demo/bug.md",
+        [
+          "## Repro",
+          "## Expected and actual",
+          "## Root cause",
+          "## Fix",
+          "## Test results",
+          "## Not verified"
+        ],
+        "\n## Pre-review\n\nRisk: medium\nOpen findings: 0\nLenses run: correctness, tests\nRevert: git revert the merge commit\n"
+      ]
+    },
+    {
+      "sdlc": [
+        "request",
+        "demo"
+      ],
+      "ok": true,
+      "out": "waiting on"
+    }
+  ]
+}

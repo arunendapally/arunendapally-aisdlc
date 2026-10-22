@@ -19,7 +19,7 @@ const TOOL = `mcp__${PLUGIN}__sdlc_board`
 const STAGES = ['', 'Plan', '', 'Design', 'Build', 'Verify', 'Release']
 // Copies of scripts/lib.mjs DEFAULT_CONFIG (the mod cannot import it); tests/hooks.test.mjs fails if they drift.
 const SLA: Record<string, number> = { full: 24, light: 8, bug: 8, task: 8, hotfix: 1 }
-const NEVER_TRUST = ['full:5', 'light:5', 'full:6', 'light:6', 'hotfix:5', 'hotfix:6']
+const NEVER_TRUST = ['full:5', 'light:5', 'full:6', 'light:6', 'hotfix:5', 'hotfix:6', 'bug:5', 'task:5']
 const EDIT_TOOLS = new Set(['Write', 'Edit', 'MultiEdit', 'NotebookEdit'])
 const RULES: Record<number, string> = {
   1: 'Plan: ask the questions that would change the PRD before drafting it, mark every assumption confirmed or unconfirmed, and write acceptance.feature with a scenario per requirement. No code.',

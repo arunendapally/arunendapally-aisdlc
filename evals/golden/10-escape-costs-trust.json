@@ -5,58 +5,28 @@
   "steps": [
     {
       "config": {
-        "gateCommand": "node gate.cjs",
         "trustThreshold": 1,
         "trust": true
       }
     },
     {
       "sdlc": [
-        "bug",
+        "init",
         "demo"
       ],
       "ok": true
     },
     {
-      "setState": [
-        "demo",
-        {
-          "stage": 5,
-          "stages": {
-            "5": {
-              "enteredAt": "2026-10-21T00:00:00Z"
-            }
-          },
-          "baseline": 12,
-          "gateRuns": {
-            "5": {
-              "ok": true,
-              "count": 12
-            }
-          }
-        }
+      "put": [
+        "specs/demo/prd.md",
+        "## Problem\n\nFilled.\n\n## Users and jobs\n\nFilled.\n\n## Questions asked\n\nFilled.\n\n## Assumptions\n\nFilled.\n\n## Never\n\nFilled.\n\n## Out of scope\n\nFilled.\n\n## Outcome metric\n\nFilled.\n\n## Open questions\n\nFilled.\n\n## Requirements\n\n- R1. (must) Save an item.\n"
       ]
     },
     {
-      "fill": [
-        "specs/demo/bug.md",
-        [
-          "## Repro",
-          "## Expected and actual",
-          "## Root cause",
-          "## Fix",
-          "## Test results",
-          "## Not verified"
-        ],
-        "\n## Pre-review\n\nRisk: low\nOpen findings: 0\nLenses run: correctness, tests\n"
+      "put": [
+        "specs/demo/acceptance.feature",
+        "Feature: Save\n  As a shopper\n  I want to save items\n  So that I buy later\n\n  @R1 @AC-1 @unit\n  Scenario: Save an item\n    Given an item\n    When I save it\n    Then it is saved\n"
       ]
-    },
-    {
-      "sdlc": [
-        "review",
-        "demo"
-      ],
-      "ok": true
     },
     {
       "sdlc": [
@@ -66,19 +36,24 @@
       "ok": true
     },
     {
-      "say": "sdlc approve demo 5",
-      "out": "approved gate 5"
+      "say": "sdlc approve demo 1",
+      "out": "approved gate 1"
     },
     {
-      "say": "sdlc trust bug 5",
-      "out": "promoted gate bug:5"
+      "say": "sdlc trust light 1",
+      "out": "promoted gate light:1"
     },
     {
       "trust": [
-        "bug:5",
+        "light:1",
         "promoted",
         true
       ]
+    },
+    {
+      "say": "sdlc trust bug 5",
+      "out": "never promoted",
+      "why": "a merge always needs a person"
     },
     {
       "sdlc": [
@@ -92,21 +67,21 @@
     },
     {
       "trust": [
-        "bug:5",
+        "light:1",
         "promoted",
         false
       ]
     },
     {
       "trust": [
-        "bug:5",
+        "light:1",
         "streak",
         0
       ]
     },
     {
       "trust": [
-        "bug:5",
+        "light:1",
         "escapes",
         1
       ]

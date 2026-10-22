@@ -95,6 +95,8 @@ When a gate refuses, `sdlc request` lists every reason, for example "R2 has no s
 - **Where things stand:** `/ai-sdlc:status` lists each feature, its gate, who it waits on and for how long. With the mod, the band above the prompt shows the same. `/sdlc-board` opens the board, whose Approve button fills the prompt for you to send.
 - **Let agents fix their own test failures:** `/sdlc-autopilot`. After each turn that edits files, the gate runs and the next fix starts automatically, up to the retry cap. Then it stops and notifies you.
 - **Stop everything:** type `sdlc pause`; `sdlc resume` to continue.
+- **Retire work that will not ship:** type `sdlc close <feature> <reason>`. It keeps its history and leaves the board. It is refused while a lesson is owed or a postmortem is open.
+- **When review keeps going round:** after three refused Verify rounds the gate stops. Read what is going wrong, then type `sdlc reject <feature> 5 rethink: <the new approach>`.
 - **Error budget spent:** type `sdlc freeze`. No new feature starts (`sdlc init` is refused); bug fixes, hotfixes and tasks carry on until `sdlc unfreeze`.
 - **After a full-lane release:** the feature closes, and its outcome follow-up opens with the owner and read date from `release.md` (`## Outcome metric`, or `Metric: None, because ...`). Status shows OUTCOME DUE, then OVERDUE. An agent records `sdlc outcome <feature> met|missed|breach`; a breach alerts the incident commander, who decides whether to declare a hotfix. Add `"outcomeWindowDays": { "light": 7 }` to turn it on for the light lane.
 - **When the retro is due early:** an escalation past the retry cap, or the same serious review finding in two features, shows RETRO DUE in `status`. Running the retro clears it.
@@ -125,6 +127,7 @@ Off by default, so the default path stays short. Turn them on when the risk call
 | "is not an owner of gate N" | `gateOwners` lists other names | Approve as a listed owner, or change the config |
 | An edit or command is refused with "[ai-sdlc]" | A guardrail: protected branch, secrets, a deploy, a guardrail file, or code before Build | Read the reason; humans run deploys and merges |
 | "is not on origin/main" or "Live:" at Release | The change was deployed from a branch, or the running build is not this release | Merge and push, deploy from main, read the build id again |
+| "has lapsed" when you approve | The change moved after the agent requested the gate | Ask the agent to request it again, and look at what changed |
 | "Refused 2 times this session: hand back" | A guard refused the same step twice | Read the reason; run the step yourself if it is right, then reply so the session can act again |
 | "in slices" when reading a file | The file is large | Read the code that governs it first, then the file with an offset and limit |
 | "needs the full lane" at Build | The light lane is for additive, low-risk work, and this change alters or drops data or touches a high-risk path | Type `sdlc lane <feature> full`; it goes back to Design |

@@ -157,6 +157,18 @@ Decided in [ADR-0004](adr/0004-gates-that-catch-real-failures.md), after the fee
 
 ---
 
+## 6c. Review that converges, approvals that cover what was checked
+
+Decided in [ADR-0005](adr/0005-review-converges-and-risk-is-set-by-the-change.md), after [How the Claude Code team does code review](https://claude.dev/blog/solving-code-review-at-anthropic/).
+
+- **Review converges.** A Verify request the review refuses is a round. After three, the gate stops and asks for a rethink until a human types `sdlc reject <f> 5 rethink: ...`. The packet lists what changed since the last review; a finding that repeats a closed one is refused.
+- **An approval covers what was checked.** The request stores a fingerprint of the content it checked. If that changes before the human approves, the approval lapses. Release refuses code committed after Verify reviewed it.
+- **The change sets its risk tier.** Documents only is low, code is medium, and paths that always need a person (auth, payments, migrations, infrastructure, CI, CODEOWNERS, agents and hooks) or a destructive migration are high. The pre-review's `Risk:` may raise it, never lower it. High risk turns on the strict ledger rules. Every pre-review says how to revert.
+- **Every merge needs a person.** Earned trust no longer promotes any merge. Low-risk merges with no person are proposed, not decided, and wait for a revert counter, fifty clean low-tier merges and approvals bound to a verified identity.
+- **`sdlc close <feature> <reason>`** retires work that will not ship, never while a lesson is owed or a postmortem is open.
+
+---
+
 ## 7. Knowledge: the agents' memory
 
 What one session learns, the next one must not have to learn again.
@@ -273,15 +285,15 @@ Then, in a product repo: `/ai-sdlc:start <what you want>`. The first `/ai-sdlc:s
 
 **Commands:** `start`, `plan`, `design`, `build`, `verify`, `pre-review`, `release`, `bug`, `hotfix`, `task`, `learn`, `incident`, `retro`, `status` (all `/ai-sdlc:...`), plus the mod's `/sdlc-board` and `/sdlc-autopilot`.
 
-**Typed by humans only:** `sdlc approve | reject <feature> <stage>`, `sdlc lane <feature> light|full`, `sdlc hotfix <slug> <what is broken>`, `sdlc trust | distrust <lane> <stage>`, `sdlc pause | resume`, `sdlc freeze | unfreeze`.
+**Typed by humans only:** `sdlc approve | reject <feature> <stage>`, `sdlc close <feature> <reason>`, `sdlc lane <feature> light|full`, `sdlc hotfix <slug> <what is broken>`, `sdlc trust | distrust <lane> <stage>`, `sdlc pause | resume`, `sdlc freeze | unfreeze`.
 
 ---
 
 ## How it was tested
 
-- `npm test`: 93 tests in throwaway git repos, covering the default path, the lanes end to end, each of the three real failures, every guard, every lane end to end, the gate chain, review deadlines, PR size, pre-review, kinds, the trust ledger, the knowledge base, the CI scripts, the retro miner, escape charging, both eval runners, and every bypass the two reviews found.
+- `npm test`: 102 tests in throwaway git repos, covering the default path, the lanes end to end, each of the real failures, review convergence and approvals, every guard, every lane end to end, the gate chain, review deadlines, PR size, pre-review, kinds, the trust ledger, the knowledge base, the CI scripts, the retro miner, escape charging, both eval runners, and every bypass the two reviews found.
 - `npm run eval:agents`: 7 of 8 pass, including all four seeded-bug review evals. The CTO routed an outage to a human-declared hotfix and a schema change to the data kind with a DBA; the pre-reviewer scored risk and flagged the untested branch. The product owner's short brief left out the outcome metric its definition requires. The eval stays strict: that gap is the first input for a retro.
-- `npm run eval`: 22 golden tasks, all passing, saved as the baseline; each of the three real failures in `evals/failures.json` is caught by at least one. The plugin's own CI (`.github/workflows/evals.yml`) runs the tests and the golden evals on every PR.
+- `npm run eval`: 24 golden tasks, all passing, saved as the baseline; each of the four real failures in `evals/failures.json` is caught by at least one. The plugin's own CI (`.github/workflows/evals.yml`) runs the tests and the golden evals on every PR.
 - `claude plugin test mods/ai-sdlc-autopilot`: 7 tests of the mod against the engine's test kit: the fix loop (red, green, cap, no-change stop, pause), the system-prompt section, the board's buttons on two surfaces, and the model tool.
 - Guards were mutation-tested: broken on purpose, the matching test failed, then restored. One mutation survived at first (promotion before the threshold); a test was added and it now fails as it should.
 

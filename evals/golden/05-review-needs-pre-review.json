@@ -81,7 +81,7 @@
           "## Not verified",
           "## Review honesty"
         ],
-        "\n## Pre-review\n\nRisk: low, covered\nOpen findings: 0\nLook here first: src/a.ts:1\nLenses run: correctness, tests\n"
+        "\n## Pre-review\n\nRisk: medium, covered\nOpen findings: 0\nLook here first: src/a.ts:1\nLenses run: correctness, tests\nRevert: git revert the merge commit\n"
       ]
     },
     {
