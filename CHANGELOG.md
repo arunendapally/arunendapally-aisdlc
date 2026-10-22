@@ -2,6 +2,26 @@
 
 All notable changes to this repository. The format follows [Keep a Changelog](https://keepachangelog.com/en/1.1.0/), and versions follow [Semantic Versioning](https://semver.org/).
 
+## [Unreleased]
+
+The loop spine from [ADR-0002](docs/adr/0002-loop-spine.md): plan, test, implement, verify, review, release and observe, remember, with improve out-of-band.
+
+### Added
+
+- **Test proof:** `sdlc proof <feature>` runs the new `proofCommand` on the tests that trace the new criteria, green on the branch and red against the merge-base code in a throwaway git worktree. Test files are hash-locked until Verify. JUnit reports (`{report}`) judge each criterion; "no tests collected" never counts.
+- **Spikes:** `sdlc spike <feature> [--off]`; a spike cannot pass Verify.
+- **Hotfix proof:** after the merge, against the code before the fix; the postmortem is not done until it passes.
+- **Outcome follow-up:** release opens it with an owner and a due date (`outcomeWindowDays`, or `Read on:` in release.md). `sdlc outcome <feature> met|missed|breach`, OUTCOME DUE and OVERDUE in status and at session start, and its age in `sdlc metrics`.
+- **Triggered retro:** an escalation past the retry cap, or the same blocker or major checklist finding in two features, shows RETRO DUE until `sdlc retro` runs.
+- Five golden tasks (17 in all) and `tests/loop.test.mjs` (14 tests).
+
+### Changed
+
+- **Verify** (full and light lanes) needs a passing, unchanged proof, or a PR that says the proof did not run.
+- **Release** (full and light lanes) needs a rollback `Tested: <date>` line, probe results and an outcome owner. In every lane it refuses stale knowledge pages and facts about the files the change touched, ADRs superseded but not marked, and postmortem actions without a link, owner and due date.
+- **Error-budget freeze** now stops every new full and light feature (`sdlc init` is refused), not only the light lane.
+- The release and incident templates show the lines these checks read.
+
 ## [0.2.0] - 2026-10-21
 
 The AI SDLC for organisations, packaged as the `ai-sdlc` Claude Code plugin and the `ai-sdlc-autopilot` mod. Start with [docs/getting-started.md](docs/getting-started.md); the full process is in [docs/org-ai-sdlc-process.md](docs/org-ai-sdlc-process.md).

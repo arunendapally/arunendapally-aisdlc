@@ -1,6 +1,6 @@
 # ADR-0002: The loop spine: plan, test, implement, verify, review, release and observe, remember
 
-Status: proposed
+Status: accepted
 Date: 2026-10-22
 
 ## Context

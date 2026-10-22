@@ -120,6 +120,11 @@ export const DEFAULT_CONFIG = {
   bugForbidPaths: ['**/package.json', '**/requirements*.txt', '**/pyproject.toml', '**/go.mod', '**/cargo.toml', '**/pom.xml', '**/build.gradle*', '**/migrations/**', '.github/**', 'infra/**', 'terraform/**'],
   // Days after a hotfix ships by which its postmortem must exist.
   postmortemDays: 2,
+  // The test proof (ADR-0002): runs the traced test files against the base branch's code, where they
+  // must fail. {files} becomes the quoted test files; {report}, if used, a JUnit XML path to write.
+  proofCommand: '',
+  // Days after release by which the outcome metric is read, by lane, unless release.md names a date.
+  outcomeWindowDays: { full: 14, light: 7 },
 }
 
 // List settings in a repo's config can only add to the plugin's defaults, so a repo file
@@ -153,7 +158,7 @@ export function loadConfig(dir) {
   const own = fs.existsSync(file) ? JSON.parse(fs.readFileSync(file, 'utf8')) : {}
   const cfg = { ...DEFAULT_CONFIG, ...own }
   for (const key of [...ADDITIVE, 'neverTrust']) cfg[key] = [...new Set([...DEFAULT_CONFIG[key], ...(own[key] ?? [])])]
-  for (const key of ['maxPrLines', 'reviewSlaHours']) cfg[key] = { ...DEFAULT_CONFIG[key], ...(own[key] ?? {}) }
+  for (const key of ['maxPrLines', 'reviewSlaHours', 'outcomeWindowDays']) cfg[key] = { ...DEFAULT_CONFIG[key], ...(own[key] ?? {}) }
   return cfg
 }
 
@@ -243,11 +248,13 @@ export function overdueGates(dir, now = Date.now()) {
   })
 }
 
-// Hotfixes shipped without a postmortem past the deadline.
+// Hotfixes shipped without a postmortem past the deadline. A hotfix's test proof runs after the
+// merge, and until it passes the postmortem is not done (ADR-0002).
 export function overduePostmortems(dir, now = Date.now()) {
   const incidents = path.join(dir, 'docs', 'incidents')
   const files = fs.existsSync(incidents) ? fs.readdirSync(incidents) : []
-  return listFeatures(dir).filter(s => s.postmortemDue && Date.parse(s.postmortemDue) < now && !files.some(f => f.endsWith(`-${s.feature}.md`)))
+  const proofDue = s => loadConfig(dir).proofCommand && !s.proof?.ok
+  return listFeatures(dir).filter(s => s.postmortemDue && Date.parse(s.postmortemDue) < now && (!files.some(f => f.endsWith(`-${s.feature}.md`)) || proofDue(s)))
 }
 
 export const TEMPLATES = path.join(path.dirname(fileURLToPath(import.meta.url)), '..', 'skills', 'org-ai-sdlc', 'templates')

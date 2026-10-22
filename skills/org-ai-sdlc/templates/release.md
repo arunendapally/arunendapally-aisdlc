@@ -20,11 +20,11 @@
 
 ## Rollback (tested)
 
-<!-- The command, and when it was last tested. -->
+<!-- The command, and "Tested: <YYYY-MM-DD>, <how>". Release is refused without a tested date. -->
 
 ## Probes
 
-<!-- Read-only checks against the SLOs, with results. Empty means the gate cannot be requested. -->
+<!-- Read-only checks against the SLOs, each with its result (pass or fail). -->
 
 ## Runbook
 
@@ -34,7 +34,11 @@
 
 ## Outcome metric
 
-<!-- Where the brief's outcome will be read, and when. -->
+Metric: <the PRD's outcome metric and target>
+Owner: <who reads it>
+Read on: <YYYY-MM-DD, or leave out for the lane's default watch window>
+
+<!-- The feature closes at release; this opens its outcome follow-up (sdlc outcome <feature> met|missed|breach). -->
 
 ## Traps added
 

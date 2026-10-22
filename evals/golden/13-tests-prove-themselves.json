@@ -1,0 +1,73 @@
+{
+  "name": "tests-prove-themselves",
+  "promise": "A feature's tests count only if they pass on the branch and fail against the base code; a test that passes either way proves nothing.",
+  "steps": [
+    {
+      "config": {
+        "proofCommand": "node --test {files}"
+      }
+    },
+    {
+      "sdlc": [
+        "init",
+        "demo"
+      ],
+      "ok": true
+    },
+    {
+      "put": [
+        "specs/demo/acceptance.feature",
+        "Feature: F\n  As a user\n  I want x\n  So that y\n\n  @R1 @AC-1 @unit\n  Scenario: S AC-1\n    Given a\n    When b\n    Then c\n"
+      ]
+    },
+    {
+      "put": [
+        "src/greet.cjs",
+        "module.exports = () => 'hi'\n"
+      ]
+    },
+    {
+      "put": [
+        "tests/demo.test.cjs",
+        "require('node:test').test('demo AC-1 greets', () => require('node:assert').equal(require('../src/greet.cjs')(), 'hi'))\n"
+      ]
+    },
+    {
+      "sdlc": [
+        "proof",
+        "demo"
+      ],
+      "ok": true,
+      "out": "Proof passed"
+    },
+    {
+      "state": [
+        "demo",
+        "proof.ok",
+        true
+      ]
+    },
+    {
+      "put": [
+        "tests/demo.test.cjs",
+        "require('node:test').test('demo AC-1 greets', () => {})\n"
+      ],
+      "why": "a test weakened so it passes on any code"
+    },
+    {
+      "sdlc": [
+        "proof",
+        "demo"
+      ],
+      "ok": false,
+      "out": "passed against the base code"
+    },
+    {
+      "state": [
+        "demo",
+        "proof.ok",
+        false
+      ]
+    }
+  ]
+}

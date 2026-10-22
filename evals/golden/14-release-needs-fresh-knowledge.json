@@ -1,0 +1,130 @@
+{
+  "name": "release-needs-fresh-knowledge",
+  "promise": "Release is refused while a knowledge page about code the change touched is stale, or the rollback is untested.",
+  "steps": [
+    {
+      "put": [
+        "src/pay.ts",
+        "export const retry = 1\n"
+      ]
+    },
+    {
+      "git": [
+        "add",
+        "."
+      ]
+    },
+    {
+      "git": [
+        "commit",
+        "-m",
+        "pay"
+      ]
+    },
+    {
+      "put": [
+        "knowledge/pay.md",
+        "---\nname: pay\ndescription: Retry rule.\ntype: component\nsources: [src/pay.ts]\nverified: $HEAD\nconfidence: Moderate\n---\n"
+      ]
+    },
+    {
+      "sdlc": [
+        "init",
+        "demo"
+      ],
+      "ok": true
+    },
+    {
+      "setState": [
+        "demo",
+        {
+          "stage": 6,
+          "stages": {
+            "6": {
+              "enteredAt": "2026-10-22T00:00:00.000Z"
+            }
+          }
+        }
+      ]
+    },
+    {
+      "fill": [
+        "specs/demo/release.md",
+        [
+          "## Artefact",
+          "## Release order",
+          "## Rollout",
+          "## Runbook",
+          "## Cost delta",
+          "## Traps added",
+          "## Rollback (tested)",
+          "## Probes"
+        ]
+      ]
+    },
+    {
+      "sdlc": [
+        "request",
+        "demo"
+      ],
+      "ok": false,
+      "out": "Tested: <date>",
+      "why": "an untested rollback"
+    },
+    {
+      "fill": [
+        "specs/demo/release.md",
+        [
+          "## Artefact",
+          "## Release order",
+          "## Rollout",
+          "## Runbook",
+          "## Cost delta",
+          "## Traps added"
+        ],
+        "\n## Rollback (tested)\n\nhelm rollback. Tested: 2026-10-21, on staging.\n\n## Probes\n\n- p95 latency: pass\n\n## Outcome metric\n\nMetric: checkout conversion +2%\nOwner: Priya\n"
+      ]
+    },
+    {
+      "put": [
+        "src/pay.ts",
+        "export const retry = 2\n"
+      ]
+    },
+    {
+      "git": [
+        "add",
+        "."
+      ]
+    },
+    {
+      "git": [
+        "commit",
+        "-m",
+        "change pay"
+      ]
+    },
+    {
+      "sdlc": [
+        "request",
+        "demo"
+      ],
+      "ok": false,
+      "out": "knowledge page knowledge/pay.md is stale"
+    },
+    {
+      "put": [
+        "knowledge/pay.md",
+        "---\nname: pay\ndescription: Retry rule, now 2.\ntype: component\nsources: [src/pay.ts]\nverified: $HEAD\nconfidence: Moderate\n---\n"
+      ]
+    },
+    {
+      "sdlc": [
+        "request",
+        "demo"
+      ],
+      "ok": true,
+      "out": "waiting on"
+    }
+  ]
+}

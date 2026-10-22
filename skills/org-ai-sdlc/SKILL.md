@@ -52,6 +52,14 @@ Templates are in `templates/`. Every required section must hold real content; wr
 - **Simplicity:** climb the ladder before writing code (needed now, standard library, platform, existing dependency or helper, one-liner, own code, and only then a new dependency with its reason). The packet flags new dependencies and changes over 150 code lines per criterion.
 - **Review:** `sdlc.mjs review <slug>` builds the packet; record every finding in `review.md` (F ids for agents, H for humans; `fixed: <commit>`; never delete a row).
 
+## The loop (ADR-0002)
+
+- Start each slice with a failing test. At Verify, run `sdlc.mjs proof <feature>`: the traced tests must pass on the branch and fail on the base code. Do not change a test after the proof without proving again. No `proofCommand`: write under `## Not verified` that the proof did not run.
+- A slice that explores is a spike (`sdlc.mjs spike <feature>`); it cannot pass Verify until a non-spike slice replaces it.
+- Before Release: re-verify every stale knowledge page and fact about the files you changed, mark any ADR you supersede, link each postmortem action to what it became, and fill `## Outcome metric` with `Metric:` and `Owner:`.
+- After release, record the outcome when its owner has read it: `sdlc.mjs outcome <feature> met|missed|breach`. A breach goes to the incident commander; never declare a hotfix yourself.
+- When session start says RETRO DUE, tell the human and suggest `/ai-sdlc:retro`.
+
 ## Before a human reviews
 
 Run `/ai-sdlc:pre-review`. The `pre-reviewer` writes `## Pre-review` with `Risk:`, `Open findings: 0` and `Look here first:` pointers. Keep PRs under the lane limit; split by slice.

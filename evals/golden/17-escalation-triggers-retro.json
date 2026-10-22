@@ -1,0 +1,48 @@
+{
+  "name": "escalation-triggers-retro",
+  "promise": "An escalation past the retry cap makes a retro due now, and running the retro clears it.",
+  "steps": [
+    {
+      "config": {
+        "retryCap": 1
+      }
+    },
+    {
+      "sdlc": [
+        "init",
+        "demo"
+      ],
+      "ok": true
+    },
+    {
+      "sdlc": [
+        "retry",
+        "demo",
+        "login"
+      ],
+      "ok": true
+    },
+    {
+      "sdlc": [
+        "retry",
+        "demo",
+        "login"
+      ],
+      "ok": false,
+      "out": "ESCALATE"
+    },
+    {
+      "sdlc": [
+        "status"
+      ],
+      "out": "RETRO DUE"
+    },
+    {
+      "sdlc": [
+        "retro"
+      ],
+      "ok": true,
+      "out": "Triggered by"
+    }
+  ]
+}

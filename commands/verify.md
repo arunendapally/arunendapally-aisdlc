@@ -6,6 +6,7 @@ argument-hint: <feature-slug>
 Stage 5 for `$ARGUMENTS`. You are the `tech-lead`.
 
 1. Run the full gate with `node "${CLAUDE_PLUGIN_ROOT}/scripts/sdlc.mjs" gate $ARGUMENTS` (types, lint, whole suite, end-to-end, scans, as the repo's `gateCommand` defines). It fails below the baseline.
+   Then prove the tests: `node "${CLAUDE_PLUGIN_ROOT}/scripts/sdlc.mjs" proof $ARGUMENTS`. Every new criterion's tests must pass here and fail on the base code; changing a test afterwards means proving again. With no `proofCommand`, write under `## Not verified` that the proof did not run.
 2. `qa-engineer`, independently of the builder: every QA test ID passes, every changed test fails on the baseline, every guard fails under mutation, automated accessibility checks on changed screens, an exploratory pass on the riskiest flow. Its verdict goes in `## QA verdict`.
 3. `safe-ai-sdlc-expert`: scan results and any finding a human must accept. Critical findings block.
 4. `c4-diagrams-expert`: the diagrams still match the code.
