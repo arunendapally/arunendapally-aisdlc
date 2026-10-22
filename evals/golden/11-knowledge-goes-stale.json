@@ -1,0 +1,16 @@
+{
+  "name": "knowledge-goes-stale",
+  "promise": "A knowledge page is flagged stale as soon as the code it describes changes, and unusable pages fail.",
+  "steps": [
+    { "put": ["src/pay.ts", "export const retry = 1\n"] },
+    { "git": ["add", "."] },
+    { "git": ["commit", "-m", "pay"] },
+    { "put": ["knowledge/pay.md", "---\nname: pay\ndescription: Retry rule.\ntype: component\nsources: [src/pay.ts]\nverified: $HEAD\nconfidence: Moderate\n---\n"] },
+    { "sdlc": ["knowledge", "check"], "ok": true, "out": "0 stale" },
+    { "put": ["src/pay.ts", "export const retry = 2\n"] },
+    { "git": ["commit", "-am", "change pay"] },
+    { "sdlc": ["knowledge", "check"], "out": "STALE knowledge/pay.md" },
+    { "put": ["knowledge/bad.md", "---\nname: bad\n---\n"] },
+    { "sdlc": ["knowledge", "check"], "ok": false, "out": "missing description" }
+  ]
+}

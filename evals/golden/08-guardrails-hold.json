@@ -1,0 +1,14 @@
+{
+  "name": "guardrails-hold",
+  "promise": "Agents cannot loosen their own limits, and a repo's config can only tighten them.",
+  "steps": [
+    { "write": [".ai-sdlc/config.json", "{}"], "expect": "deny" },
+    { "write": [".claude/settings.json", "{}"], "expect": "deny" },
+    { "write": [".AI-SDLC/trust.json", "{}"], "expect": "deny", "why": "case games on Windows" },
+    { "bash": "cd .ai-sdlc && echo {} > config.json", "expect": "deny" },
+    { "write": [".github/workflows/ci.yml", "x"], "expect": "ask" },
+    { "config": { "denyPaths": [], "deployPatterns": [], "protectedBranches": [] } },
+    { "bash": "terraform apply", "expect": "deny", "why": "an emptied config list" },
+    { "write": [".env", "X=1"], "expect": "deny" }
+  ]
+}

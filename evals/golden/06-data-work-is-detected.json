@@ -1,0 +1,16 @@
+{
+  "name": "data-work-is-detected",
+  "promise": "A schema change cannot hide inside ordinary work: it must be marked as data work.",
+  "steps": [
+    { "config": { "gateCommand": "node gate.cjs" } },
+    { "sdlc": ["init", "demo"], "ok": true },
+    { "setState": ["demo", { "stage": 4, "stages": { "4": { "enteredAt": "2026-10-21T00:00:00Z" } } }] },
+    { "fill": ["specs/demo/tasks.md", ["## Baseline", "## Tasks"]] },
+    { "put": ["db/migrations/010_add.sql", "alter table t add c int;\n"] },
+    { "gate": "green" },
+    { "sdlc": ["gate", "demo"], "ok": true },
+    { "sdlc": ["request", "demo"], "ok": false, "out": "this is data work" },
+    { "sdlc": ["kind", "demo", "data"], "ok": true },
+    { "sdlc": ["bug", "x", "--kind", "data"], "ok": false, "out": "is a feature" }
+  ]
+}

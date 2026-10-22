@@ -1,0 +1,10 @@
+{
+  "name": "ai-sdlc",
+  "private": true,
+  "type": "module",
+  "scripts": {
+    "test": "node --test tests/hooks.test.mjs tests/lanes.test.mjs tests/retro.test.mjs tests/quality.test.mjs",
+    "eval": "node evals/run.mjs --baseline evals/baseline.json",
+    "eval:agents": "node evals/agents.mjs"
+  }
+}

@@ -1,0 +1,26 @@
+{
+  "_doc": "Autonomy per activity. L0 human only, L1 agent drafts and human decides, L2 agent acts after human approval, L3 agent acts in a sandbox and human reviews the batch, L4 agent acts and reports. A level rises only after its golden-task evals hold for 4 weeks, with CTO approval. A failed eval or an incident drops it one level. High-risk paths cap at L2. Agents cannot edit this file.",
+  "ceilings": { "highRiskPaths": "L2" },
+  "activities": {
+    "gate-decision": "L0",
+    "risk-acceptance": "L0",
+    "autonomy-change": "L0",
+    "production-data-access": "L0",
+    "brief": "L1",
+    "scope-cut": "L1",
+    "threat-model": "L1",
+    "release-go": "L1",
+    "spec": "L2",
+    "plan-and-contracts": "L2",
+    "merge": "L2",
+    "infra-apply": "L2",
+    "db-migration": "L2",
+    "build-batch": "L3",
+    "tests-and-mutation": "L3",
+    "pr-authoring": "L3",
+    "lint-fixes": "L4",
+    "dependency-patch-bump": "L4",
+    "docs-changelog-traps": "L4",
+    "production-probe-read": "L4"
+  }
+}

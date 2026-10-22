@@ -1,0 +1,40 @@
+{
+  "feature": "quality-gates",
+  "lane": "full",
+  "stage": 1,
+  "branch": "dogfood/quality-gates",
+  "createdAt": "2026-10-21T10:05:20.780Z",
+  "stages": {
+    "1": {
+      "enteredAt": "2026-10-21T10:05:20.780Z"
+    }
+  },
+  "gates": {
+    "1": {
+      "status": "waiting",
+      "requestedAt": "2026-10-21T16:36:45.725Z"
+    }
+  },
+  "retries": {},
+  "kinds": [
+    "brownfield"
+  ],
+  "updatedAt": "2026-10-21T16:40:43.010Z",
+  "ledgerIds": [
+    "F1",
+    "F2",
+    "F3",
+    "F4",
+    "F5",
+    "F6",
+    "F7",
+    "F8",
+    "F9",
+    "F10",
+    "F11",
+    "F12",
+    "F13",
+    "F14",
+    "F15"
+  ]
+}

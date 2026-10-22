@@ -2,6 +2,13 @@
 
 *October 2026.*
 
+> **New in 0.2.0: the same cycle for teams.** This repo is now a Claude Code plugin, `ai-sdlc`. It brings a CTO agent and 20 expert agents, and lanes from hotfix to full feature with a named human at every gate. It also has checked PRDs, Gherkin criteria, design review boards, a test matrix, structured code review, and agents that earn autonomy over time.
+> - **Start here:** [docs/getting-started.md](docs/getting-started.md)
+> - **How it works:** [docs/org-ai-sdlc-process.md](docs/org-ai-sdlc-process.md)
+> - **What changed:** [CHANGELOG.md](CHANGELOG.md)
+>
+> The article below is the original one-developer story the plugin grew from.
+
 ![The AI software development cycle: 1 Planning, product-owner agent. 2 Analysis, supervisor and spec. 3 Design, canvas and comments. 4 Implementation, reviewer and worker. 5 Testing and integration, mutation-tested. 6 Maintenance, human decides.](images/ai-sdlc-cycle.svg)
 
 The software development cycle has six stages, and every one of them is still needed now that we build with agents: planning, analysis, design, implementation, testing and integration, maintenance. What has changed is who does the work at each stage, and where the human stands.
@@ -194,6 +201,31 @@ The cycle is the same one we've always had. My job now is to design the system t
 | [`skills/ai-sdlc/example-ecommerce.md`](skills/ai-sdlc/example-ecommerce.md) | A worked example: back-in-stock alerts for a fictional online shop, with a starter constitution |
 | [`skills/ai-sdlc/standards/`](skills/ai-sdlc/standards/) | The knowledge base: engineering standards, testing standards, a code-review checklist and a traps log |
 | [`docs/first-principles.md`](docs/first-principles.md) | A companion post: the first principles behind the cycle |
+| [`docs/org-ai-sdlc-process.md`](docs/org-ai-sdlc-process.md) | The same cycle for an organisation: every kind of work routed to the lightest safe lane, human gates, earned autonomy, a test-and-fix loop, and a knowledge base agents learn from |
+| [`agents/`](agents/) | The CTO and 20 expert subagents: product owner, UI/UX, architect, design reviewer, C4, project manager, tech lead, builder, pre-reviewer, SDET, QA, performance, DBA, SRE, ops, safe AI SDLC, AI agents, agentic AI, GitHub, Confluence |
+| [`commands/`](commands/) | `/ai-sdlc:start` to triage any work, the stages (`kickoff`, `plan`, `analyze`, `design`, `build`, `verify`, `release`), `design-review`, `tests`, `pre-review`, the small lanes (`bug`, `hotfix`, `task`), `learn`, `incident`, `retro`, `status` |
+| [`hooks/`](hooks/) and [`scripts/`](scripts/) | Guardrail hooks and the `sdlc.mjs` CLI: human-only approvals, lanes, PR size, review deadlines, the trust ledger, the knowledge base, the kill switch |
+| [`skills/org-ai-sdlc/`](skills/org-ai-sdlc/) | The working summary agents follow, plus a template for every artefact: PRD, facts, Gherkin acceptance criteria, ADR, design review, ER diagram and OpenAPI with a Swagger viewer, review ledger, and test scaffolds for unit, subsystem, Postman and Playwright |
+| [`templates/repo/`](templates/repo/) | The kit a product repo gets on first kickoff: constitution, agent rules, config, autonomy levels, knowledge folder, GitHub workflows (gate, PR size, review deadlines, docs), ruleset, CODEOWNERS, C4 workspace |
+| [`mods/ai-sdlc-autopilot/`](mods/ai-sdlc-autopilot/) | A mod for what hooks and MCP cannot do: a gate board pane, stage rules and knowledge in every turn, a test-and-fix loop, a state tool for the model, review-deadline nudges |
+| [`evals/`](evals/) | How the plugin improves itself safely: golden tasks for every promise the process makes (`npm run eval`, checked against a baseline in CI) and agent evals that score real agents' answers (`npm run eval:agents`); `/ai-sdlc:retro` uses both to prove its proposed changes |
+| [`tests/`](tests/) | Tests for every hook, guard, lane, CI script, the retro miner and the eval runners (`npm test`); the mod's own tests run with `claude plugin test mods/ai-sdlc-autopilot` |
+
+## Use the plugin (teams)
+
+```bash
+claude plugin marketplace add arunendapally/arunendapally-aisdlc
+```
+
+```bash
+claude plugin install ai-sdlc@arunendapally-aisdlc
+```
+
+```bash
+claude plugin install ai-sdlc-autopilot@arunendapally-aisdlc
+```
+
+Or, inside Claude Code: `/plugin install ai-sdlc --marketplace arunendapally/arunendapally-aisdlc`. Then run `/ai-sdlc:start <what you want>` in your product repo. See [`docs/org-ai-sdlc-process.md`](docs/org-ai-sdlc-process.md) for the setup steps a human does once.
 
 ## Use the skill
 

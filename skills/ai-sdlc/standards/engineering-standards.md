@@ -22,6 +22,7 @@ Copy into your repo and edit. Each standard says what and why. Where tooling enf
 
 - **Match the surrounding code**: naming, comment density, idiom.
 - **Simplicity first.** No speculative abstraction, no configuration nobody asked for, no error handling for impossible cases.
+- **Climb the ladder before writing code**, and stop at the first rung that works: (1) is it needed now; (2) the standard library; (3) a native platform feature; (4) a dependency or helper already in the repo; (5) a one-liner; (6) a small piece of your own code; (7) only then a new dependency, with the reason written in the task. Validation, error handling, security and accessibility are never the place to save lines.
 - **Pure core, thin edges.** Business rules live in pure functions with no I/O, tested first. Handlers parse, call the core and persist.
 - **One validation schema shared by every writer.** Validating only in the form leaves the API unguarded.
 - **Explicit locale and time zone** in any formatting that renders on both server and client.

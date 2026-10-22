@@ -1,0 +1,54 @@
+openapi: 3.1.0
+info:
+  title: Orders API
+  version: 1.4.0
+  description: The contract for this change. Every operation has an operationId and its responses. Open it in Swagger with swagger.html.
+paths:
+  /orders/{orderId}:
+    get:
+      operationId: getOrder
+      summary: Read one of the caller's orders
+      parameters:
+        - name: orderId
+          in: path
+          required: true
+          schema:
+            type: string
+      responses:
+        '200':
+          description: The order
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Order'
+        '404':
+          description: No such order for this caller
+    delete:
+      operationId: cancelOrder
+      summary: Cancel the caller's order before it ships
+      parameters:
+        - name: orderId
+          in: path
+          required: true
+          schema:
+            type: string
+      responses:
+        '204':
+          description: Cancelled
+        '403':
+          description: Not the caller's order
+        '409':
+          description: Already shipped
+components:
+  schemas:
+    Order:
+      type: object
+      required: [id, status, total]
+      properties:
+        id:
+          type: string
+        status:
+          type: string
+          enum: [open, shipped, cancelled]
+        total:
+          type: number

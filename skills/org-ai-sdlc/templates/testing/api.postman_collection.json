@@ -1,0 +1,120 @@
+{
+  "info": {
+    "name": "Orders API (AC-tagged)",
+    "description": "Run with: newman run api.postman_collection.json -e test.postman_environment.json --bail. Setup creates data through the API and stores the ids; Teardown deletes exactly those ids. Request names start with the criterion they prove.",
+    "schema": "https://schema.getpostman.com/json/collection/v2.1.0/collection.json"
+  },
+  "item": [
+    {
+      "name": "Setup",
+      "item": [
+        {
+          "name": "Create a test user",
+          "event": [
+            {
+              "listen": "prerequest",
+              "script": { "exec": ["pm.collectionVariables.set('runId', Date.now().toString(36));"] }
+            },
+            {
+              "listen": "test",
+              "script": {
+                "exec": [
+                  "pm.test('user created', () => pm.response.to.have.status(201));",
+                  "pm.collectionVariables.set('userId', pm.response.json().id);"
+                ]
+              }
+            }
+          ],
+          "request": {
+            "method": "POST",
+            "header": [{ "key": "Content-Type", "value": "application/json" }],
+            "url": "{{baseUrl}}/users",
+            "body": { "mode": "raw", "raw": "{ \"email\": \"test-{{runId}}@example.test\", \"name\": \"Test User\" }" }
+          }
+        },
+        {
+          "name": "Create an open order",
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "exec": [
+                  "pm.test('order created', () => pm.response.to.have.status(201));",
+                  "pm.collectionVariables.set('orderId', pm.response.json().id);"
+                ]
+              }
+            }
+          ],
+          "request": {
+            "method": "POST",
+            "header": [{ "key": "Content-Type", "value": "application/json" }, { "key": "X-Test-User", "value": "{{userId}}" }],
+            "url": "{{baseUrl}}/orders",
+            "body": { "mode": "raw", "raw": "{ \"total\": 100 }" }
+          }
+        }
+      ]
+    },
+    {
+      "name": "Tests",
+      "item": [
+        {
+          "name": "AC-5 another shopper cannot cancel the order",
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "exec": [
+                  "pm.test('AC-5 refused with 403', () => pm.response.to.have.status(403));",
+                  "pm.test('AC-5 says why', () => pm.expect(pm.response.json().error).to.match(/not your order/i));"
+                ]
+              }
+            }
+          ],
+          "request": {
+            "method": "DELETE",
+            "header": [{ "key": "X-Test-User", "value": "someone-else-{{runId}}" }],
+            "url": "{{baseUrl}}/orders/{{orderId}}"
+          }
+        },
+        {
+          "name": "AC-4 the owner cancels the order",
+          "event": [
+            {
+              "listen": "test",
+              "script": { "exec": ["pm.test('AC-4 cancelled', () => pm.response.to.have.status(204));"] }
+            }
+          ],
+          "request": {
+            "method": "DELETE",
+            "header": [{ "key": "X-Test-User", "value": "{{userId}}" }],
+            "url": "{{baseUrl}}/orders/{{orderId}}"
+          }
+        }
+      ]
+    },
+    {
+      "name": "Teardown",
+      "item": [
+        {
+          "name": "Delete the test user and everything it owns",
+          "event": [
+            {
+              "listen": "test",
+              "script": { "exec": ["pm.test('cleaned up', () => pm.expect([200, 204, 404]).to.include(pm.response.code));"] }
+            }
+          ],
+          "request": {
+            "method": "DELETE",
+            "header": [{ "key": "X-Test-Admin", "value": "{{testAdminToken}}" }],
+            "url": "{{baseUrl}}/test-support/users/{{userId}}"
+          }
+        }
+      ]
+    }
+  ],
+  "variable": [
+    { "key": "runId", "value": "" },
+    { "key": "userId", "value": "" },
+    { "key": "orderId", "value": "" }
+  ]
+}

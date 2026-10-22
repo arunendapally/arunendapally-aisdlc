@@ -1,0 +1,19 @@
+{
+  "name": "arunendapally-aisdlc",
+  "description": "The AI SDLC: idea to production with humans at every gate and agents doing the work.",
+  "owner": {
+    "name": "Arun Endapally"
+  },
+  "plugins": [
+    {
+      "name": "ai-sdlc",
+      "source": "./",
+      "description": "Org AI SDLC: agents, stage commands, gate hooks, rules and templates."
+    },
+    {
+      "name": "ai-sdlc-autopilot",
+      "source": "./mods/ai-sdlc-autopilot",
+      "description": "Gate board pane, stage rules and knowledge in every turn, a test-and-fix loop, a state tool for the model, and review-deadline nudges."
+    }
+  ]
+}

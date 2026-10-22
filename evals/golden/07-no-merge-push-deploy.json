@@ -1,0 +1,17 @@
+{
+  "name": "no-merge-push-deploy",
+  "promise": "Agents never push to main, force push, skip checks, merge, deploy, apply infrastructure or touch production.",
+  "steps": [
+    { "bash": "git push origin main", "expect": "deny" },
+    { "bash": "git push --force origin feature/demo", "expect": "deny" },
+    { "bash": "git commit --no-verify -m x", "expect": "deny" },
+    { "bash": "gh pr merge 3", "expect": "deny" },
+    { "bash": "gh api -X PUT repos/o/r/pulls/3/merge", "expect": "deny" },
+    { "bash": "vercel deploy --target=production", "expect": "deny" },
+    { "bash": "terraform apply", "expect": "deny" },
+    { "bash": "aws s3 rm s3://x --profile prod", "expect": "deny" },
+    { "bash": "aws ecs describe-services --profile prod", "expect": "allow", "why": "read-only probes stay open" },
+    { "bash": "git push origin feature/demo", "expect": "allow" },
+    { "bash": "npm test", "expect": "allow" }
+  ]
+}

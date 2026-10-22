@@ -1,0 +1,20 @@
+# The plugin's own CI: every change to agents, commands, hooks or scripts must keep the tests green and
+# every golden task that passed in evals/baseline.json. Agent evals cost tokens and run by hand.
+name: evals
+on:
+  pull_request:
+  push:
+    branches: [main]
+permissions:
+  contents: read
+jobs:
+  tests-and-golden-evals:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 22
+      - run: git config --global user.name ci && git config --global user.email ci@example.com
+      - run: npm test
+      - run: npm run eval

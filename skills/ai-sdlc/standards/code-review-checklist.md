@@ -43,6 +43,12 @@ The reviewer runs this on every batch and again before merge. Report findings by
 22. No unrelated edits, reformatting or drive-by refactors.
 23. Every new trap or repeated finding has been proposed for `traps.md` or this checklist.
 
+## G. Simplicity (the ladder)
+
+24. Every new dependency is justified by the ladder: the need exists now, and no standard library, platform feature or dependency already installed does the job. A one-function use of a large library is a finding.
+25. No hand-rolled code for what the standard library, the platform or an existing dependency or helper in this repo already does (deep copy, dates, retries, unique lists, HTTP clients, parsing).
+26. No speculative generality: no option, flag, abstraction, interface or extension point the spec does not ask for, and no code larger than the requirement it serves. What it keeps: validation, error handling, security and accessibility.
+
 ## The reviewer's honesty check
 
 Before you approve, answer in writing: "Did I review every phase at the same depth, or did I take any result on the worker's word?" If it was the second, go back and review properly.
