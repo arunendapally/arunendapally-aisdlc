@@ -46,5 +46,25 @@
   {
     "name": "code-waits-for-build",
     "passed": true
+  },
+  {
+    "name": "tests-prove-themselves",
+    "passed": true
+  },
+  {
+    "name": "release-needs-fresh-knowledge",
+    "passed": true
+  },
+  {
+    "name": "outcome-outlives-release",
+    "passed": true
+  },
+  {
+    "name": "frozen-budget-stops-features",
+    "passed": true
+  },
+  {
+    "name": "escalation-triggers-retro",
+    "passed": true
   }
 ]

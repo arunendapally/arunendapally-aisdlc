@@ -1,0 +1,34 @@
+{
+  "name": "frozen-budget-stops-features",
+  "promise": "When the error budget is spent, no new full or light feature starts; bug fixes and tasks still do.",
+  "steps": [
+    {
+      "put": [
+        ".ai-sdlc/BUDGET_FROZEN",
+        ""
+      ]
+    },
+    {
+      "sdlc": [
+        "init",
+        "shiny"
+      ],
+      "ok": false,
+      "out": "error budget is spent"
+    },
+    {
+      "sdlc": [
+        "bug",
+        "oops"
+      ],
+      "ok": true
+    },
+    {
+      "sdlc": [
+        "task",
+        "tidy"
+      ],
+      "ok": true
+    }
+  ]
+}

@@ -83,7 +83,7 @@ A change to migrations or SQL that is not marked as data work cannot pass its ga
 - In the bug, task and hotfix lanes, Build passes on checks rather than a person: the gate is green at or above the baseline, the diff is under the limit, and for a bug a red run was recorded before the fix (the repro).
 - A bug fix cannot touch dependencies, schema, CI or infrastructure; the hook refuses. A hotfix can, with the on-call engineer's yes.
 - After a hotfix ships, a postmortem is due within two days; session start and status flag it until it exists.
-- `sdlc freeze` (error budget spent) closes the light lane and suspends every earned promotion until `sdlc unfreeze`.
+- `sdlc freeze` (error budget spent) stops new full and light features, moves a light feature still at Analyze to the full lane, and suspends every earned promotion until `sdlc unfreeze`. Bug, hotfix and task work stays open.
 
 The full lane's stages, artefacts and section requirements are unchanged: see the templates in `skills/org-ai-sdlc/templates/`.
 
@@ -127,6 +127,28 @@ Inside a build, `sdlc gate` records the baseline on the first run and refuses a 
 
 ---
 
+## 6a. The loop spine: plan, test, implement, verify, review, release and observe, remember
+
+Decided in [ADR-0002](adr/0002-loop-spine.md). The stages are the outer loop, once per feature; inside Build, each slice runs test, implement, gate, retry. Improve runs out-of-band.
+
+- **Test, proved.** `sdlc proof <feature>` runs the repo's `proofCommand` on the test files that trace the new criteria: first on the branch, where they must pass, then in a throwaway git worktree of the merge-base with those test files copied in, where every new criterion's tests must fail or error. "No tests collected" does not count. With a JUnit report (`{report}`), each criterion is judged on its own.
+  - The test files' hashes are recorded. Verify refuses if one changed after the proof, so a test cannot be weakened between red and green.
+  - Without a `proofCommand`, Verify warns and the PR must say under `## Not verified` that the proof did not run.
+  - A hotfix proves its repro after the merge (`sdlc proof <hotfix> --files <tests>`), against the code before the fix. Until it passes, its postmortem counts as not done.
+  - `sdlc spike <feature>` marks a slice as a spike: it may skip the red-first habit, never the proof, and it cannot pass Verify until a non-spike slice replaces it.
+- **Verify, then review.** The machine gate runs before the packet, the lenses and the human, at every scale.
+- **Release and observe.** In the full and light lanes, Release refuses without a rollback line `Tested: <date>, <how>`, a result for each probe, and `## Outcome metric` naming `Metric:` and `Owner:`. The feature closes at release and opens an outcome follow-up, due after the lane's watch window (`outcomeWindowDays`, 14 days full and 7 light) or on its `Read on:` date. Status and session start show OUTCOME DUE and OVERDUE; `sdlc metrics` reports its age. `sdlc outcome <feature> breach` alerts the incident commander; only a human declares a hotfix.
+- **Remember, on staleness.** Release refuses while any of these stand:
+  - a knowledge page whose sources the change touched is stale (C4 files count as sources)
+  - a fact in `facts.md` about a file the change touched is stale
+  - a decision says it supersedes an ADR (in `plan.md` or a changed ADR) and that ADR is not marked `Status: superseded`
+  - a changed postmortem has an action without a link to the trap, test, check or PRD it became, an owner and a due date
+
+  There is no rule that traps or the changelog must change.
+- **Improve, when triggered.** An escalation past the retry cap, or the same blocker or major checklist finding in two features, writes a trigger. Session start and status show RETRO DUE until `sdlc retro` runs.
+
+---
+
 ## 7. Knowledge: the agents' memory
 
 What one session learns, the next one must not have to learn again.
@@ -145,7 +167,7 @@ Sections 5 to 7 make each repo better. This loop makes the plugin better, for ev
 - **Evidence is recorded as the work runs:** rejection reasons, goals that escalated past the retry cap, how long each gate waited, guards that fired (the audit log), traps and how they are guarded, and escaped bugs. A bug that escaped shipped work is recorded with `sdlc bug <slug> --caused-by <feature>`, which also takes back the streak and any promotion of every gate that feature passed.
 - **`sdlc retro`** mines one or more repos (`--repos a,b`) over a window (`--since 30`) and ranks proposals: a rejection theme seen twice at the same gate becomes a checklist or command change; an escalating goal, a command change; a gate waiting past its deadline, a pre-review and PR-size change; a guard firing again and again, an agent rule or a narrower guard; an escape, a new Verify check; a trap guarded only by prose, a hook or test. One event is never a pattern.
 - **`/ai-sdlc:retro`** takes at most three proposals, changes the named plugin files on a `retro/<date>` branch, adds an eval for each that fails before the change and passes after, and opens a PR with the before and after numbers. It never loosens a guard, gate, limit or approval rule. A human platform owner merges it.
-- **Golden-task evals** (`evals/golden/`, `npm run eval`) are the promises the process makes, one per file, replayed in throwaway repos: agents cannot approve, a bug needs a repro, bugs stay small, only humans declare hotfixes, no PR without a pre-review, data work is detected, no merge, push or deploy, guardrails hold, the kill switch works, escapes cost trust, knowledge goes stale, code waits for Build. CI fails on any task that passed in `evals/baseline.json` and fails now.
+- **Golden-task evals** (`evals/golden/`, `npm run eval`) are the promises the process makes, one per file, replayed in throwaway repos: agents cannot approve, a bug needs a repro, bugs stay small, only humans declare hotfixes, no PR without a pre-review, data work is detected, no merge, push or deploy, guardrails hold, the kill switch works, escapes cost trust, knowledge goes stale, code waits for Build, tests prove themselves against the base code, release needs fresh knowledge and a tested rollback, the outcome outlives the release, a frozen budget stops new features, an escalation triggers the retro. CI fails on any task that passed in `evals/baseline.json` and fails now.
 - **Agent evals** (`evals/agents/`, `npm run eval:agents`) run real agents through `claude -p` on small fixed tasks and score the answers: the CTO routes an outage to a human-declared hotfix and a schema change to the data kind, the pre-reviewer scores risk and finds the untested branch, the product owner grades its evidence. They cost tokens, so they run by hand and in every retro.
 
 ---

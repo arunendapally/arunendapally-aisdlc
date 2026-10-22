@@ -47,17 +47,18 @@ Then, as a human:
 2. **Name who approves what**, by git user name. Leave a list empty to let anyone at the keyboard approve.
    - `"gateOwners": { "1": ["Product Lead"], "3": ["Architect"], "5": ["Tech Lead"] }`
    - `"trustOwners": ["CTO"]` for who may promote gates.
-3. **Optionally**, add `"dataCheckCommand"` (a script that fails when tests leave data behind) and `"gateRepeats": 3` (to catch flaky tests on every gate run).
-4. **Replace the teams** in `.github/CODEOWNERS` with your own.
-5. **Turn on the GitHub ruleset.** This is the real enforcement; the hooks only fail sooner.
+3. **Set your proof command**, so a feature's tests prove they depend on the change (ADR-0002). `sdlc proof` runs it twice on the test files that name the feature's criteria: on your branch, where they must pass, and on the base commit's code, where they must fail. `{files}` becomes the quoted test files. Examples: `"proofCommand": "npx jest {files}"`, `"pytest {files}"`, `"node --test {files}"`. To judge each criterion on its own, also write a JUnit report to `{report}`, for example `"npx jest {files} --reporters=jest-junit"` with `JEST_JUNIT_OUTPUT_FILE={report}`. Without it, Verify only warns and the PR must say under `## Not verified` that the proof did not run.
+4. **Optionally**, add `"dataCheckCommand"` (a script that fails when tests leave data behind) and `"gateRepeats": 3` (to catch flaky tests on every gate run).
+5. **Replace the teams** in `.github/CODEOWNERS` with your own.
+6. **Turn on the GitHub ruleset.** This is the real enforcement; the hooks only fail sooner.
 
    ```bash
    gh api repos/OWNER/REPO/rulesets --method POST --input .github/rulesets/main.json
    ```
 
    For a one-person repo, first set `required_approving_review_count` to 0 and `require_code_owner_review` to false. GitHub does not let you approve your own pull request, so you would lock yourself out.
-6. **Set the repo variable** `BACKUP_REVIEWERS` to a team handle. The hourly `review-sla` workflow mentions it on overdue reviews.
-7. **Give agents a GitHub App or fine-grained token** with no admin or bypass rights.
+7. **Set the repo variable** `BACKUP_REVIEWERS` to a team handle. The hourly `review-sla` workflow mentions it on overdue reviews.
+8. **Give agents a GitHub App or fine-grained token** with no admin or bypass rights.
 
 ## 3. Your first feature, start to finish
 
@@ -92,7 +93,9 @@ When a gate refuses, `sdlc request` lists every reason, for example "R2 has no s
 - **Where things stand:** `/ai-sdlc:status` lists each feature, its gate, who it waits on and for how long. With the mod, the band above the prompt shows the same. `/sdlc-board` opens the board, whose Approve button fills the prompt for you to send.
 - **Let agents fix their own test failures:** `/sdlc-autopilot`. After each turn that edits files, the gate runs and the next fix starts automatically, up to the retry cap. Then it stops and notifies you.
 - **Stop everything:** type `sdlc pause`; `sdlc resume` to continue.
-- **Error budget spent:** type `sdlc freeze`. The light lane closes and earned promotions are suspended until `sdlc unfreeze`.
+- **Error budget spent:** type `sdlc freeze`. No new full or light feature starts (`sdlc init` is refused), bug fixes, hotfixes and tasks carry on, and earned promotions are suspended until `sdlc unfreeze`.
+- **After a release:** the feature closes, and its outcome follow-up opens with the owner and read date from `release.md` (`## Outcome metric`). Status shows OUTCOME DUE, then OVERDUE. The owner reads the metric and an agent records `sdlc outcome <feature> met|missed|breach`; a breach alerts the incident commander, who decides whether to declare a hotfix.
+- **When the retro is due early:** an escalation past the retry cap, or the same serious review finding in two features, shows RETRO DUE at session start. Running the retro clears it.
 - **Give agents more autonomy:** after enough clean approvals, `sdlc trust` (run by an agent) shows which gates are READY, and a trust owner types `sdlc trust bug 5`. Any rejection or escaped bug takes it back.
 
 ## 6. Improve the process

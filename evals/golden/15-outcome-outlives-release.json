@@ -1,0 +1,89 @@
+{
+  "name": "outcome-outlives-release",
+  "promise": "A released feature leaves an outcome follow-up with an owner and a date; a breach alerts a human and never declares a hotfix by itself.",
+  "steps": [
+    {
+      "sdlc": [
+        "init",
+        "demo"
+      ],
+      "ok": true
+    },
+    {
+      "setState": [
+        "demo",
+        {
+          "stage": 6,
+          "stages": {
+            "6": {
+              "enteredAt": "2026-10-22T00:00:00.000Z"
+            }
+          },
+          "gates": {
+            "6": {
+              "status": "approved"
+            }
+          }
+        }
+      ]
+    },
+    {
+      "put": [
+        "specs/demo/release.md",
+        "## Outcome metric\n\nMetric: checkout conversion +2%\nOwner: Priya\n"
+      ]
+    },
+    {
+      "sdlc": [
+        "advance",
+        "demo"
+      ],
+      "ok": true,
+      "out": "Outcome follow-up: Priya"
+    },
+    {
+      "sdlc": [
+        "status"
+      ],
+      "out": "OUTCOME DUE"
+    },
+    {
+      "sdlc": [
+        "outcome",
+        "demo",
+        "breach"
+      ],
+      "ok": true,
+      "out": "incident commander"
+    },
+    {
+      "state": [
+        "demo",
+        "outcome.status",
+        "open"
+      ]
+    },
+    {
+      "state": [
+        "demo",
+        "lane",
+        "full"
+      ]
+    },
+    {
+      "sdlc": [
+        "outcome",
+        "demo",
+        "met"
+      ],
+      "ok": true
+    },
+    {
+      "state": [
+        "demo",
+        "outcome.status",
+        "met"
+      ]
+    }
+  ]
+}

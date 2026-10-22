@@ -16,6 +16,7 @@ import { boardProblems } from './design-review.mjs'
 import { matrix, matrixText } from './testmatrix.mjs'
 import { factsGateProblems, assumptionProblems } from './facts.mjs'
 import { erProblems, openapiProblems, breakingChanges } from './contracts.mjs'
+import { runProof, proofProblems, releaseProblems, outcomeFollowUp, overdueOutcomes, readTriggers, addTrigger, clearTriggers, repeatedFindings } from './loop.mjs'
 
 const dir = root()
 const [cmd, feature, ...rest] = process.argv.slice(2)
@@ -102,6 +103,7 @@ const commands = {
   init() {
     if (!feature || !/^[a-z0-9][a-z0-9-]*$/.test(feature)) fail('Usage: sdlc init <feature-slug> [--branch <name>]')
     if (readState(dir, feature)) fail(`Feature "${feature}" already exists.`)
+    if (isFrozen(dir)) fail('The error budget is spent, so new features wait until a human unfreezes it. Bug, hotfix and reliability tasks stay open (sdlc bug, sdlc task).')
     createFeature(dir, { feature, lane: 'full', branch: flag('branch'), extra: { kinds: kinds() } })
     const prd = copyTemplate(dir, feature, 'prd.md')
     console.log(`Created ${feature} at stage 1 (Plan), full lane${kindNote()}. PRD template: ${prd}`)
@@ -198,6 +200,15 @@ const commands = {
       if (pre && !/Open findings:\s*0\b/i.test(pre)) missing.push('the pre-review still has open findings ("Open findings: 0" is required)')
       // A ledger with no rows reads the same as a skipped review, so the pre-review says what ran (F10).
       if (pre && !/Lenses run:\s*\S/i.test(pre)) missing.push('the pre-review does not say which lenses ran ("Lenses run: ...")')
+      const proof = proofProblems(dir, state, fs.existsSync(file) ? fs.readFileSync(file, 'utf8') : '', cfg)
+      if (proof.warning) console.log(`WARNING: ${proof.warning}`)
+      missing.push(...proof.problems)
+      // The same serious finding in two features is a gap in the process: the retro is due now.
+      for (const r of repeatedFindings(dir, cfg)) addTrigger(dir, `"${r.item}" found again (${r.features.join(', ')})`)
+    }
+    if (state.stage === 6) {
+      const file = path.join(dir, cfg.specsDir, feature, spec.artefact)
+      missing.push(...releaseProblems(dir, state, fs.existsSync(file) ? fs.readFileSync(file, 'utf8') : '', cfg))
     }
     if (missing.length) fail(`Gate ${state.stage} cannot be requested:\n- ${missing.join('\n- ')}`)
     const gate = state.gates[state.stage]
@@ -229,10 +240,16 @@ const commands = {
     const next = nextStage(state)
     if (next === undefined) {
       state.closedAt = now
-      if (state.lane === 'hotfix') state.postmortemDue = new Date(Date.now() + loadConfig(dir).postmortemDays * 864e5).toISOString()
+      const cfg = loadConfig(dir)
+      if (state.lane === 'hotfix') state.postmortemDue = new Date(Date.now() + cfg.postmortemDays * 864e5).toISOString()
+      // The feature closes at release; its outcome is a follow-up with an owner and a date.
+      const release = path.join(dir, cfg.specsDir, feature, 'release.md')
+      if (['full', 'light'].includes(state.lane) && fs.existsSync(release)) state.outcome = outcomeFollowUp(state, fs.readFileSync(release, 'utf8'), cfg)
       writeState(dir, state)
-      const due = state.postmortemDue ? ` Postmortem due by ${state.postmortemDue.slice(0, 10)}: sdlc incident ${feature}` : ''
-      return console.log(`${feature} is complete.${due}`)
+      const proofNote = cfg.proofCommand ? `, and the test proof: sdlc proof ${feature} --files <repro tests>` : ''
+      const due = state.postmortemDue ? ` Postmortem due by ${state.postmortemDue.slice(0, 10)}: sdlc incident ${feature}${proofNote}` : ''
+      const outcome = state.outcome ? ` Outcome follow-up: ${state.outcome.owner} reads "${state.outcome.metric}" by ${state.outcome.due.slice(0, 10)}, then: sdlc outcome ${feature} met|missed|breach` : ''
+      return console.log(`${feature} is complete.${due}${outcome}`)
     }
     state.stage = next
     state.stages[state.stage] = { enteredAt: now }
@@ -271,6 +288,8 @@ const commands = {
     if (flaky) console.log(`FLAKY: ${runs.length} runs gave ${runs.map(r => `${r.ok ? 'green' : 'red'} ${r.count}`).join(', ')}. Quarantine with an owner and a date, or fix it; never retry until green.`)
     if (leaked) console.log(`TEST DATA LEAKED: the data check failed after a run. Each test must tear down what it creates.\n${runs.find(r => r.leaked).leakOut.trim().slice(0, 400)}`)
     if (state.stage === 4 && state.baseline === undefined) state.baseline = count
+    // The code before any fix: a hotfix proves its repro against it after the merge.
+    if (state.stage === 4 && !state.proofBase) state.proofBase = loadConfig(dir).protectedBranches.map(b => git(`merge-base ${b} HEAD`, dir)).find(Boolean)
     if (!ok && !flaky && !leaked && !hadGreen && !state.reproRedAt && state.stage === 4 && ['bug', 'hotfix'].includes(state.lane)) {
       state.reproRedAt = now
       writeState(dir, state)
@@ -292,6 +311,7 @@ const commands = {
     state.retries[key] = (state.retries[key] ?? 0) + 1
     writeState(dir, state)
     const cap = loadConfig(dir).retryCap
+    if (state.retries[key] > cap) addTrigger(dir, `${feature} escalated "${goal}" past the retry cap`)
     if (state.retries[key] > cap) fail(`ESCALATE: "${goal}" failed ${state.retries[key]} times (cap ${cap}). Stop, write what was tried and what failed, and ask the gate owner.`)
     console.log(`Attempt ${state.retries[key]} of ${cap} on "${goal}".`)
   },
@@ -302,18 +322,65 @@ const commands = {
     if (!features.length) return console.log('No features in flight. Start one with /ai-sdlc:kickoff.')
     const overdue = overdueGates(dir)
     const noPostmortem = overduePostmortems(dir).map(s => s.feature)
+    const lateOutcomes = overdueOutcomes(dir).map(s => s.feature)
     for (const s of features) {
       if (s.closedAt) {
-        const due = noPostmortem.includes(s.feature) ? `, POSTMORTEM OVERDUE (due ${s.postmortemDue.slice(0, 10)})` : ''
-        console.log(`${s.feature}: complete (${s.lane} lane)${due}`)
+        const noProof = loadConfig(dir).proofCommand && !s.proof?.ok ? '; the test proof has not passed' : ''
+        const due = noPostmortem.includes(s.feature) ? `, POSTMORTEM OVERDUE (due ${s.postmortemDue.slice(0, 10)}${noProof})` : ''
+        const open = s.outcome?.status === 'open' ? `, OUTCOME ${lateOutcomes.includes(s.feature) ? 'OVERDUE' : 'DUE'} ${s.outcome.due.slice(0, 10)} (${s.outcome.owner})` : ''
+        const outcome = open || (s.outcome ? `, outcome ${s.outcome.status}` : '')
+        console.log(`${s.feature}: complete (${s.lane} lane)${due}${outcome}`)
         continue
       }
       const gate = s.gates[s.stage]
       const late = overdue.find(o => o.feature === s.feature)
       const deadline = late ? ` OVERDUE (deadline ${late.limit}h): escalate to a backup reviewer` : ''
       const wait = gate?.status === 'waiting' ? `, waiting on ${stageSpec(s).owner} for ${hours(gate.requestedAt)}h${deadline}` : ''
-      console.log(`${s.feature}: stage ${s.stage} ${STAGES[s.stage].name} (${s.lane} lane), gate ${gate?.status ?? 'not requested'}${wait}`)
+      console.log(`${s.feature}: stage ${s.stage} ${STAGES[s.stage].name} (${s.lane} lane)${s.spike ? ', SPIKE' : ''}, gate ${gate?.status ?? 'not requested'}${wait}`)
     }
+    for (const t of readTriggers(dir)) console.log(`RETRO DUE: ${t.reason}. Run: sdlc retro`)
+  },
+
+  // The test proof (ADR-0002): the traced tests are green here and red against the base code.
+  // "sdlc proof <feature> [--files a,b] [--base <commit>]"; a hotfix names its repro tests.
+  proof() {
+    const state = need()
+    const cfg = loadConfig(dir)
+    if (!cfg.proofCommand) fail('No proofCommand in .ai-sdlc/config.json. A human sets it, for example "npx jest {files}" or "pytest {files}". Until then, the PR says under "## Not verified" that the proof did not run.')
+    if (state.lane === 'hotfix' && !state.closedAt) fail('A hotfix proves its repro after the merge, so the fix is never held up: run this once it has shipped.')
+    const files = flag('files')?.split(',').map(f => f.trim()).filter(Boolean)
+    if (!fs.existsSync(path.join(dir, cfg.specsDir, feature, 'acceptance.feature')) && !files?.length) fail(`${feature} has no acceptance.feature: name the tests to prove with --files a,b`)
+    const base = flag('base') ?? (state.lane === 'hotfix' ? state.proofBase : undefined)
+    const result = runProof(dir, state, { files, base }, cfg)
+    state.proof = result
+    writeState(dir, state)
+    if (!result.ok) fail(`Proof FAILED${result.base ? ` against ${result.base}` : ''}:\n- ${result.problems.join('\n- ')}`)
+    console.log(`Proof passed against ${result.base}: ${result.acs.join(', ')} ${result.perTest ? 'each failed' : 'failed'} on the base code and pass here. Locked ${Object.keys(result.files).length} test file(s); changing one means proving again.`)
+  },
+
+  // A spike may skip the red-first habit inside a slice, never the proof; its code cannot merge.
+  spike() {
+    const state = need()
+    state.spike = !rest.includes('--off')
+    writeState(dir, state)
+    console.log(state.spike ? `${feature} is a spike: it cannot pass Verify until a non-spike slice replaces it (sdlc spike ${feature} --off).` : `${feature} is no longer a spike.`)
+  },
+
+  // Close the outcome follow-up, or raise a breach. Only a human declares a hotfix.
+  outcome() {
+    const state = need()
+    const result = rest[0]
+    if (!state.outcome) fail(`${feature} has no outcome follow-up: one opens when a full or light feature is released.`)
+    if (!['met', 'missed', 'breach'].includes(result)) fail('Usage: sdlc outcome <feature> met|missed|breach [note]')
+    const note = rest.slice(1).join(' ')
+    if (result === 'breach') {
+      state.outcome.breaches = [...(state.outcome.breaches ?? []), { at: new Date().toISOString(), note }]
+      writeState(dir, state)
+      return console.log(`ALERT: ${feature} breached "${state.outcome.metric}". Notify the incident commander, who decides whether to declare a hotfix (a human types: sdlc hotfix <slug>).`)
+    }
+    state.outcome = { ...state.outcome, status: result, closedAt: new Date().toISOString(), ...(note ? { note } : {}) }
+    writeState(dir, state)
+    console.log(`Outcome for ${feature}: ${result}.${result === 'missed' ? ' Feed it to the next retro and, if it still matters, a new PRD.' : ''}`)
   },
 
   // Earned autonomy: each gate's run of clean human approvals, what is promoted, and what has
@@ -425,6 +492,9 @@ const commands = {
     const sinceMs = Date.now() - days * 864e5
     const repos = [dir, ...(opt('repos') ?? '').split(',').filter(Boolean).map(p => root(path.resolve(p)))]
     const result = analyze(repos.map(r => collect(r, sinceMs)))
+    const triggers = readTriggers(dir)
+    clearTriggers(dir)
+    if (triggers.length && !args.includes('--json')) console.log(`Triggered by: ${triggers.map(t => t.reason).join('; ')}\n`)
     if (args.includes('--json')) return console.log(JSON.stringify(result, null, 2))
     const text = report(result)
     if (args.includes('--write')) {
@@ -443,7 +513,9 @@ const commands = {
       const waits = Object.entries(s.gates).filter(([, g]) => g.approvedAt && g.requestedAt)
         .map(([n, g]) => `${n}:${hours(g.requestedAt, g.approvedAt)}h`).join(', ') || 'none yet'
       const rework = Object.values(s.retries).reduce((a, b) => a + b, 0) + Object.values(s.gates).filter(g => g.rejections).reduce((a, g) => a + g.rejections, 0)
-      console.log(`${s.feature}\n  lead time ${hours(s.createdAt)}h\n  cycle ${cycle}\n  gate wait ${waits}\n  rework ${rework}`)
+      // Closed but not done: the outcome follow-up's age is a flow number of its own.
+      const outcome = s.outcome ? `\n  outcome ${s.outcome.status} after ${hours(s.outcome.openedAt, s.outcome.closedAt)}h` : ''
+      console.log(`${s.feature}\n  lead time ${hours(s.createdAt)}h\n  cycle ${cycle}\n  gate wait ${waits}\n  rework ${rework}${outcome}`)
     }
   },
 
@@ -482,6 +554,6 @@ const commands = {
 }
 
 if (!commands[cmd]) {
-  fail('Usage: sdlc <init|bug|task|kind|request|advance|gate|tests|review|gherkin|api|retry|status|trust|metrics|retro|incident|knowledge|init-repo> [feature] [...]')
+  fail('Usage: sdlc <init|bug|task|kind|request|advance|gate|tests|proof|spike|review|gherkin|api|retry|status|outcome|trust|metrics|retro|incident|knowledge|init-repo> [feature] [...]')
 }
 commands[cmd]()

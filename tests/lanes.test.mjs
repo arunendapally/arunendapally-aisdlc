@@ -92,8 +92,8 @@ test('PR size: the Verify gate refuses an oversized full-lane PR', () => {
   r.config({ gateCommand: 'node gate.cjs' })
   r.sdlc('init', 'demo')
   r.setState('demo', { stage: 5, stages: { 5: { enteredAt: hoursAgo(1) } }, baseline: 12 })
-  const PR = ['## Tasks', '## Test results', '## Mutations', '## Defects', '## Security results', '## QA verdict', '## Not verified', '## Review honesty']
-  r.fill('specs/demo/pr.md', PR, CLEAN_PRE)
+  const PR = ['## Tasks', '## Test results', '## Mutations', '## Defects', '## Security results', '## QA verdict', '## Review honesty']
+  r.fill('specs/demo/pr.md', PR, `${CLEAN_PRE}\n## Not verified\n\nThe test proof did not run: no proofCommand yet.\n`)
   r.put('src/huge.ts', 'x\n'.repeat(450))
   gate.green()
   r.sdlc('gate', 'demo')
