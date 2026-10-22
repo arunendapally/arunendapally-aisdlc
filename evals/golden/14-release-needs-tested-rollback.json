@@ -1,6 +1,6 @@
 {
-  "name": "release-needs-fresh-knowledge",
-  "promise": "Release is refused while a knowledge page about code the change touched is stale, or the rollback is untested.",
+  "name": "release-needs-tested-rollback",
+  "promise": "Release is refused while the rollback is untested or probes have no result; a knowledge page the change made stale is a warning, not a block.",
   "steps": [
     {
       "put": [
@@ -30,7 +30,8 @@
     {
       "sdlc": [
         "init",
-        "demo"
+        "demo",
+        "--full"
       ],
       "ok": true
     },
@@ -109,22 +110,9 @@
         "request",
         "demo"
       ],
-      "ok": false,
-      "out": "knowledge page knowledge/pay.md is stale"
-    },
-    {
-      "put": [
-        "knowledge/pay.md",
-        "---\nname: pay\ndescription: Retry rule, now 2.\ntype: component\nsources: [src/pay.ts]\nverified: $HEAD\nconfidence: Moderate\n---\n"
-      ]
-    },
-    {
-      "sdlc": [
-        "request",
-        "demo"
-      ],
       "ok": true,
-      "out": "waiting on"
+      "out": "WARNING: knowledge page knowledge/pay.md is stale",
+      "why": "bookkeeping warns"
     }
   ]
 }

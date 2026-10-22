@@ -112,7 +112,7 @@ test('autopilot: paused agents stop the loop', async ($, on) => {
   expect(submitted.filter(t => t.startsWith('[autopilot]')).length).toBe(0)
 })
 
-test('every turn carries the stage rules and the knowledge index in the system prompt', async ($, on) => {
+test('every turn carries the stage rules and a pointer to the knowledge, not the whole index', async ($, on) => {
   world($, on)
   on('prompt.compose', () => ({ sections: [] }))
   await $.session.start({ cwd: '/repo', surface: 'terminal', isInteractive: true })
@@ -120,7 +120,8 @@ test('every turn carries the stage rules and the knowledge index in the system p
   const mine = sections.find(s => s.id === 'ai-sdlc-context')
   expect(mine?.text).toContain('demo, bug lane, stage 4 Build')
   expect(mine?.text).toContain('never loosen or skip a test')
-  expect(mine?.text).toContain('payments-retry')
+  expect(mine?.text).toContain('knowledge for <files>')
+  expect(mine?.text).not.toContain('payments-retry')
 })
 
 test('the board puts an approval in the prompt for a human to send, never records it', async ($, on) => {

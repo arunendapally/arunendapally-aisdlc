@@ -1,12 +1,58 @@
 {
   "name": "code-waits-for-build",
-  "promise": "In the full lane no code is written before the plan is approved, and each artefact waits for the gate before it.",
+  "promise": "No code is written before Build, and the plan waits for the spec to be approved.",
   "steps": [
-    { "sdlc": ["init", "demo"], "ok": true },
-    { "write": ["src/app.ts", "x"], "expect": "deny" },
-    { "write": ["specs/demo/spec.md", "x"], "expect": "deny" },
-    { "write": ["docs/notes.md", "x"], "expect": "allow" },
-    { "setState": ["demo", { "stage": 4 }] },
-    { "write": ["src/app.ts", "x"], "expect": "allow" }
+    {
+      "sdlc": [
+        "init",
+        "demo",
+        "--full"
+      ],
+      "ok": true
+    },
+    {
+      "write": [
+        "src/app.ts",
+        "x"
+      ],
+      "expect": "deny"
+    },
+    {
+      "write": [
+        "specs/demo/plan.md",
+        "x"
+      ],
+      "expect": "deny"
+    },
+    {
+      "write": [
+        "specs/demo/acceptance.feature",
+        "x"
+      ],
+      "expect": "allow",
+      "why": "the acceptance criteria are part of the spec"
+    },
+    {
+      "write": [
+        "docs/notes.md",
+        "x"
+      ],
+      "expect": "allow"
+    },
+    {
+      "setState": [
+        "demo",
+        {
+          "stage": 4
+        }
+      ]
+    },
+    {
+      "write": [
+        "src/app.ts",
+        "x"
+      ],
+      "expect": "allow"
+    }
   ]
 }

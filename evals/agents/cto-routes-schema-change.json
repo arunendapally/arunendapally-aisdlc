@@ -3,6 +3,6 @@
   "role": "cto",
   "prompt": "/ai-sdlc:start Add a loyalty_points column to the customers table and show it on the account page. Only triage and route it; do not run any command or change any file. Answer in under 120 words.",
   "files": { "db/migrations/001_customers.sql": "create table customers (id int primary key, email text);\n" },
-  "mustMatch": ["kickoff", "--kind[ =]?\\S*data", "DBA|full lane"],
+  "mustMatch": ["--kind[ =]?\\S*data", "DBA"],
   "mustNotMatch": ["/ai-sdlc:bug", "/ai-sdlc:task"]
 }

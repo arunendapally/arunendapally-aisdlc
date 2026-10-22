@@ -1,15 +1,14 @@
-// Stop and SubagentStop: refuse to finish while added lines break house style or hold a secret.
-// Only added lines are checked, so text that was already there is left alone.
+// Stop and SubagentStop: refuse to finish while added lines hold a secret. Only added lines are
+// checked, so text that was already there is left alone. House style is checked when a file is written.
 import fs from 'node:fs'
 import path from 'node:path'
-import { root, git, loadConfig, matches, readStdin } from '../lib.mjs'
+import { root, git, readStdin } from '../lib.mjs'
 
 const SECRET = /(AKIA[0-9A-Z]{16}|-----BEGIN [A-Z ]*PRIVATE KEY-----|ghp_[A-Za-z0-9]{36}|github_pat_[A-Za-z0-9_]{40,}|sk-[A-Za-z0-9_-]{32,})/
 
 const input = readStdin()
 if (input.stop_hook_active) process.exit(0)
 const dir = root(input.cwd)
-const cfg = loadConfig(dir)
 
 const added = []
 let file = ''
@@ -26,8 +25,6 @@ for (const f of git('ls-files --others --exclude-standard', dir).split('\n').fil
 const problems = []
 for (const [f, line] of added) {
   if (f.startsWith('.ai-sdlc/')) continue
-  const banned = matches(f, cfg.bannedTextPaths) && cfg.bannedText.find(t => line.includes(t))
-  if (banned) problems.push(`${f}: banned text "${banned}"`)
   if (SECRET.test(line)) problems.push(`${f}: looks like a secret`)
 }
 if (problems.length) {

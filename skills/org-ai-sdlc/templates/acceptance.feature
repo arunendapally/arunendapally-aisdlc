@@ -1,11 +1,8 @@
-# Stage 2 Analyze. Every acceptance criterion, as executable Gherkin.
-# Rules the gate enforces (sdlc gherkin <feature>):
-# - One Feature with a narrative: As a ..., I want ..., So that ...
-# - Every scenario has exactly one @AC-n (unique), the @Rn requirement(s) from prd.md it proves,
-#   and one test level: @unit, @subsystem, @api or @e2e. Every PRD requirement has a scenario.
-# - Given (context), one When (the behaviour), Then (observable outcome), in that order.
-# - Scenario Outline only with an Examples table that has a column for every <placeholder>.
-# - Describe behaviour, not UI mechanics: no selectors; "clicks the button" is a warning.
+# Stage 1 Plan, written with the PRD. Every acceptance criterion, as executable Gherkin.
+# What the gate enforces (sdlc gherkin <feature>): every scenario has exactly one @AC-n (unique) and
+# the @Rn requirement(s) from prd.md it proves, and every PRD requirement has a scenario.
+# Advice it warns about: a narrative (As a ..., I want ..., So that ...); one test level as a hint
+# (@unit, @subsystem, @api, @e2e); Given, one When, Then, in that order; behaviour, not UI mechanics.
 # Replace the example below with this feature's scenarios.
 
 Feature: Save items for later

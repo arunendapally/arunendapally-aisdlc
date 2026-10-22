@@ -1,0 +1,106 @@
+{
+  "name": "risk-leaves-the-light-lane",
+  "promise": "A migration that drops or alters existing data, or a change to a high-risk path, cannot pass Build in the light lane; a human moves it to full, which sends it back to Design.",
+  "steps": [
+    {
+      "config": {
+        "gateCommand": "node gate.cjs"
+      }
+    },
+    {
+      "sdlc": [
+        "init",
+        "demo",
+        "--kind",
+        "data"
+      ],
+      "ok": true
+    },
+    {
+      "setState": [
+        "demo",
+        {
+          "stage": 4,
+          "stages": {
+            "4": {
+              "enteredAt": "2026-10-22T00:00:00Z"
+            }
+          }
+        }
+      ]
+    },
+    {
+      "fill": [
+        "specs/demo/tasks.md",
+        [
+          "## Tasks",
+          "## Down migration"
+        ]
+      ]
+    },
+    {
+      "put": [
+        "db/migrations/002_add.sql",
+        "alter table customers add column points int;\n"
+      ]
+    },
+    {
+      "gate": "green"
+    },
+    {
+      "sdlc": [
+        "gate",
+        "demo"
+      ],
+      "ok": true
+    },
+    {
+      "sdlc": [
+        "request",
+        "demo"
+      ],
+      "ok": true,
+      "out": "passed on checks",
+      "why": "an additive migration is light-lane work"
+    },
+    {
+      "setState": [
+        "demo",
+        {
+          "stage": 4,
+          "gates": {}
+        }
+      ]
+    },
+    {
+      "put": [
+        "db/migrations/003_drop.sql",
+        "alter table customers drop column email;\n"
+      ]
+    },
+    {
+      "sdlc": [
+        "request",
+        "demo"
+      ],
+      "ok": false,
+      "out": "alter or drop existing data, which needs the full lane"
+    },
+    {
+      "bash": "echo sdlc lane demo full",
+      "expect": "deny",
+      "why": "only a human changes the lane"
+    },
+    {
+      "say": "sdlc lane demo full",
+      "out": "back to stage 3 \\(Design\\)"
+    },
+    {
+      "state": [
+        "demo",
+        "stage",
+        3
+      ]
+    }
+  ]
+}

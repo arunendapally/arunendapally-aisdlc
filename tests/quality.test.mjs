@@ -14,6 +14,8 @@ import { STAGES } from '../scripts/lib.mjs'
 
 const template = name => fs.readFileSync(new URL(`../skills/org-ai-sdlc/templates/${name}`, import.meta.url), 'utf8')
 const messages = r => r.errors.map(e => e.message).join('\n')
+// Style is advice since ADR-0003: it warns, and only the AC and R tags are errors.
+const warns = r => r.warnings.map(w => w.message).join('\n')
 const FEATURE = (body, tags = '@R1 @AC-1 @unit') => `Feature: F\n  As a user\n  I want x\n  So that y\n\n  ${tags}\n  Scenario: S\n${body}\n`
 const hoursAgo = h => new Date(Date.now() - h * 36e5).toISOString()
 
@@ -25,33 +27,35 @@ test('AC-1 the acceptance template is valid Gherkin that covers its requirements
   assert.deepEqual(requirementsFrom('## Requirements\n\n- R1. (must) a\n- R2. b\n\n## Never\n\n- R9. not a requirement\n'), ['R1', 'R2'])
 })
 
-test('AC-2 every scenario must carry its criterion, requirement and one test level', () => {
+test('AC-2 every scenario must carry its criterion and requirement; the test level is a hint', () => {
   const r = lint(FEATURE('    Given a\n    When b\n    Then c', '@unit'), ['R1'])
   assert.match(messages(r), /exactly one criterion tag/)
   assert.match(messages(r), /needs the requirement it proves/)
   assert.match(messages(r), /R1 has no scenario/)
-  assert.match(messages(lint(FEATURE('    Given a\n    When b\n    Then c', '@R1 @AC-1 @unit @e2e'))), /exactly one test level/)
+  assert.match(warns(lint(FEATURE('    Given a\n    When b\n    Then c', '@R1 @AC-1 @unit @e2e'))), /exactly one test level/)
+  assert.deepEqual(lint(FEATURE('    Given a\n    When b\n    Then c', '@R1 @AC-1')).errors, [], 'no level is not an error')
   assert.match(messages(lint(FEATURE('    Given a\n    When b\n    Then c', '@R7 @AC-1 @unit'), ['R1'])), /@R7, which is not in the PRD/)
-  assert.match(messages(lint('Feature: F\n  I want x\n\n  @R1 @AC-1 @unit\n  Scenario: S\n    Given a\n    When b\n    Then c\n')), /missing: As a, So that/)
+  assert.match(warns(lint('Feature: F\n  I want x\n\n  @R1 @AC-1 @unit\n  Scenario: S\n    Given a\n    When b\n    Then c\n')), /missing: As a, So that/)
 })
 
-test('AC-3 one behaviour per scenario, in Given, When, Then order', () => {
-  assert.match(messages(lint(FEATURE('    Given a\n    When b\n    And c\n    Then d'))), /2 When steps\. One behaviour per scenario/)
-  assert.match(messages(lint(FEATURE('    Given a\n    Then d'))), /has no When/)
-  assert.match(messages(lint(FEATURE('    When b\n    Then c\n    Given a'))), /Given after Then/)
-  assert.match(messages(lint(FEATURE('    And a\n    When b\n    Then c'))), /cannot start with And/)
+test('AC-3 one behaviour per scenario, in Given, When, Then order, as advice', () => {
+  assert.deepEqual(lint(FEATURE('    Given a\n    Then d')).errors, [], 'style never blocks the gate')
+  assert.match(warns(lint(FEATURE('    Given a\n    When b\n    And c\n    Then d'))), /2 When steps\. One behaviour per scenario/)
+  assert.match(warns(lint(FEATURE('    Given a\n    Then d'))), /has no When/)
+  assert.match(warns(lint(FEATURE('    When b\n    Then c\n    Given a'))), /Given after Then/)
+  assert.match(warns(lint(FEATURE('    And a\n    When b\n    Then c'))), /cannot start with And/)
 })
 
 test('AC-4 a Scenario Outline needs Examples with a column for every placeholder', () => {
   const outline = 'Feature: F\n  As a u\n  I want x\n  So that y\n\n  @R1 @AC-1 @unit\n  Scenario Outline: O\n    Given <a>\n    When <b> happens\n    Then ok\n\n    Examples:\n      | a |\n      | 1 |\n'
-  assert.match(messages(lint(outline)), /no column for <b>/)
-  assert.match(messages(lint(FEATURE('    Given <a>\n    When b\n    Then c'))), /is not a Scenario Outline/)
+  assert.match(warns(lint(outline)), /no column for <b>/)
+  assert.match(warns(lint(FEATURE('    Given <a>\n    When b\n    Then c'))), /is not a Scenario Outline/)
 })
 
-test('AC-5 steps describe behaviour: selectors fail, UI mechanics warn', () => {
+test('AC-5 steps describe behaviour: selectors and UI mechanics warn', () => {
   assert.match(lint(FEATURE('    Given a\n    When the user presses #submit-btn\n    Then c')).warnings[0].message, /may name a selector/)
-  assert.match(messages(lint(FEATURE('    Given a\n    When the page has //div[@id]\n    Then c'))), /names a selector/)
-  assert.match(messages(lint(FEATURE('    Given a\n    When the page has [data-test=save]\n    Then c'))), /names a selector/)
+  assert.match(warns(lint(FEATURE('    Given a\n    When the page has //div[@id]\n    Then c'))), /names a selector/)
+  assert.match(warns(lint(FEATURE('    Given a\n    When the page has [data-test=save]\n    Then c'))), /names a selector/)
   assert.deepEqual(lint(FEATURE('    Given a step that names a CSS selector\n    When the linter checks it\n    Then it is refused')).errors, [], 'talking about selectors in words is fine')
   const warned = lint(FEATURE('    Given a\n    When the user clicks the Save button\n    Then c'))
   assert.deepEqual(warned.errors, [])
@@ -65,24 +69,22 @@ test('AC-5 no false positives on paths, hashtags, comparisons or scenario descri
   assert.deepEqual(ok('    Given a search\n    When it runs\n    Then the time is < 200 ms and > 10 ms'), [])
   const described = 'Feature: F\n  As a u\n  I want x\n  So that y\n\n  Rule: Retries are safe\n    Retrying never charges twice.\n\n  @R1 @AC-1 @unit\n  Scenario: S\n    This scenario covers retries.\n    Given a\n    When b\n    Then c\n'
   assert.deepEqual(lint(described).errors, [])
-  assert.match(messages(lint(FEATURE('    Given a\n    When b\n    Then c\n    this prose sits after the steps'))), /Not Gherkin: "this prose sits after the steps"/, 'description is allowed only before the first step')
+  assert.match(warns(lint(FEATURE('    Given a\n    When b\n    Then c\n    this prose sits after the steps'))), /Not Gherkin: "this prose sits after the steps"/, 'description is allowed only before the first step')
   assert.deepEqual(requirementsFrom('## Requirements\n\n| ID | Priority | Requirement |\n|---|---|---|\n| R1 | must | save |\n| R2 | should | mark |\n'), ['R1', 'R2'], 'table PRDs (review F2)')
 })
 
 test('AC-8 a PRD with no requirement ids cannot switch coverage off (review F2)', () => {
   const r = makeRepo()
   r.sdlc('init', 'demo')
-  r.setState('demo', { stage: 2 })
   r.put('specs/demo/prd.md', '## Requirements\n\n1. (must) save for later\n')
   r.put('specs/demo/acceptance.feature', FEATURE('    Given a\n    When b\n    Then c'))
   assert.match(r.sdlc('request', 'demo').out, /prd\.md has no requirement ids/)
 })
 
-test('AC-12 a single option with sub-bullets is still one option, and "no real cost" is not a downside (review F4)', () => {
+test('AC-12 a single option with sub-bullets is still one option (review F4)', () => {
   const adr = 'Status: proposed\n\n## Context\n\nx\n\n## Options\n\n- Postgres: what it is\n  - why it might lose: ops cost\n\n## Decision\n\nPostgres\n\n## Consequences\n\nNo real cost.\n'
   const p = adrProblems(adr, 'ADR-0002').join('\n')
   assert.match(p, /weighs 1 option/)
-  assert.match(p, /names no downside/)
 })
 
 test('AC-14 criteria are scoped to their feature, and *.spec.ts unit tests are unit tests (review F1, F5)', () => {
@@ -124,7 +126,6 @@ test('AC-7 system facts are pinned to real lines and go stale when the code chan
   r.git('commit', '-m', 'orders')
   const sha = r.git('rev-parse', '--short', 'HEAD')
   r.sdlc('init', 'demo', '--kind', 'brownfield')
-  r.setState('demo', { stage: 2 })
   const facts = body => r.put('specs/demo/facts.md', `## Facts\n\n${body}\n`)
   const factIssues = () => r.sdlc('request', 'demo').out
   facts(`- F1: Orders are soft-deleted. Source: src/orders.ts:1. Verified: ${sha}.`)
@@ -136,8 +137,8 @@ test('AC-7 system facts are pinned to real lines and go stale when the code chan
   facts('- F1: Orders are soft-deleted, see the repo.')
   assert.match(factIssues(), /write a fact as/)
   facts(`- F1: Orders are soft-deleted. Source: src/orders.ts:1. Verified: ${sha}.`)
-  r.put('specs/demo/spec.md', '## Requirements\n\nFR-1 relies on F1 and F4.\n')
-  assert.match(factIssues(), /spec\.md cites F4, which facts\.md does not define/)
+  r.put('specs/demo/prd.md', '## Requirements\n\n- R1. (must) relies on F1 and F4.\n')
+  assert.match(factIssues(), /prd\.md cites F4, which facts\.md does not define/)
   r.put('src/orders.ts', 'export const softDelete = false\nexport const x = 1\n')
   r.git('commit', '-am', 'change')
   assert.match(factIssues(), /F1 is stale/)
@@ -146,18 +147,20 @@ test('AC-7 system facts are pinned to real lines and go stale when the code chan
   assert.equal(parseFacts(`- F2: A. Source: a.ts:3-5. Verified: ${sha}.`).facts[0].end, 5)
 })
 
-test('AC-8 the Analyze gate needs acceptance.feature covering the PRD and valid facts', () => {
+test('AC-8 the Plan gate needs acceptance.feature covering the PRD; facts only for brownfield and data work', () => {
   const r = makeRepo()
   r.sdlc('init', 'demo')
-  r.setState('demo', { stage: 2 })
   r.put('specs/demo/prd.md', '## Requirements\n\n- R1. (must) save for later\n- R2. (should) sold-out marker\n')
+  fs.rmSync(path.join(r.repo, 'specs', 'demo', 'acceptance.feature'))
   let out = r.sdlc('request', 'demo').out
   assert.match(out, /acceptance\.feature does not exist/)
-  assert.match(out, /facts\.md does not exist/)
+  assert.doesNotMatch(out, /facts\.md/, 'new behaviour on its own needs no facts')
   r.put('specs/demo/acceptance.feature', FEATURE('    Given a\n    When b\n    Then c'))
   out = r.sdlc('request', 'demo').out
   assert.match(out, /R2 has no scenario/)
-  assert.equal(r.write('specs/demo/acceptance.feature', 'x'), 'allow', 'stage 2 may write it')
+  assert.equal(r.write('specs/demo/acceptance.feature', 'x'), 'allow', 'stage 1 may write it')
+  r.sdlc('kind', 'demo', 'data')
+  assert.match(r.sdlc('request', 'demo').out, /facts\.md does not exist/, 'data work pins facts first')
 })
 
 test('AC-9 the review packet shows where the risk is before anyone reads the diff', () => {
@@ -199,12 +202,11 @@ test('AC-10 the findings ledger refuses open serious findings, missing locations
   r.config({ gateCommand: 'node gate.cjs' })
   r.sdlc('bug', 'demo')
   r.setState('demo', { stage: 5, stages: { 5: { enteredAt: hoursAgo(1) } }, baseline: 12 })
-  r.fill('specs/demo/bug.md', ['## Repro', '## Expected and actual', '## Root cause', '## Fix', '## Test results', '## Not verified', '## Review honesty'], '\n## Pre-review\n\nRisk: low\nOpen findings: 0\nLenses run: correctness, tests\n')
+  r.fill('specs/demo/bug.md', ['## Repro', '## Expected and actual', '## Root cause', '## Fix', '## Test results', '## Not verified'], '\n## Pre-review\n\nRisk: high, it touches retries\nOpen findings: 0\nLenses run: correctness, tests\n')
   gate.green()
   r.sdlc('gate', 'demo')
-  assert.match(r.sdlc('request', 'demo').out, /no review packet/)
   r.put('src/a.ts', 'x\n')
-  r.sdlc('review', 'demo')
+  assert.match(r.sdlc('request', 'demo').out, /Rebuilt specs\/demo\/review-packet\.md at HEAD/, 'no packet is built, not refused')
   const row = (...cells) => `| ${cells.join(' | ')} |`
   const ledger = rows => r.put('specs/demo/review.md', `| ID | Severity | Location | Checklist | Finding | Status | Source |\n|---|---|---|---|---|---|---|\n${rows.join('\n')}\n`)
   ledger([
@@ -230,8 +232,7 @@ test('AC-10 the findings ledger refuses open serious findings, missing locations
   r.git('add', 'src')
   r.git('commit', '-m', 'the fix')
   const sha = r.git('rev-parse', '--short', 'HEAD')
-  assert.match(r.sdlc('request', 'demo').out, /the review packet was built at \w+, not HEAD/)
-  r.sdlc('review', 'demo')
+  assert.match(r.sdlc('request', 'demo').out, /Rebuilt specs\/demo\/review-packet\.md at HEAD/)
   // Every round keeps all five rows: closing a finding never means deleting it.
   const rounds = f1 => ledger([
     row('F1', 'major', f1.location ?? 'src/a.ts:1', '6', 'retry not idempotent', f1.status, 'pre-review'),
@@ -245,7 +246,12 @@ test('AC-10 the findings ledger refuses open serious findings, missing locations
   rounds({ status: 'fixed: abcdef9' })
   assert.match(r.sdlc('request', 'demo').out, /F1: abcdef9 is not a commit/)
   rounds({ status: `fixed: ${unrelated}` })
-  assert.match(r.sdlc('request', 'demo').out, new RegExp(`F1: commit ${unrelated} does not change src/a.ts`), 'any old commit is not proof of a fix')
+  assert.match(r.sdlc('request', 'demo').out, new RegExp(`F1: commit ${unrelated} does not change src/a.ts`), 'at high risk, any old commit is not proof of a fix')
+  const bug = r.state('demo')
+  r.fill('specs/demo/bug.md', ['## Repro', '## Expected and actual', '## Root cause', '## Fix', '## Test results', '## Not verified'], '\n## Pre-review\n\nRisk: low\nOpen findings: 0\nLenses run: correctness, tests\n')
+  assert.doesNotMatch(r.sdlc('request', 'demo').out, /does not change/, 'at low or medium risk the commit is trusted')
+  r.setState('demo', bug)
+  r.fill('specs/demo/bug.md', ['## Repro', '## Expected and actual', '## Root cause', '## Fix', '## Test results', '## Not verified'], '\n## Pre-review\n\nRisk: high, it touches retries\nOpen findings: 0\nLenses run: correctness, tests\n')
   rounds({ status: `fixed: ${sha}`, location: 'src/gone.ts:1' })
   const ok = r.sdlc('request', 'demo')
   assert.equal(ok.status, 0, `${ok.out}: a fixed row may point at a file the fix removed`)
@@ -293,51 +299,41 @@ test('AC-11 serious findings only a human caught become retro proposals with the
   assert.match(miss.verify, /seeded-bug review eval/)
 })
 
-test('AC-12 an ADR must weigh two options and name a downside', () => {
+test('AC-12 an ADR must weigh two options', () => {
   const adr = 'Status: proposed\n\n## Context\n\nx\n\n## Options\n\n- Postgres\n\n## Decision\n\nPostgres\n\n## Consequences\n\nIt is great.\n'
   const p = adrProblems(adr, 'ADR-0001').join('\n')
   assert.match(p, /weighs 1 option; a decision needs at least two/)
-  assert.match(p, /names no downside/)
-  assert.deepEqual(adrProblems(adr.replace('- Postgres', '- Postgres\n- DynamoDB').replace('It is great.', 'Downside: we run it ourselves.'), 'ADR-0001'), [])
+  assert.deepEqual(adrProblems(adr.replace('- Postgres', '- Postgres\n- DynamoDB'), 'ADR-0001'), [])
   assert.deepEqual(decisionsIn('## Decisions\n\nSee ADR-3 and ADR-0012.\n'), ['ADR-0003', 'ADR-0012'])
 })
 
-test('AC-13 the Design gate needs three disciplines to cross-question each decision, all answered, verdict accept', () => {
+test('AC-13 the Design gate needs each ADR the plan names, with its review recorded in the ADR', () => {
   const r = makeRepo()
-  r.sdlc('init', 'demo')
+  r.sdlc('init', 'demo', '--full')
   r.setState('demo', { stage: 3 })
+  r.put('specs/demo/plan.md', '## Decisions\n\nNone, because it reuses the existing store.\n')
+  assert.doesNotMatch(r.sdlc('request', 'demo').out, /ADR|design-review/, 'a plan with no ADR has nothing to review')
   r.put('specs/demo/plan.md', '## Decisions\n\nADR-0001 for storage.\n')
-  let out = r.sdlc('request', 'demo').out
-  assert.match(out, /names ADR-0001, but docs\/adr\/ has no file/)
-  assert.match(out, /no design-review\.md/)
-  r.put('docs/adr/0001-storage.md', 'Status: proposed\n\n## Context\n\nx\n\n## Options\n\n- A\n- B\n\n## Decision\n\nA\n\n## Consequences\n\nRisk: lock-in.\n')
-  const board = (rows, verdict) => r.put('specs/demo/design-review.md', `## ADR-0001: storage\n\n| Q | Reviewer | Question | Answer | Resolved |\n|---|---|---|---|---|\n${rows}\n\nVerdict: ${verdict}\n`)
-  board('| Q1 | design-reviewer | why not B? | B costs more | yes |\n| Q2 | sre | failover? | | |', 'revise')
-  out = r.sdlc('request', 'demo').out
-  assert.match(out, /ADR-0001: 2 reviewers questioned it; the board needs at least 3/)
-  assert.match(out, /ADR-0001 Q2 \(sre\) has no answer/)
-  assert.match(out, /verdict is revise/)
-  board('| Q1 | design-reviewer | why not B? | B costs more | yes |\n| Q2 | sre | failover? | multi-AZ | yes (residual: one region) |\n| Q3 | dba | backfill? | batched, 1k rows | not yet: show the lock time |', 'accept')
-  assert.match(r.sdlc('request', 'demo').out, /Q3 \(dba\) is answered but not resolved/)
-  assert.doesNotMatch(r.sdlc('request', 'demo').out, /Q2 \(sre\)/, 'a resolved answer may carry a note')
-  board('| Q1 | design-reviewer | why not B? | B costs more | yes |\n| Q2 | sre | failover? | multi-AZ | yes (residual: one region) |\n| Q3 | dba | backfill? | batched, 1k rows | yes |', 'accept')
-  out = r.sdlc('request', 'demo').out
-  assert.doesNotMatch(out, /design-review|ADR-0001/)
+  assert.match(r.sdlc('request', 'demo').out, /names ADR-0001, but docs\/adr\/ has no file/)
+  const adr = review => r.put('docs/adr/0001-storage.md', `Status: proposed\n\n## Context\n\nx\n\n## Options\n\n- A\n- B\n\n## Decision\n\nA\n\n## Consequences\n\nLock-in.\n${review}`)
+  adr('')
+  assert.match(r.sdlc('request', 'demo').out, /ADR-0001 has no "## Review"/)
+  adr('\n## Review\n\n- Q1 (sre): failover? A: multi-AZ\n')
+  assert.doesNotMatch(r.sdlc('request', 'demo').out, /ADR-0001/)
 })
 
-test('AC-14 every criterion must be tested at its declared level', () => {
+test('AC-14 every criterion must have a test; its level is a hint', () => {
   const r = makeRepo()
   r.sdlc('init', 'demo')
   r.put('specs/demo/acceptance.feature', FEATURE('    Given a\n    When b\n    Then c', '@R1 @AC-1 @unit') + '\n  @R1 @AC-2 @e2e\n  Scenario: Journey\n    Given a\n    When b\n    Then c\n\n  @R1 @AC-3 @api\n  Scenario: Contract\n    Given a\n    When b\n    Then c\n')
-  r.put('test/cart.test.ts', "// demo\ntest('AC-1 cart', () => {})\ntest('AC-2 journey done as a unit test', () => {})\n")
+  r.put('test/cart.test.ts', "// demo\ntest('AC-1 cart', () => {})\n")
   r.put('tests/api/orders.postman_collection.json', '{"info":{"name":"demo"},"item":[{"name":"AC-3 contract"}]}')
   const out = r.sdlc('tests', 'demo')
   assert.notEqual(out.status, 0)
-  assert.match(out.out, /AC-2 is a e2e criterion, but it is only tested at test\/cart\.test\.ts \(unit\)/)
-  assert.match(out.out, /\| AC-1 \| unit .*\| yes \|/)
+  assert.match(out.out, /AC-2 has no test/)
   assert.match(out.out, /\| AC-3 \| api .*postman.*\| yes \|/)
-  r.put('e2e/journey.spec.ts', "test('demo AC-2 journey', async () => {})\n")
-  assert.equal(r.sdlc('tests', 'demo').status, 0)
+  r.put('test/cart.test.ts', "// demo\ntest('AC-1 cart', () => {})\ntest('AC-2 journey done as a unit test', () => {})\n")
+  assert.equal(r.sdlc('tests', 'demo').status, 0, 'a unit test may prove an e2e criterion')
   assert.ok(fs.existsSync(path.join(r.repo, 'specs', 'demo', 'test-matrix.md')))
 })
 

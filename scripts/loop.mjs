@@ -1,16 +1,17 @@
 // The loop spine (ADR-0002): plan, test, implement, verify, review, release and observe, remember.
 // - proof: the new criteria's tests, run against the base branch's code, must fail; their files are
 //   hashed then and must not change before the final green run.
-// - release: rollout readiness, no stale knowledge or facts the change touched, superseded ADRs
-//   marked, postmortem actions linked.
-// - outcome: a follow-up after release with an owner and a due date.
+// - release: rollout readiness blocks; stale knowledge or facts the change touched, superseded ADRs
+//   left unmarked and unlinked postmortem actions only warn (ADR-0003).
+// - outcome: a follow-up after a full-lane release with an owner and a due date.
+// - advance: the one way a feature moves on, after a human approval or a gate passed on checks.
 // - retro triggers: an escalation past the cap, or the same review finding twice.
 import fs from 'node:fs'
 import os from 'node:os'
 import path from 'node:path'
 import crypto from 'node:crypto'
 import { spawnSync } from 'node:child_process'
-import { git, loadConfig, section, changedFiles, listFeatures } from './lib.mjs'
+import { STAGES, git, loadConfig, section, changedFiles, listFeatures, nextStage, writeState } from './lib.mjs'
 import { matrix } from './testmatrix.mjs'
 import { check as knowledgeCheck, pages as knowledgePages } from './knowledge.mjs'
 import { parseFacts, factProblems } from './facts.mjs'
@@ -139,21 +140,29 @@ export function proofProblems(dir, state, artefactText, cfg = loadConfig(dir)) {
   return { problems, warning: null }
 }
 
-// Release: is it safe to ship, and is what we know still true?
+// Release: is it safe to ship (problems block), and is what we know still true (warnings)?
 export function releaseProblems(dir, state, artefactText, cfg = loadConfig(dir)) {
   const problems = []
   const changed = changedFiles(dir, cfg).map(f => f.file)
 
-  // Rollout readiness: a rollback that was actually tested, probe results, and an outcome owner.
-  // A hotfix is already in production, so its incident commander judges these.
+  // Rollout readiness: a rollback that was actually tested, and probe results. A lane with an outcome
+  // window also names who reads the outcome, or says why there is none. A hotfix is already in
+  // production, so its incident commander judges these.
   if (['full', 'light'].includes(state.lane)) {
     const rollback = section(artefactText, '## Rollback (tested)') ?? ''
     if (!/\btested\b[^\n]*\d{4}-\d{2}-\d{2}/i.test(rollback)) problems.push('the rollback has no "Tested: <date>, <how>" line: test the rollback before release')
     const probes = section(artefactText, '## Probes') ?? ''
     if (!/\b(pass(ed)?|ok|green|fail(ed)?|red)\b/i.test(probes)) problems.push('"## Probes" records no result (pass or fail for each probe)')
     const outcome = section(artefactText, '## Outcome metric') ?? ''
-    if (!/Metric:\s*\S/i.test(outcome) || !/Owner:\s*\S/i.test(outcome)) problems.push('"## Outcome metric" needs "Metric:" and "Owner:" lines, so the outcome follow-up has an owner')
+    const none = /Metric:\s*None, because\s+\S/i.test(outcome)
+    if (state.lane in cfg.outcomeWindowDays && !none && (!/Metric:\s*\S/i.test(outcome) || !/Owner:\s*\S/i.test(outcome))) problems.push('"## Outcome metric" needs "Metric:" and "Owner:" lines (or "Metric: None, because ..."), so the outcome follow-up has an owner')
   }
+  return { problems, warnings: rememberWarnings(dir, state, changed, cfg) }
+}
+
+// What the change may have made untrue. These warn at Release, and an agent re-verifies them.
+export function rememberWarnings(dir, state, changed, cfg = loadConfig(dir)) {
+  const problems = []
 
   // Remember: no knowledge page or fact this change touched may be stale.
   const { stale } = knowledgeCheck(dir)
@@ -190,12 +199,14 @@ export function releaseProblems(dir, state, artefactText, cfg = loadConfig(dir))
 }
 
 // The outcome follow-up a released feature leaves behind: the metric, its owner and when to read it.
+// Only lanes with an outcome window open one, and "Metric: None, because ..." opens none.
 export function outcomeFollowUp(state, artefactText, cfg) {
+  const days = cfg.outcomeWindowDays[state.lane]
   const outcome = section(artefactText, '## Outcome metric') ?? ''
   const metric = outcome.match(/Metric:\s*(.+)/i)?.[1]?.trim()
+  if (!days || !metric || /^None, because/i.test(metric)) return null
   const owner = outcome.match(/Owner:\s*(.+)/i)?.[1]?.trim()
   const readOn = outcome.match(/Read on:\s*(\d{4}-\d{2}-\d{2})/i)?.[1]
-  const days = cfg.outcomeWindowDays[state.lane] ?? cfg.outcomeWindowDays.full
   const due = readOn ? new Date(`${readOn}T00:00:00Z`).toISOString() : new Date(Date.now() + days * 864e5).toISOString()
   return { metric, owner, due, status: 'open', openedAt: new Date().toISOString() }
 }
@@ -231,4 +242,30 @@ export function repeatedFindings(dir, cfg = loadConfig(dir)) {
     }
   }
   return Object.entries(byItem).filter(([, features]) => features.size >= 2).map(([item, features]) => ({ item, features: [...features] }))
+}
+
+// Move to the lane's next stage once the gate is approved; past the last stage, close the run.
+// Returns what to tell the person or agent.
+export function advanceFeature(dir, state) {
+  const cfg = loadConfig(dir)
+  const now = new Date().toISOString()
+  state.stages[state.stage].leftAt = now
+  const next = nextStage(state)
+  if (next === undefined) {
+    state.closedAt = now
+    if (state.lane === 'hotfix') state.postmortemDue = new Date(Date.now() + cfg.postmortemDays * 864e5).toISOString()
+    // The feature closes at release; its outcome is a follow-up with an owner and a date.
+    const release = path.join(dir, cfg.specsDir, state.feature, 'release.md')
+    const outcome = fs.existsSync(release) ? outcomeFollowUp(state, fs.readFileSync(release, 'utf8'), cfg) : null
+    if (outcome) state.outcome = outcome
+    writeState(dir, state)
+    const proofNote = cfg.proofCommand ? `, and the test proof: sdlc proof ${state.feature} --files <repro tests>` : ''
+    const due = state.postmortemDue ? ` Postmortem due by ${state.postmortemDue.slice(0, 10)}: sdlc incident ${state.feature}${proofNote}` : ''
+    const follow = outcome ? ` Outcome follow-up: ${outcome.owner} reads "${outcome.metric}" by ${outcome.due.slice(0, 10)}, then: sdlc outcome ${state.feature} met|missed|breach` : ''
+    return `${state.feature} is complete.${due}${follow}`
+  }
+  state.stage = next
+  state.stages[state.stage] = { enteredAt: now }
+  writeState(dir, state)
+  return `${state.feature} is now at stage ${state.stage} (${STAGES[state.stage].name}).`
 }

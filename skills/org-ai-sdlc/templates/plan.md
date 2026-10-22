@@ -1,71 +1,42 @@
 # Plan: <feature>
 
-<!-- Stage 3 Design. Gate: architect and product lead; "sdlc approve <feature> 3". Write "None, because ..." where a section does not apply. -->
+<!-- Stage 3 Design, full lane only. Gate: architect and product lead; "sdlc approve <feature> 3".
+     Write "None, because ..." where a section does not apply. -->
+
+## Decisions
+
+<!-- Links to ADRs in docs/adr/. Each ADR names two options and records its review in "## Review".
+     A change that adds a datastore, dependency or service needs one. -->
 
 ## Data model
 
-<!-- For data work (--kind data) the gate requires a Mermaid ER diagram; GitHub, Confluence and VS Code
-     render it. Draw every entity this change touches with its attributes, and name the new or changed
-     ones on a "%% changed:" line:
+<!-- For data work, a Mermaid ER diagram of every entity the change touches (advice, not a gate):
 
 ```mermaid
 erDiagram
   %% changed: LOYALTY_POINTS
-  CUSTOMERS {
-    uuid id PK
-    text email
-  }
-  LOYALTY_POINTS {
-    uuid customer_id FK
-    int balance
-  }
   CUSTOMERS ||--o| LOYALTY_POINTS : earns
 ```
 -->
 
 ## Contracts
 
-<!-- Versioned. For API work (--kind api) the contract is specs/<feature>/openapi.yaml, started and
-     checked with "sdlc api <feature>", which also puts swagger.html beside it to view it in Swagger UI.
-     Any breaking change against the base branch (a removed operation or response) must be declared here
-     with the word "breaking", the operation, the version bump and how clients migrate. Breaking changes
-     also need an ADR. -->
+<!-- Versioned. For API work the contract is specs/<feature>/openapi.yaml ("sdlc api <feature>" also
+     writes swagger.html beside it). A breaking change against the base branch must be declared here with
+     the word "breaking", the operation, the version bump and how clients migrate. -->
 
-## Decisions
+## Threat model
 
-<!-- Links to ADRs in docs/adr/, and every judgement made interpreting the constitution. -->
+<!-- What an attacker or a mistake could do through this change, and what stops it. -->
 
-## C4 changes
+## Test plan
 
-<!-- New, changed and removed elements in docs/architecture/workspace.dsl. -->
+<!-- Levels, test data (where it comes from, how it is isolated and torn down; synthetic only), and
+     performance or accessibility budgets. See templates/testing/README.md. -->
 
-## Screens
+## Run it
 
-<!-- Mocks from real components, the canvas link, and comment threads all resolved by a human. -->
+<!-- Logs, signals and alerts with runbook links; environments, secrets by name, cost delta, backup. -->
 
-## Unmatched components
-
-## Accessibility checks
-
-<!-- WCAG 2.2 AA checks QA will automate. -->
-
-## Microcopy
-
-## Test strategy
-
-<!-- Levels, synthetic data, performance and accessibility budgets. -->
-
-## Test data
-
-<!-- Per level: where data comes from (factories, API seeding, fixtures), how each test isolates it
-     (unique values, a rolled-back transaction, its own schema or tenant), how it is torn down (also on
-     failure), and the dataCheckCommand that proves nothing was left behind. Synthetic data only.
-     See the plugin's templates/testing/README.md. -->
-
-## Observability
-
-<!-- Logs, golden signals, traces, SLO alerts each with a runbook link. -->
-
-## Operability
-
-<!-- Environments touched, IaC modules, secrets needed (by name), cost delta, backup and restore. -->
+<!-- Optional, when they apply: ## C4 changes (a new container), ## Screens and ## Accessibility checks
+     (UI changes). -->

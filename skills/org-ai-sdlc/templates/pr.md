@@ -1,39 +1,23 @@
-<!-- Stage 5 Verify. This file is the PR body. Gate: CODEOWNER engineer and security owner; "sdlc approve <feature> 5". -->
+<!-- Stage 5 Verify. This file is the PR body. Gate: a CODEOWNER engineer; "sdlc approve <feature> 5". -->
 
 ## Summary
 
-## Tasks
+<!-- What changed and why, in two or three sentences. -->
 
 ## Test results
 
-<!-- Counts before and after, e2e before and after, all green or not. -->
-
-## Mutations
-
-| Guard | Mutation | Test failed? | Restored? |
-|---|---|---|---|
-
-## Defects
-
-<!-- Found and fixed, or open. An open defect means the gate is not met. -->
-
-## Security results
-
-<!-- Secret scan, SAST, dependencies, licences, SBOM. Findings a human must accept. -->
-
-## Spec corrections
-
-## QA verdict
+<!-- Counts before and after, the test proof (sdlc proof), all green or not. -->
 
 ## Pre-review
 
 <!-- Written by the pre-reviewer agent before any human looks.
 Risk: low | medium | high, and why
 Open findings: 0
-Look here first: file:line, ... -->
+Look here first: file:line, ...
+Lenses run: correctness, simplicity, tests, ... -->
 
 ## Not verified
 
-## Review honesty
+<!-- What nobody checked, and why. Say so if the test proof did not run. -->
 
-<!-- Did the reviewer review every phase, or take any result on the builder's word? -->
+<!-- Optional: ## QA verdict (expected when Risk is high), ## Security results, ## Defects. -->

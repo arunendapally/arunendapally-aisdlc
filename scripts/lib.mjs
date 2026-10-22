@@ -4,31 +4,29 @@ import path from 'node:path'
 import { execSync } from 'node:child_process'
 import { fileURLToPath } from 'node:url'
 
+// ADR-0003: one spec gate (the PRD plus acceptance.feature), Design only in the full lane, Build on
+// checks in every lane. Stage numbers keep their old meaning; there is no stage 2 any more.
 export const STAGES = {
   1: { name: 'Plan', artefact: 'prd.md', owner: 'product lead',
-    headings: ['## Problem', '## Users and jobs', '## Questions asked', '## Assumptions', '## Evidence', '## Goals and non-goals', '## Requirements', '## Never', '## Out of scope',
-      '## Outcome metric', '## Stakeholders', '## Dependencies', '## Release criteria', '## Open questions'] },
-  2: { name: 'Analyze', artefact: 'spec.md', owner: 'product lead + architect + security owner',
-    headings: ['## Lane', '## Requirements', '## User journey', '## Integration decision', '## Acceptance criteria and test IDs', '## Test plan', '## SLOs and error budget', '## Threat model'] },
+    headings: ['## Problem', '## Users and jobs', '## Questions asked', '## Assumptions', '## Requirements', '## Never', '## Out of scope', '## Outcome metric', '## Open questions'] },
   3: { name: 'Design', artefact: 'plan.md', owner: 'architect + product lead',
-    headings: ['## Data model', '## Contracts', '## Decisions', '## C4 changes', '## Screens', '## Accessibility checks', '## Test strategy', '## Test data', '## Observability', '## Operability'] },
-  4: { name: 'Build', artefact: 'tasks.md', owner: 'tech lead',
-    headings: ['## Baseline', '## Tasks'] },
-  5: { name: 'Verify', artefact: 'pr.md', owner: 'CODEOWNER engineer + security owner (QA verdict attached)',
-    headings: ['## Tasks', '## Test results', '## Mutations', '## Defects', '## Security results', '## QA verdict', '## Not verified', '## Review honesty'] },
-  6: { name: 'Release', artefact: 'release.md', owner: 'release owner (SRE and ops advise)',
-    headings: ['## Artefact', '## Release order', '## Rollout', '## Rollback (tested)', '## Probes', '## Runbook', '## Cost delta', '## Traps added'] },
+    headings: ['## Decisions', '## Data model', '## Contracts', '## Threat model', '## Test plan', '## Run it'] },
+  4: { name: 'Build', artefact: 'tasks.md', owner: 'checks (gate green, small diff)',
+    headings: ['## Tasks'] },
+  5: { name: 'Verify', artefact: 'pr.md', owner: 'CODEOWNER engineer',
+    headings: ['## Summary', '## Test results', '## Pre-review', '## Not verified'] },
+  6: { name: 'Release', artefact: 'release.md', owner: 'release owner',
+    headings: ['## Rollout', '## Rollback (tested)', '## Probes'] },
 }
-STAGES[5].headings.splice(-2, 0, '## Pre-review')
 
 // Which stages each lane runs. Bug and hotfix lanes keep one document for the whole run,
-// which is also the PR body, and their Build gate is passed by checks rather than a person.
+// which is also the PR body. Build passes on checks in every lane.
 const BUG_BUILD = ['## Repro', '## Expected and actual', '## Root cause', '## Fix']
 const HOTFIX_BUILD = ['## Incident', '## Fix', '## Rollback']
-const SMALL_VERIFY = ['## Test results', '## Pre-review', '## Not verified', '## Review honesty']
+const SMALL_VERIFY = ['## Test results', '## Pre-review', '## Not verified']
 export const LANES = {
-  full: { stages: [1, 2, 3, 4, 5, 6] },
-  light: { stages: [1, 2, 4, 5, 6] },
+  full: { stages: [1, 3, 4, 5, 6], auto: [4] },
+  light: { stages: [1, 4, 5, 6], auto: [4] },
   bug: {
     stages: [4, 5], auto: [4], artefact: 'bug.md', branch: 'bug',
     headings: { 4: BUG_BUILD, 5: [...BUG_BUILD, ...SMALL_VERIFY] },
@@ -50,16 +48,23 @@ LANES.task = {
 // What kind of work it is adds sections (and owners) to whatever lane it runs in.
 // Sections are keyed by stage and land in that stage's artefact for the lane.
 export const KINDS = {
-  greenfield: { headings: { 3: ['## Walking skeleton'] } },
-  brownfield: { headings: { 2: ['## Current system'], 4: ['## Characterisation tests'] } },
-  perf: { headings: { 2: ['## Performance budget'], 4: ['## Benchmark before'], 5: ['## Benchmark after'] } },
-  // API work: an OpenAPI file is the contract (checked at Design, viewable in Swagger).
-  api: { headings: { 2: ['## API changes'] } },
+  brownfield: { headings: { 1: ['## Current system'], 4: ['## Characterisation tests'] } },
+  perf: { headings: { 1: ['## Performance budget'], 4: ['## Benchmark before'], 5: ['## Benchmark after'] } },
+  // API work: an OpenAPI file is the contract; a breaking change must be declared.
+  api: { headings: { 1: ['## API changes'] } },
+  // An additive migration runs in the light lane with a down migration and the DBA on the PR. One that
+  // alters or drops what exists needs the full lane (see destructiveMigrations).
   data: {
-    lane: 'full',
-    headings: { 2: ['## Data impact'], 3: ['## Migration plan (expand-contract)', '## Rehearsal'], 6: ['## Backout'] },
-    owners: { 3: 'DBA', 6: 'DBA' },
+    headings: { 1: ['## Data impact'], 3: ['## Migration plan (expand-contract)', '## Rehearsal'], 4: ['## Down migration'], 6: ['## Backout'] },
+    owners: { 3: 'DBA', 5: 'DBA', 6: 'DBA' },
   },
+}
+
+// Migrations that alter or drop what already exists: these are the hard-to-undo changes.
+const DESTRUCTIVE = /\b(DROP\s+(TABLE|COLUMN|INDEX|CONSTRAINT)|TRUNCATE|RENAME\s+(TABLE|COLUMN|TO)|ALTER\s+COLUMN|ALTER\s+TABLE\s+\S+\s+(DROP|RENAME|ALTER|MODIFY))\b|\b(dropTable|dropColumn|renameColumn|renameTable|alterColumn|remove_column|rename_column|drop_table)\b/i
+export function destructiveMigrations(dir, cfg = loadConfig(dir)) {
+  return changedFiles(dir, cfg).map(f => f.file)
+    .filter(f => matches(f, ['**/migrations/**', '**/*.sql', '**/schema.prisma']) && fs.existsSync(path.join(dir, f)) && DESTRUCTIVE.test(fs.readFileSync(path.join(dir, f), 'utf8')))
 }
 
 // The artefact, sections and owner of a stage, as the feature's lane and kinds define them.
@@ -110,8 +115,10 @@ export const DEFAULT_CONFIG = {
   prLineExcludes: ['specs/**', 'docs/**', '**/*.md', '**/package-lock.json', '**/yarn.lock', '**/pnpm-lock.yaml', '**/*.lock', '**/*.snap'],
   // Hours a human gate may wait before it is overdue and escalated, by lane.
   reviewSlaHours: { full: 24, light: 8, bug: 8, task: 8, hotfix: 1 },
-  // Earned autonomy: after this many clean human approvals in a row, a gate may be promoted to
-  // run on checks. These gates are never promoted: the merge of a full feature and every release.
+  // Earned autonomy is optional (ADR-0003): with trust on, after this many clean human approvals in a
+  // row a gate may be promoted to run on checks. These gates are never promoted: the merge of a
+  // feature and every release.
+  trust: false,
   trustThreshold: 10,
   // Who may promote or demote a gate, by git user.name. Empty means anyone at the keyboard.
   trustOwners: [],
@@ -123,8 +130,9 @@ export const DEFAULT_CONFIG = {
   // The test proof (ADR-0002): runs the traced test files against the base branch's code, where they
   // must fail. {files} becomes the quoted test files; {report}, if used, a JUnit XML path to write.
   proofCommand: '',
-  // Days after release by which the outcome metric is read, by lane, unless release.md names a date.
-  outcomeWindowDays: { full: 14, light: 7 },
+  // Days after release by which the outcome metric is read, unless release.md names a date. Only the
+  // lanes listed here open an outcome follow-up; add "light" to turn it on there.
+  outcomeWindowDays: { full: 14 },
 }
 
 // List settings in a repo's config can only add to the plugin's defaults, so a repo file
@@ -303,13 +311,14 @@ export function writeTrust(dir, trust) {
 
 // Gates promoted to run on checks. A frozen error budget suspends every promotion.
 export function trustedGates(dir) {
-  if (isFrozen(dir)) return []
+  if (!loadConfig(dir).trust || isFrozen(dir)) return []
   return Object.entries(readTrust(dir)).filter(([, t]) => t.promoted).map(([key]) => key)
 }
 
 // Gates that earned promotion and wait for a human to grant it.
 export function promotable(dir) {
   const cfg = loadConfig(dir)
+  if (!cfg.trust) return []
   return Object.entries(readTrust(dir))
     .filter(([key, t]) => !t.promoted && t.streak >= cfg.trustThreshold && !cfg.neverTrust.includes(key))
     .map(([key, t]) => ({ key, streak: t.streak }))

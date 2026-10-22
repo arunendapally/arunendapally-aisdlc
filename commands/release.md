@@ -1,13 +1,13 @@
 ---
-description: Stage 6 Release. Written release order, staged rollout, tested rollback, production probes, and the lessons fed back; the release owner decides when it ships.
+description: Stage 6 Release. A staged rollout, a tested rollback and production probes; the release owner decides when it ships.
 argument-hint: <feature-slug>
 ---
 
 Stage 6 for `$ARGUMENTS`.
 
-1. `sre` and `ops-engineer` write `specs/$ARGUMENTS/release.md` from the template: the artefact digest, the release order (check production shape, rehearse migrations on a copy, data changes before code, deploy, probe), the rollout (flag, canary or staged), a rollback with its `Tested: <date>, <how>` line, the probes, `## Outcome metric` with `Metric:`, `Owner:` and optionally `Read on:`, the support runbook and the cost delta.
+1. The `sre` writes `specs/$ARGUMENTS/release.md` from the template: the rollout (flag, canary or staged), a rollback with its `Tested: <date>, <how>` line, the probes, and `## Outcome metric` with `Metric:` and `Owner:` (or `Metric: None, because ...`).
 2. Humans run the merge, `terraform apply` and the production deploy. The hooks refuse those commands for agents.
-3. `sre` runs the read-only production probes against the SLOs and records the results. A deploy's own success message is not proof.
-4. Feed the cycle: changelog, docs, new traps in `standards/traps.md`, any review finding seen twice becomes a checklist item. Update or add `knowledge/` pages for every area this feature taught you, re-verify the stale ones it touched (`sdlc.mjs knowledge check`) and any stale fact in `facts.md`, mark every ADR this feature supersedes `Status: superseded by ...`, and rebuild the index. `confluence-expert` publishes the changed artefacts. `project-manager` posts `node "${CLAUDE_PLUGIN_ROOT}/scripts/sdlc.mjs" metrics $ARGUMENTS`.
+3. The `sre` runs the read-only production probes and records pass or fail for each. A deploy's success message is not proof.
+4. `sdlc request` warns about knowledge pages and facts the change made stale, ADRs it supersedes that are not marked, and postmortem actions without a link. Fix what it lists: re-verify the pages, mark the ADRs, link the actions. Add a trap to `standards/traps.md` only when the feature taught one.
 
-**Gate:** `node "${CLAUDE_PLUGIN_ROOT}/scripts/sdlc.mjs" request $ARGUMENTS` (it refuses without probe results, a tested rollback, an outcome owner, or with stale knowledge or facts about the changed files, unmarked superseded ADRs, or postmortem actions without a link), then stop. The release owner closes the cycle with `sdlc approve $ARGUMENTS 6`; `sdlc advance` then opens the outcome follow-up.
+**Gate:** `node "${CLAUDE_PLUGIN_ROOT}/scripts/sdlc.mjs" request $ARGUMENTS` (it refuses without a tested rollback and probe results), then stop. The release owner closes the feature with `sdlc approve $ARGUMENTS 6`; in the full lane that opens the outcome follow-up.

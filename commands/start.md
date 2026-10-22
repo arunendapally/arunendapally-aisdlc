@@ -1,5 +1,5 @@
 ---
-description: Start any piece of work. The CTO triages it (what kind, how big, how risky), picks the lane and kinds, and routes it to the right command. Use this when you are not sure where something belongs.
+description: Start any piece of work. The CTO triages it (what kind, how big, how risky), picks the lane and kinds, sets up the repo and the feature if needed, and routes it to the right command.
 argument-hint: <what you want done, or an issue or ticket link>
 ---
 
@@ -15,12 +15,16 @@ You are the `cto`. Work: $ARGUMENTS
 | Wrong behaviour that exists today, fixable without dependency, schema or infra changes | `/ai-sdlc:bug <slug>` (add `--kind perf` for slowness) | merge |
 | A small change users would not notice: dependency bump, config, refactor, docs, tooling | `/ai-sdlc:task <slug>` | merge |
 | A question about how the system works, or someone needs to become an SME | `/ai-sdlc:learn <topic>` | none, it writes knowledge only |
-| Anything that changes the schema or data | `/ai-sdlc:kickoff <slug> --kind data` (full lane, DBA owns design and release) | all six |
-| New behaviour in an existing codebase | `/ai-sdlc:kickoff <slug> --kind brownfield` | all, or five in the light lane |
-| A new service or product with no code yet | `/ai-sdlc:kickoff <slug> --kind greenfield` | all six |
-| A big capability | Split it into slices first (the `project-manager`), then one kickoff per slice, each its own small PR | per slice |
+| A migration that alters or drops existing data, a high-risk path (auth, payments, infra), or a new datastore, dependency or service | a feature in the **full** lane (`init <slug> --full`) | spec, design, merge, release |
+| Any other new behaviour | a feature in the **light** lane (the default) | spec, merge, release |
+| A big capability | Slice it first into thin vertical increments, each under the PR line limit, then one feature per slice | per slice |
 | Not worth doing, a duplicate, or not ours | Say so, with the reason, and stop | none |
 
-Kinds stack: slow checkout in an old service is `--kind brownfield,perf`. Add `api` for any change to an HTTP contract (an OpenAPI file, viewable in Swagger) and `data` for any schema change (an ER diagram and the DBA).
+Kinds add only what the work needs, and stack: `brownfield` (facts pinned to the code), `perf` (budget and benchmarks), `api` (an OpenAPI contract, viewable in Swagger), `data` (a schema change: an ER diagram, a down migration and the DBA on the PR).
 
-4. Say the route and why in one line each, then start it. If two routes fit, take the one with more human gates and say so.
+4. **For a feature**, set it up:
+   - If `.ai-sdlc/config.json` or `CONSTITUTION.md` is missing, run `node "${CLAUDE_PLUGIN_ROOT}/scripts/sdlc.mjs" init-repo` and ask the human to set `gateCommand` (and optionally `proofCommand` and `gateOwners`) in `.ai-sdlc/config.json`; agents cannot edit it.
+   - Create the branch `feature/<slug>` in its own worktree and work inside it.
+   - Run `node "${CLAUDE_PLUGIN_ROOT}/scripts/sdlc.mjs" init <slug> [--full] [--kind <kinds>]` and commit `specs/<slug>/`, so other sessions and CI see the same state. Commit it after every gate decision too.
+   - Hand off to `/ai-sdlc:plan <slug>`.
+5. Say the route and why in one line each, then start it. If two routes fit, take the one with more human gates and say so.

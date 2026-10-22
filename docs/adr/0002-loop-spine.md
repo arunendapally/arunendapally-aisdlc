@@ -1,6 +1,6 @@
 # ADR-0002: The loop spine: plan, test, implement, verify, review, release and observe, remember
 
-Status: accepted
+Status: accepted; the Release "remember" checks are superseded by ADR-0003 (they warn instead of blocking)
 Date: 2026-10-22
 
 ## Context

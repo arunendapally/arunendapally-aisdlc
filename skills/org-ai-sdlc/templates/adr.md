@@ -8,7 +8,7 @@ Date:
 ## Options
 
 <!-- At least two, each as "- <option>: what it is, why it might win, why it might lose".
-     The board will argue the second-best one, so argue it well first. -->
+     The reviewers will argue the second-best one, so argue it well first. -->
 
 ## Decision
 
@@ -18,5 +18,7 @@ Date:
 
 ## Review
 
-<!-- Filled after the design review board: what changed because of it. -->
+<!-- Required before the Design gate. Who questioned it (at least one other discipline), what they
+     asked, the answers, and what changed because of it:
+     - Q1 (security): <question> A: <answer> -->
 

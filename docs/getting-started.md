@@ -28,7 +28,7 @@ In Claude Code, inside your product repo, start any piece of work:
 /ai-sdlc:start add a saved-for-later list to the basket
 ```
 
-The first kickoff copies the repo kit in, and never overwrites a file that already exists:
+The first `/ai-sdlc:start` copies the repo kit in, and never overwrites a file that already exists:
 
 | Path | What it is |
 |---|---|
@@ -46,7 +46,7 @@ Then, as a human:
 1. **Set your gate command** in `.ai-sdlc/config.json`. This is the one command that runs your whole gate: types, lint, every test level, scans. Example: `"gateCommand": "npm run gate"`. Gates at Build and Verify refuse to pass without it.
 2. **Name who approves what**, by git user name. Leave a list empty to let anyone at the keyboard approve.
    - `"gateOwners": { "1": ["Product Lead"], "3": ["Architect"], "5": ["Tech Lead"] }`
-   - `"trustOwners": ["CTO"]` for who may promote gates.
+   - `"trustOwners": ["CTO"]` for who may promote gates, if you turn earned trust on.
 3. **Set your proof command**, so a feature's tests prove they depend on the change (ADR-0002). `sdlc proof` runs it twice on the test files that name the feature's criteria: on your branch, where they must pass, and on the base commit's code, where they must fail. `{files}` becomes the quoted test files. Examples: `"proofCommand": "npx jest {files}"`, `"pytest {files}"`, `"node --test {files}"`. To judge each criterion on its own, also write a JUnit report to `{report}`, for example `"npx jest {files} --reporters=jest-junit"` with `JEST_JUNIT_OUTPUT_FILE={report}`. Without it, Verify only warns and the PR must say under `## Not verified` that the proof did not run.
 4. **Optionally**, add `"dataCheckCommand"` (a script that fails when tests leave data behind) and `"gateRepeats": 3` (to catch flaky tests on every gate run).
 5. **Replace the teams** in `.github/CODEOWNERS` with your own.
@@ -62,7 +62,7 @@ Then, as a human:
 
 ## 3. Your first feature, start to finish
 
-Each stage has a command an agent runs, and ends at a gate that waits for a named human. You approve or reject by typing in the Claude Code prompt. Agents cannot type these for you; the hooks refuse it.
+A feature starts in the light lane and waits on a human three times: the spec, the merge and the release. You approve or reject by typing in the Claude Code prompt; the approval moves the feature on by itself. Agents cannot type these for you; the hooks refuse it.
 
 ```
 sdlc approve saved-items 1
@@ -71,14 +71,15 @@ sdlc reject saved-items 1 the outcome metric has no baseline
 
 | Stage | You run | The agents produce | You decide |
 |---|---|---|---|
-| 1 Plan | `/ai-sdlc:plan saved-items` | Its questions first (you answer them), then `prd.md`: graded evidence, assumptions marked confirmed or unconfirmed, numbered requirements R1, R2 ... | `sdlc approve saved-items 1` |
-| 2 Analyze | `/ai-sdlc:analyze saved-items` | `facts.md` pinned to your code, `acceptance.feature` in Gherkin covering every requirement, the spec with threat model and SLOs | `sdlc approve saved-items 2`, and `sdlc lane saved-items light` if it is small and reversible |
-| 3 Design | `/ai-sdlc:design saved-items` and `/ai-sdlc:design-review saved-items` | Plan, ADRs, C4 changes, an ER diagram for data work, `openapi.yaml` for API work, and a board record where three disciplines question each decision | `sdlc approve saved-items 3` |
-| 4 Build | `/ai-sdlc:build saved-items` and `/ai-sdlc:tests saved-items` | Code from a cheaper builder reviewed by the tech lead, and tests at each scenario's level with their own data setup and teardown | `sdlc approve saved-items 4` |
-| 5 Verify | `/ai-sdlc:verify saved-items` (it runs the pre-review) | The review packet, the findings ledger `review.md`, and a PR whose body says what was not verified | Review the PR on GitHub, starting from "Look here first". Add what you find to `review.md` as H rows. Then `sdlc approve saved-items 5`. |
-| 6 Release | `/ai-sdlc:release saved-items` | The release order, rollout, a tested rollback, and probe results after you deploy | You merge and deploy; then `sdlc approve saved-items 6` |
+| Start | `/ai-sdlc:start add a saved-items list` | The route and lane, a feature branch and `specs/saved-items/` | Nothing yet |
+| 1 Plan | `/ai-sdlc:plan saved-items` | Its questions first (you answer them), then a short `prd.md` and `acceptance.feature`: a Gherkin scenario per requirement | `sdlc approve saved-items 1` |
+| 4 Build | `/ai-sdlc:build saved-items` | Tests first, then code from the builder, reviewed by the tech lead. Passes on checks | Nothing: no wait |
+| 5 Verify | `/ai-sdlc:verify saved-items` | The test proof, the review packet, the findings ledger `review.md`, and a PR whose body says what was not verified | Review the PR from "Look here first", add what you find to `review.md` as H rows, then `sdlc approve saved-items 5` |
+| 6 Release | `/ai-sdlc:release saved-items` | The rollout, a tested rollback, and probe results after you deploy | You merge and deploy; then `sdlc approve saved-items 6` |
 
-When a gate refuses, `sdlc request` lists every reason, for example "R2 has no scenario" or "the review packet was built at an older commit". Ask the agent to fix them and request again.
+**The full lane** adds stage 3 Design (`/ai-sdlc:design`: the plan, and an ADR with its review for each new datastore, dependency or service) and a fourth wait. Triage picks it for a migration that alters or drops data, a high-risk path, or a new component; you can also type `sdlc lane saved-items full` at any point before Verify.
+
+When a gate refuses, `sdlc request` lists every reason, for example "R2 has no scenario". Ask the agent to fix them and request again. Warnings, such as a knowledge page the change made stale, do not block.
 
 ## 4. Smaller work
 
@@ -93,23 +94,35 @@ When a gate refuses, `sdlc request` lists every reason, for example "R2 has no s
 - **Where things stand:** `/ai-sdlc:status` lists each feature, its gate, who it waits on and for how long. With the mod, the band above the prompt shows the same. `/sdlc-board` opens the board, whose Approve button fills the prompt for you to send.
 - **Let agents fix their own test failures:** `/sdlc-autopilot`. After each turn that edits files, the gate runs and the next fix starts automatically, up to the retry cap. Then it stops and notifies you.
 - **Stop everything:** type `sdlc pause`; `sdlc resume` to continue.
-- **Error budget spent:** type `sdlc freeze`. No new full or light feature starts (`sdlc init` is refused), bug fixes, hotfixes and tasks carry on, and earned promotions are suspended until `sdlc unfreeze`.
-- **After a release:** the feature closes, and its outcome follow-up opens with the owner and read date from `release.md` (`## Outcome metric`). Status shows OUTCOME DUE, then OVERDUE. The owner reads the metric and an agent records `sdlc outcome <feature> met|missed|breach`; a breach alerts the incident commander, who decides whether to declare a hotfix.
-- **When the retro is due early:** an escalation past the retry cap, or the same serious review finding in two features, shows RETRO DUE at session start. Running the retro clears it.
-- **Give agents more autonomy:** after enough clean approvals, `sdlc trust` (run by an agent) shows which gates are READY, and a trust owner types `sdlc trust bug 5`. Any rejection or escaped bug takes it back.
+- **Error budget spent:** type `sdlc freeze`. No new feature starts (`sdlc init` is refused); bug fixes, hotfixes and tasks carry on until `sdlc unfreeze`.
+- **After a full-lane release:** the feature closes, and its outcome follow-up opens with the owner and read date from `release.md` (`## Outcome metric`, or `Metric: None, because ...`). Status shows OUTCOME DUE, then OVERDUE. An agent records `sdlc outcome <feature> met|missed|breach`; a breach alerts the incident commander, who decides whether to declare a hotfix. Add `"outcomeWindowDays": { "light": 7 }` to turn it on for the light lane.
+- **When the retro is due early:** an escalation past the retry cap, or the same serious review finding in two features, shows RETRO DUE in `status`. Running the retro clears it.
 
-## 6. Improve the process
+## 6. Optional steps
+
+Off by default, so the default path stays short. Turn them on when the risk calls for them:
+
+| Step | Turn it on with |
+|---|---|
+| Earned trust: bug and task merges that pass on checks after enough clean approvals | `"trust": true` in `.ai-sdlc/config.json`, then a trust owner types `sdlc trust bug 5` when it is READY |
+| Flaky-test and leaked-data checks on every gate run | `"gateRepeats": 3` and `"dataCheckCommand"` |
+| The QA verdict, security results and extra review lenses | Automatic when the pre-review says `Risk: high` |
+| The Design stage | `init <slug> --full`, or `sdlc lane <slug> full` |
+| Facts pinned to the code | Automatic for `--kind brownfield` and `--kind data` |
+| C4 changes, screens and accessibility checks | When the change adds a container or changes a screen |
+
+## 7. Improve the process
 
 - **Monthly**, run `/ai-sdlc:retro --since 30` (add `--repos` for your other repos). It turns what was recorded into at most three proposed plugin changes, each proven by an eval, as a PR for the platform owner to merge.
 - **Before changing an agent or command**, run `npm run eval` and `npm run eval:agents` in the plugin repo; the golden tasks must not regress.
 
-## 7. Troubleshooting
+## 8. Troubleshooting
 
 | Symptom | Why | What to do |
 |---|---|---|
 | `sdlc approve` records nothing | The `ai-sdlc` plugin is not installed in this session, or the gate was never requested | Install the plugin and start a new session; ask the agent to run `sdlc request <feature>` first |
 | "is not an owner of gate N" | `gateOwners` lists other names | Approve as a listed owner, or change the config |
 | An edit or command is refused with "[ai-sdlc]" | A guardrail: protected branch, secrets, a deploy, a guardrail file, or code before Build | Read the reason; humans run deploys and merges |
-| "the review packet was built at ..., not HEAD" | Commits landed after the packet | Ask the agent to run `sdlc review <feature>` again |
+| "needs the full lane" at Build | The light lane is for additive, low-risk work, and this change alters or drops data or touches a high-risk path | Type `sdlc lane <feature> full`; it goes back to Design |
 | The Swagger page is blank | The contract changed since the viewer was written, or you are offline | Run `sdlc api <feature>` again; the page loads Swagger UI from the internet |
 | The band shows a feature you do not recognise | A feature folder under `specs/` from earlier work | Press Hide, or finish or close that feature |

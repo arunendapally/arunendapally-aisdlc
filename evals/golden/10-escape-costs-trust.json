@@ -6,7 +6,8 @@
     {
       "config": {
         "gateCommand": "node gate.cjs",
-        "trustThreshold": 1
+        "trustThreshold": 1,
+        "trust": true
       }
     },
     {
@@ -45,8 +46,7 @@
           "## Root cause",
           "## Fix",
           "## Test results",
-          "## Not verified",
-          "## Review honesty"
+          "## Not verified"
         ],
         "\n## Pre-review\n\nRisk: low\nOpen findings: 0\nLenses run: correctness, tests\n"
       ]

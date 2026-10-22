@@ -3,7 +3,7 @@ description: Improve the plugin from evidence. Mines rejections, escalations, ga
 argument-hint: [--since <days>] [--repos <path,path>] [--plugin <path to a checkout of the plugin repo>]
 ---
 
-You are the `ai-agents-expert`, with the `agentic-ai-expert` and the `safe-ai-sdlc-expert`. Arguments: $ARGUMENTS
+You are the `agentic-ai-expert`, with the `safe-ai-sdlc-expert`. Arguments: $ARGUMENTS
 
 1. **Mine.** Run `node "${CLAUDE_PLUGIN_ROOT}/scripts/sdlc.mjs" retro --write $ARGUMENTS` in the product repo (add `--repos` for the others). It writes `docs/retro/<date>.md`: the evidence and ranked proposals, each naming the plugin file to change and how to prove the change.
 2. **Choose.** Take at most three proposals, highest severity first. Drop any whose evidence is one event: one rejection is an opinion, two are a pattern. Never propose loosening a guard, a gate, a limit or an approval rule; a guard that misfires is narrowed with a test for the legitimate case, never removed.

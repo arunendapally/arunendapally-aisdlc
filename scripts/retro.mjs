@@ -5,8 +5,8 @@ import path from 'node:path'
 import { listFeatures, loadConfig, readTrust, promotable } from './lib.mjs'
 import { parseLedger, humanCatches } from './review.mjs'
 
-export const STAGE_COMMAND = { 1: 'commands/plan.md', 2: 'commands/analyze.md', 3: 'commands/design.md', 4: 'commands/build.md', 5: 'commands/verify.md', 6: 'commands/release.md' }
-const CHECKLIST = 'skills/ai-sdlc/standards/code-review-checklist.md'
+export const STAGE_COMMAND = { 1: 'commands/plan.md', 3: 'commands/design.md', 4: 'commands/build.md', 5: 'commands/verify.md', 6: 'commands/release.md' }
+const CHECKLIST = 'templates/repo/standards/code-review-checklist.md'
 export const MIN_RECALL_SAMPLE = 5
 const STOP = new Set(['about', 'after', 'again', 'also', 'because', 'before', 'being', 'does', 'from', 'have', 'into', 'just', 'missed', 'missing', 'more', 'needs', 'only', 'other', 'should', 'some', 'that', 'their', 'there', 'these', 'this', 'when', 'where', 'which', 'with', 'without', 'would', 'still', 'what', 'were', 'will', 'been', 'than', 'then', 'they', 'them', 'your'])
 

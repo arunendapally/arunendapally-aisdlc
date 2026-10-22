@@ -5,7 +5,8 @@
     {
       "sdlc": [
         "init",
-        "demo"
+        "demo",
+        "--full"
       ],
       "ok": true
     },

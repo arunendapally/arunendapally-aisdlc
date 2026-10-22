@@ -1,6 +1,6 @@
 # AI SDLC rules for every agent in this repo
 
-- Work through the stages: /ai-sdlc:kickoff, plan, analyze, design, build, verify, release. /ai-sdlc:status shows where things stand.
+- Start any work with /ai-sdlc:start; it picks the lane. Features run plan, build, verify and release (design too in the full lane). /ai-sdlc:status shows where things stand.
 - Artefacts live in specs/<feature>/. The spec is the source of truth; when the build disproves it, fix the spec first, then the code.
 - Only a human approves a gate, by typing "sdlc approve <feature> <stage>". Never say a gate is passed. Never write state.json by hand.
 - Work on a feature branch in its own worktree. Never commit or push to main.

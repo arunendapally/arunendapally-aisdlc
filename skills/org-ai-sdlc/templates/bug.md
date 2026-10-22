@@ -28,4 +28,3 @@ Look here first: file:line, ... -->
 
 ## Not verified
 
-## Review honesty

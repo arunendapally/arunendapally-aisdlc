@@ -74,23 +74,17 @@ const skips = /\b(it|describe|test)\.skip\(|\bxit\(|@pytest\.mark\.skip|@Disable
 if (skips) ask(`${rel} adds a skipped test. A skip needs a quarantine entry with an owner and an expiry date.`)
 
 // Stage gates on the artefact chain: each artefact needs the gate before it.
-const spec = rel.match(new RegExp(`^${cfg.specsDir}/([^/]+)/(spec|plan|tasks)\\.md$`)) ??
-  rel.match(new RegExp(`^${cfg.specsDir}/([^/]+)/(acceptance)\\.feature$`))?.map((m, i) => (i === 2 ? 'spec' : m))
+const spec = rel.match(new RegExp(`^${cfg.specsDir}/([^/]+)/(plan|tasks)\\.md$`))
 if (spec) {
   const state = readState(dir, spec[1])
-  const approved = n => state?.gates[n]?.status === 'approved'
-  if (state) {
-    if (spec[2] === 'spec' && !approved(1) && state.stage < 2) deny('spec.md needs gate 1 (the PRD) approved by the product lead first.')
-    if (spec[2] === 'plan' && state.stage < 3 && !approved(2)) deny('plan.md needs gate 2 (scope, integration, threat model) approved first.')
-    if (spec[2] === 'tasks' && state.stage < 4 && !(approved(3) || (state.lane === 'light' && approved(2)))) deny('tasks.md needs the design gate approved first.')
-  }
+  if (state && state.stage < 3 && state.gates[1]?.status !== 'approved') deny(`${spec[2]}.md waits for gate 1 (the PRD and acceptance.feature) to be approved first.`)
 }
 
 // Code on a feature branch waits until the feature reaches Build.
 const feature = listFeatures(dir).find(s => s.branch === branch)
 const isDoc = rel.startsWith(`${cfg.specsDir}/`) || rel.startsWith('docs/') || rel.endsWith('.md')
 if (feature && feature.stage < 4 && !isDoc) deny(`${feature.feature} is at stage ${feature.stage}. Code waits for stage 4 (Build).`)
-if (feature?.lane === 'bug' && matches(rel, cfg.bugForbidPaths)) deny(`${rel} is out of scope for a bug fix (dependencies, schema, CI or infrastructure). Open a feature with /ai-sdlc:kickoff instead.`)
+if (feature?.lane === 'bug' && matches(rel, cfg.bugForbidPaths)) deny(`${rel} is out of scope for a bug fix (dependencies, schema, CI or infrastructure). Open a feature with /ai-sdlc:start instead.`)
 if (feature?.lane === 'hotfix' && matches(rel, cfg.bugForbidPaths)) ask(`${rel} changes dependencies, schema, CI or infrastructure inside a hotfix. The on-call engineer must approve this edit.`)
 
 if (matches(rel, cfg.askPaths)) ask(`${rel} controls CI, ownership or agents. A human must approve this edit.`)
