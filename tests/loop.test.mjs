@@ -98,6 +98,7 @@ test('hotfix: the proof runs after the merge, against the code before the fix, a
   r.git('merge', '--ff-only', 'hotfix/api-down')
   r.setState('api-down', { closedAt: hoursAgo(72), postmortemDue: hoursAgo(24), proofBase: base })
   r.put('docs/incidents/2026-10-20-api-down.md', '# Incident\n')
+  r.put('standards/traps.md', '### Retries hid the outage\n- **What happened:** x.\n- **Source:** api-down\n- **Guard now:** a test in tests/retry.test.ts.\n')
   assert.match(r.sdlc('status').out, /POSTMORTEM OVERDUE.*test proof has not passed/, 'a postmortem without a passing proof is not done')
   assert.match(r.sdlc('proof', 'api-down').out, /name the tests to prove with --files/)
   const out = r.sdlc('proof', 'api-down', '--files', 'tests/api-down.test.cjs')
@@ -108,24 +109,27 @@ test('hotfix: the proof runs after the merge, against the code before the fix, a
 test('release: rollout readiness needs a tested rollback and probe results; the full lane also an outcome owner', () => {
   const r = makeRepo()
   r.sdlc('init', 'demo', '--full')
+  r.remote()
+  const live = r.land()
   const state = r.state('demo')
   const bare = releaseProblems(r.repo, state, '## Rollback (tested)\n\nhelm rollback\n\n## Probes\n\nTBD\n').problems.join('\n')
   assert.match(bare, /no "Tested: <date>/)
   assert.match(bare, /records no result/)
   assert.match(bare, /needs "Metric:" and "Owner:"/)
-  const ready = '## Rollback (tested)\n\nhelm rollback. Tested: 2026-10-21, on staging.\n\n## Probes\n\n- p95 latency: pass\n\n## Outcome metric\n\nMetric: checkout conversion +2%\nOwner: Product lead\n'
+  const ready = `## Rollback (tested)\n\nhelm rollback. Tested: 2026-10-21, on staging.\n\n## Probes\n\n- p95 latency: pass\n\nLive: ${live}\n\n## Outcome metric\n\nMetric: checkout conversion +2%\nOwner: Product lead\n`
   assert.deepEqual(releaseProblems(r.repo, state, ready).problems, [])
   const none = ready.replace(/Metric: [^\n]*\nOwner: [^\n]*\n/, 'Metric: None, because it is a refactor behind a flag\n')
   assert.deepEqual(releaseProblems(r.repo, state, none).problems, [], 'a feature may have no outcome to read')
   const light = ready.replace(/## Outcome metric[\s\S]*/, '')
   assert.deepEqual(releaseProblems(r.repo, { ...state, lane: 'light' }, light).problems, [], 'the light lane opens no outcome follow-up by default')
-  assert.deepEqual(releaseProblems(r.repo, { ...state, lane: 'hotfix' }, '').problems, [], 'the incident commander judges a hotfix')
+  assert.deepEqual(releaseProblems(r.repo, { ...state, lane: 'hotfix' }, `## Probes\n\nLive: ${live}\n`).problems, [], 'the incident commander judges a hotfix, but not what is live')
 })
 
 test('release: stale knowledge or facts the change touched, unmarked superseded ADRs and unlinked postmortem actions warn', () => {
   const r = makeRepo()
   r.sdlc('init', 'demo', '--full')
-  const ready = '## Rollback (tested)\n\nTested: 2026-10-21, staging.\n\n## Probes\n\n- ok\n\n## Outcome metric\n\nMetric: m\nOwner: o\n'
+  r.remote()
+  const ready = `## Rollback (tested)\n\nTested: 2026-10-21, staging.\n\n## Probes\n\n- ok\n\nLive: ${r.git('rev-parse', 'HEAD')}\n\n## Outcome metric\n\nMetric: m\nOwner: o\n`
   r.put('src/a.js', '1\n')
   r.git('add', '.')
   r.git('commit', '-m', 'a')
@@ -137,7 +141,7 @@ test('release: stale knowledge or facts the change touched, unmarked superseded 
   r.git('commit', '-m', 'pages')
   r.put('src/a.js', '2\n')
   const state = r.state('demo')
-  assert.deepEqual(releaseProblems(r.repo, state, ready).problems, [], 'bookkeeping never blocks a release')
+  assert.doesNotMatch(releaseProblems(r.repo, state, ready).problems.join('\n'), /knowledge|facts|ADR|incidents/, 'bookkeeping never blocks a release')
   let problems = releaseProblems(r.repo, state, ready).warnings.join('\n')
   assert.match(problems, /knowledge page knowledge\/a\.md is stale/)
   assert.doesNotMatch(problems, /other\.md/, 'a stale page about code the change did not touch does not block it')

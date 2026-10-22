@@ -1,0 +1,94 @@
+{
+  "name": "release-is-on-main-and-live",
+  "promise": "Release refuses a change that is only on a branch, and a live build that does not contain it; a preview deploy from an unpushed branch asks first.",
+  "catches": [
+    "F3"
+  ],
+  "steps": [
+    {
+      "remote": true
+    },
+    {
+      "tool": [
+        "Bash",
+        {
+          "command": "vercel deploy"
+        }
+      ],
+      "expect": "ask",
+      "reason": "a branch deploy is a preview, never a release"
+    },
+    {
+      "sdlc": [
+        "init",
+        "demo",
+        "--full"
+      ],
+      "ok": true
+    },
+    {
+      "put": [
+        "src/saved.ts",
+        "export const saved = true\n"
+      ]
+    },
+    {
+      "git": [
+        "add",
+        "-A"
+      ]
+    },
+    {
+      "git": [
+        "commit",
+        "-m",
+        "saved items"
+      ]
+    },
+    {
+      "setState": [
+        "demo",
+        {
+          "stage": 6,
+          "stages": {
+            "6": {
+              "enteredAt": "2026-10-22T00:00:00Z"
+            }
+          }
+        }
+      ]
+    },
+    {
+      "put": [
+        "specs/demo/release.md",
+        "## Rollout\n\nFlag at 10%.\n\n## Rollback (tested)\n\nTested: 2026-10-21, staging.\n\n## Probes\n\n- saved items render: pass\n\nLive: $HEAD\n\n## Outcome metric\n\nMetric: saves per user\nOwner: Priya\n"
+      ]
+    },
+    {
+      "sdlc": [
+        "request",
+        "demo"
+      ],
+      "ok": false,
+      "out": "is not on origin/main.*a preview, never a release",
+      "why": "deployed from the branch"
+    },
+    {
+      "land": "land saved items"
+    },
+    {
+      "put": [
+        "specs/demo/release.md",
+        "## Rollout\n\nFlag at 10%.\n\n## Rollback (tested)\n\nTested: 2026-10-21, staging.\n\n## Probes\n\n- saved items render: pass\n\nLive: $MAIN\n\n## Outcome metric\n\nMetric: saves per user\nOwner: Priya\n"
+      ]
+    },
+    {
+      "sdlc": [
+        "request",
+        "demo"
+      ],
+      "ok": true,
+      "out": "waiting on"
+    }
+  ]
+}

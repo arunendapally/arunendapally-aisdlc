@@ -11,7 +11,7 @@ import os from 'node:os'
 import path from 'node:path'
 import crypto from 'node:crypto'
 import { spawnSync } from 'node:child_process'
-import { STAGES, git, loadConfig, section, changedFiles, listFeatures, nextStage, writeState } from './lib.mjs'
+import { STAGES, stageSpec, git, gitOk, loadConfig, section, changedFiles, listFeatures, nextStage, writeState } from './lib.mjs'
 import { matrix } from './testmatrix.mjs'
 import { check as knowledgeCheck, pages as knowledgePages } from './knowledge.mjs'
 import { parseFacts, factProblems } from './facts.mjs'
@@ -143,7 +143,7 @@ export function proofProblems(dir, state, artefactText, cfg = loadConfig(dir)) {
 // Release: is it safe to ship (problems block), and is what we know still true (warnings)?
 export function releaseProblems(dir, state, artefactText, cfg = loadConfig(dir)) {
   const problems = []
-  const changed = changedFiles(dir, cfg).map(f => f.file)
+  const changed = state.reviewedFiles ?? changedFiles(dir, cfg).map(f => f.file)
 
   // Rollout readiness: a rollback that was actually tested, and probe results. A lane with an outcome
   // window also names who reads the outcome, or says why there is none. A hotfix is already in
@@ -157,7 +157,46 @@ export function releaseProblems(dir, state, artefactText, cfg = loadConfig(dir))
     const none = /Metric:\s*None, because\s+\S/i.test(outcome)
     if (state.lane in cfg.outcomeWindowDays && !none && (!/Metric:\s*\S/i.test(outcome) || !/Owner:\s*\S/i.test(outcome))) problems.push('"## Outcome metric" needs "Metric:" and "Owner:" lines (or "Metric: None, because ..."), so the outcome follow-up has an owner')
   }
+  problems.push(...liveProblems(dir, state, artefactText, cfg))
   return { problems, warnings: rememberWarnings(dir, state, changed, cfg) }
+}
+
+// What was released and what is live (ADR-0004, failure F3), in every lane that releases. The reviewed
+// commit must be on the remote's protected branch, so a branch deploy is never the release and never
+// the only copy; and the running system's build must contain it, and still contain the last release.
+export const releaseSha = (dir, state) => state.reviewedSha ?? git('rev-parse HEAD', dir)
+export const liveShaIn = text => (section(text, '## Probes') ?? section(text, '## Live') ?? '').match(/Live:\s*([0-9a-f]{7,40}|unknown)\b/i)?.[1]
+// The commit on origin/<branch> that holds the reviewed change: the commit itself after a merge, or the
+// squash commit whose patch is the same. Null when the change never reached the remote's branch.
+export function landedOn(dir, sha, branch) {
+  const ref = `origin/${branch}`
+  if (!gitOk(`rev-parse --verify --quiet ${ref}`, dir)) return null
+  if (gitOk(`merge-base --is-ancestor ${sha} ${ref}`, dir)) return sha
+  const base = git(`merge-base ${sha} ${ref}`, dir)
+  if (!base) return null
+  const id = git(`diff ${base} ${sha} | git patch-id --stable`, dir).split(' ')[0]
+  if (!id) return null
+  const match = git(`log -p --no-merges ${base}..${ref} | git patch-id --stable`, dir).split('\n').map(l => l.split(' ')).find(([p]) => p === id)
+  return match?.[1] ?? null
+}
+
+export function liveProblems(dir, state, artefactText, cfg = loadConfig(dir)) {
+  const problems = []
+  const reviewed = releaseSha(dir, state)
+  if (!git('remote get-url origin', dir)) return ['the repo has no "origin" remote: a release must be on the remote, or the branch is the only copy']
+  git('fetch --quiet origin', dir)
+  const landed = cfg.protectedBranches.map(b => landedOn(dir, reviewed, b)).find(Boolean)
+  if (!landed) problems.push(`the reviewed commit ${reviewed.slice(0, 7)} is not on origin/${cfg.protectedBranches.join(' or origin/')}: merge and push it first. A deploy from a branch is a preview, never a release`)
+  const sha = landed ?? reviewed
+  const live = liveShaIn(artefactText)
+  if (!live) return [...problems, '"## Probes" has no "Live: <sha>" line: read the build the running system reports (a version endpoint, a meta tag, the platform\'s inspect command) and record it']
+  if (/unknown/i.test(live)) return [...problems, '"Live: unknown": find out what is running before calling it released']
+  // cat-file -t, not "${live}^{commit}": cmd.exe on Windows eats the caret.
+  if (git(`cat-file -t ${live}`, dir) !== 'commit') return [...problems, `Live: ${live} is not a commit this repo knows: fetch, or read the build id again`]
+  if (!gitOk(`merge-base --is-ancestor ${sha} ${live}`, dir)) problems.push(`the live build ${live.slice(0, 7)} does not contain the release commit ${sha.slice(0, 7)}: what is running is not this release`)
+  const previous = listFeatures(dir).filter(s => s.feature !== state.feature && s.releasedSha).sort((a, b) => Date.parse(b.closedAt) - Date.parse(a.closedAt))[0]
+  if (previous && !gitOk(`merge-base --is-ancestor ${previous.releasedSha} ${live}`, dir)) problems.push(`the live build ${live.slice(0, 7)} no longer contains ${previous.feature} (${previous.releasedSha.slice(0, 7)}), released before: this deploy rolled it back`)
+  return problems
 }
 
 // What the change may have made untrue. These warn at Release, and an agent re-verifies them.
@@ -254,6 +293,13 @@ export function advanceFeature(dir, state) {
   if (next === undefined) {
     state.closedAt = now
     if (state.lane === 'hotfix') state.postmortemDue = new Date(Date.now() + cfg.postmortemDays * 864e5).toISOString()
+    // What shipped and what was live when it did, so the next release can check it is still there.
+    if (state.stage === 6) {
+      const artefact = path.join(dir, cfg.specsDir, state.feature, stageSpec(state, 6).artefact)
+      state.releasedSha = cfg.protectedBranches.map(b => landedOn(dir, releaseSha(dir, state), b)).find(Boolean) ?? releaseSha(dir, state)
+      const live = fs.existsSync(artefact) ? liveShaIn(fs.readFileSync(artefact, 'utf8')) : null
+      if (live && !/unknown/i.test(live)) state.liveSha = live
+    }
     // The feature closes at release; its outcome is a follow-up with an owner and a date.
     const release = path.join(dir, cfg.specsDir, state.feature, 'release.md')
     const outcome = fs.existsSync(release) ? outcomeFollowUp(state, fs.readFileSync(release, 'utf8'), cfg) : null

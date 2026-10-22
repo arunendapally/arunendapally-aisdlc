@@ -59,6 +59,7 @@ Then, as a human:
    For a one-person repo, first set `required_approving_review_count` to 0 and `require_code_owner_review` to false. GitHub does not let you approve your own pull request, so you would lock yourself out.
 7. **Set the repo variable** `BACKUP_REVIEWERS` to a team handle. The hourly `review-sla` workflow mentions it on overdue reviews.
 8. **Give agents a GitHub App or fine-grained token** with no admin or bypass rights.
+9. **Expose your build id** so a release can be checked: a version endpoint, a meta tag, or your platform's read-only inspect command. Release records it as `Live: <sha>` and refuses unless it contains the reviewed change on `origin/main` and the previous release.
 
 ## 3. Your first feature, start to finish
 
@@ -123,6 +124,9 @@ Off by default, so the default path stays short. Turn them on when the risk call
 | `sdlc approve` records nothing | The `ai-sdlc` plugin is not installed in this session, or the gate was never requested | Install the plugin and start a new session; ask the agent to run `sdlc request <feature>` first |
 | "is not an owner of gate N" | `gateOwners` lists other names | Approve as a listed owner, or change the config |
 | An edit or command is refused with "[ai-sdlc]" | A guardrail: protected branch, secrets, a deploy, a guardrail file, or code before Build | Read the reason; humans run deploys and merges |
+| "is not on origin/main" or "Live:" at Release | The change was deployed from a branch, or the running build is not this release | Merge and push, deploy from main, read the build id again |
+| "Refused 2 times this session: hand back" | A guard refused the same step twice | Read the reason; run the step yourself if it is right, then reply so the session can act again |
+| "in slices" when reading a file | The file is large | Read the code that governs it first, then the file with an offset and limit |
 | "needs the full lane" at Build | The light lane is for additive, low-risk work, and this change alters or drops data or touches a high-risk path | Type `sdlc lane <feature> full`; it goes back to Design |
 | The Swagger page is blank | The contract changed since the viewer was written, or you are offline | Run `sdlc api <feature>` again; the page loads Swagger UI from the internet |
 | The band shows a feature you do not recognise | A feature folder under `specs/` from earlier work | Press Hide, or finish or close that feature |

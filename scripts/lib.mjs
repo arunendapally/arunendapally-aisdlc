@@ -94,7 +94,8 @@ export const DEFAULT_CONFIG = {
   denyPaths: ['.ai-sdlc/**', '.claude/settings*.json', '**/.env', '**/.env.*', '**/*.pem', '**/*.key', '**/id_rsa*', '**/*.tfstate', '**/*.tfstate.*'],
   askPaths: ['.github/workflows/**', '.github/CODEOWNERS', 'CODEOWNERS', '.claude/agents/**', '.claude/hooks/**', '.mcp.json'],
   highRiskPaths: ['**/auth/**', '**/payments/**', '**/migrations/**', 'infra/**', 'terraform/**'],
-  deployPatterns: ['vercel\\b.*(--prod|--target[= ]production|\\bpromote\\b)', 'terraform\\s+apply', 'kubectl\\s+(apply|delete|rollout)', 'helm\\s+(install|upgrade)', 'npm\\s+publish',
+  deployPatterns: ['vercel\\b.*(--prod|--target[= ]production|\\bpromote\\b|\\balias\\b)', 'terraform\\s+apply', 'netlify\\s+deploy\\b.*--prod', 'fly(ctl)?\\s+deploy\\b',
+    'firebase\\s+deploy\\b', 'wrangler\\s+(deploy|publish)\\b', '(npm|pnpm|yarn)\\s+(run\\s+)?deploy\\b', 'kubectl\\s+(apply|delete|rollout)', 'helm\\s+(install|upgrade)', 'npm\\s+publish',
     'gh\\s+pr\\s+merge', 'gh\\s+release\\s+create', 'gh\\s+(ruleset|secret|repo\\s+edit)\\b', 'gh\\s+api\\b.*(-X|--method)\\s*(?!GET\\b)[A-Z]+', 'git\\s+config\\b.*\\balias\\.',
     '\\bsdlc\\s+(approve|reject|lane|hotfix|trust|distrust|resume|unfreeze)\\b'],
   // Production is touched only by read-only probes: a command matching these must also be a probe.
@@ -109,7 +110,18 @@ export const DEFAULT_CONFIG = {
   // MCP tools whose names look like they merge, deploy or change settings are denied unless listed in mcpAllow.
   mcpDenyPattern: '(merge|deploy|promote|rollback|release|publish|delete|apply|push|ruleset|protection|secret|setting|permission)',
   mcpAllow: [],
+  // Two different loops (ADR-0004). retryCap counts failed checks after a real change; denialCap counts
+  // refusals by one guard in one session, after which the session hands back and may only read until a
+  // human types. A repo can lower denialCap, never raise it.
   retryCap: 3,
+  denialCap: 2,
+  // A Read (or a cat) of a file bigger than this, without a slice, is refused with the sliced call.
+  maxReadLines: 1500,
+  maxReadBytes: 100000,
+  // Preview deploys an agent may run, once its branch is on the remote; a preview is never a release.
+  previewPatterns: ['\\bvercel\\b(?![^|;&]*(--prod|\\b(alias|promote|env|login|whoami|ls|list|inspect|logs|pull|link)\\b))', '\\bnetlify\\s+deploy\\b(?![^|;&]*--prod)'],
+  // Files that run what they contain: a deploy written into one asks a human.
+  scriptPaths: ['**/*.sh', '**/*.ps1', '**/*.bat', '**/*.cmd', '**/makefile', '**/justfile', '**/package.json', '**/taskfile.yml'],
   // Small PRs review faster: changed lines allowed per PR, by lane, excluding specs, docs and lock files.
   maxPrLines: { full: 400, light: 300, bug: 200, task: 200, hotfix: 100 },
   prLineExcludes: ['specs/**', 'docs/**', '**/*.md', '**/package-lock.json', '**/yarn.lock', '**/pnpm-lock.yaml', '**/*.lock', '**/*.snap'],
@@ -137,7 +149,7 @@ export const DEFAULT_CONFIG = {
 
 // List settings in a repo's config can only add to the plugin's defaults, so a repo file
 // (or an agent that slipped past a guard) can never switch a guard off.
-const ADDITIVE = ['bannedText', 'bannedTextPaths', 'protectedBranches', 'denyPaths', 'askPaths', 'highRiskPaths', 'deployPatterns', 'prodPatterns', 'bugForbidPaths']
+const ADDITIVE = ['bannedText', 'bannedTextPaths', 'protectedBranches', 'denyPaths', 'askPaths', 'highRiskPaths', 'deployPatterns', 'prodPatterns', 'bugForbidPaths', 'scriptPaths']
 
 // A read-only production probe: a read verb and no write verb.
 export function isProbe(command) {
@@ -161,11 +173,22 @@ export function git(args, cwd) {
   }
 }
 
+// Whether a git command succeeds, for checks such as "merge-base --is-ancestor" that answer by exit code.
+export function gitOk(args, cwd) {
+  try {
+    execSync(`git ${args}`, { cwd, stdio: 'ignore' })
+    return true
+  } catch {
+    return false
+  }
+}
+
 export function loadConfig(dir) {
   const file = path.join(dir, '.ai-sdlc', 'config.json')
   const own = fs.existsSync(file) ? JSON.parse(fs.readFileSync(file, 'utf8')) : {}
   const cfg = { ...DEFAULT_CONFIG, ...own }
   for (const key of [...ADDITIVE, 'neverTrust']) cfg[key] = [...new Set([...DEFAULT_CONFIG[key], ...(own[key] ?? [])])]
+  cfg.denialCap = Math.max(1, Math.min(DEFAULT_CONFIG.denialCap, Number(own.denialCap) || DEFAULT_CONFIG.denialCap))
   for (const key of ['maxPrLines', 'reviewSlaHours', 'outcomeWindowDays']) cfg[key] = { ...DEFAULT_CONFIG[key], ...(own[key] ?? {}) }
   return cfg
 }
@@ -256,13 +279,28 @@ export function overdueGates(dir, now = Date.now()) {
   })
 }
 
+// The loop with memory (ADR-0004): an escaped bug or a hotfix owes a lesson, paid by a trap in
+// standards/traps.md that names it ("- **Source:** <slug>") and is guarded by a check, not by words.
+export const ENFORCED_GUARD = /\b(tests?|hooks?|lint|ci|ruleset|workflow|assert(ion)?s?|evals?|gate)\b/i
+export function lessonPaid(dir, slug) {
+  const file = path.join(dir, 'standards', 'traps.md')
+  if (!fs.existsSync(file)) return false
+  return fs.readFileSync(file, 'utf8').split(/^### /m).slice(1).some(block =>
+    new RegExp(`\\*\\*Source:\\*\\*[^\\n]*\\b${slug}\\b`).test(block) && ENFORCED_GUARD.test(block.match(/\*\*Guard now:\*\*\s*(.*)/)?.[1] ?? ''))
+}
+export function lessonsOwed(dir) {
+  return listFeatures(dir).filter(s => s.lessonOwed && !lessonPaid(dir, s.feature))
+}
+export const lessonProblem = slug => `a lesson is owed: add a trap to standards/traps.md with "- **Source:** ${slug}" and a "Guard now" that is a test, hook, lint rule, CI check or eval, so this cannot happen again unnoticed`
+
 // Hotfixes shipped without a postmortem past the deadline. A hotfix's test proof runs after the
-// merge, and until it passes the postmortem is not done (ADR-0002).
+// merge, and until it passes the postmortem is not done (ADR-0002); nor is it while its lesson is
+// owed (ADR-0004).
 export function overduePostmortems(dir, now = Date.now()) {
   const incidents = path.join(dir, 'docs', 'incidents')
   const files = fs.existsSync(incidents) ? fs.readdirSync(incidents) : []
   const proofDue = s => loadConfig(dir).proofCommand && !s.proof?.ok
-  return listFeatures(dir).filter(s => s.postmortemDue && Date.parse(s.postmortemDue) < now && (!files.some(f => f.endsWith(`-${s.feature}.md`)) || proofDue(s)))
+  return listFeatures(dir).filter(s => s.postmortemDue && Date.parse(s.postmortemDue) < now && (!files.some(f => f.endsWith(`-${s.feature}.md`)) || proofDue(s) || (s.lessonOwed && !lessonPaid(dir, s.feature))))
 }
 
 export const TEMPLATES = path.join(path.dirname(fileURLToPath(import.meta.url)), '..', 'skills', 'org-ai-sdlc', 'templates')

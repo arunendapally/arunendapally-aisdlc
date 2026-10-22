@@ -14,7 +14,14 @@
 
 ## Probes
 
-<!-- Read-only checks against the SLOs, each with its result (pass or fail). -->
+<!-- After the deploy from main: read-only checks, each with its result (pass or fail), including this
+     feature's own acceptance check, since a generic health check cannot see an old build.
+     Then the build that is running, read from the system itself, not from the deploy log: a version
+     endpoint, a meta tag, or the platform's read-only inspect command. Release refuses unless the
+     reviewed change is on origin/main and this build contains it and the previous release. A deploy
+     from a branch is a preview, never a release. -->
+
+Live: <sha>
 
 ## Outcome metric
 

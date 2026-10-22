@@ -13,8 +13,9 @@ const plugin = path.join(path.dirname(fileURLToPath(import.meta.url)), '..')
 const hook = name => path.join(plugin, 'scripts', 'hooks', `${name}.mjs`)
 let repo
 
+let calls = 0
 const run = (name, input) => {
-  const r = spawnSync('node', [hook(name)], { cwd: repo, input: JSON.stringify({ cwd: repo, ...input }) })
+  const r = spawnSync('node', [hook(name)], { cwd: repo, input: JSON.stringify({ cwd: repo, session_id: `call-${++calls}`, ...input }) })
   return r.stdout.toString().trim()
 }
 const sdlc = (...args) => spawnSync('node', [path.join(plugin, 'scripts', 'sdlc.mjs'), ...args], { cwd: repo })

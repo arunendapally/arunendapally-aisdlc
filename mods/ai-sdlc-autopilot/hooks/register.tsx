@@ -3,6 +3,8 @@
 // - The current stage's rules, and a pointer to the knowledge index, in the system prompt on every turn.
 // - An autopilot loop: after each turn that edited files, run the gate and, while it is red and
 //   under the retry cap, start the next fix turn itself; past the cap, stop and call a human.
+//   A refusal is an answer, not a red gate (ADR-0004): after a turn with a denied tool call, or an
+//   aborted turn, it starts nothing and hands back.
 // - A read-only tool, sdlc_board, so the model reads feature state as data.
 // - A native notification when a gate waits past its review deadline.
 // The ai-sdlc plugin's hooks still own approvals and guardrails; this mod never records a decision.
@@ -33,6 +35,23 @@ const autopilot = atom({ plugin: 'ai-sdlc-autopilot', key: 'autopilot' } as cons
 const notified = atom({ plugin: 'ai-sdlc-autopilot', key: 'notified' } as const, [])
 
 let editsThisTurn = 0
+let deniedThisTurn = 0
+let turnStartedAt = 0
+
+// Pre-tool denials the plugin's hook logged since this turn began, for sessions where they do not
+// reach the mod as a refused call.
+async function hookDenials($: EngineInterface) {
+  if (!(await exists($, '.ai-sdlc/audit.jsonl'))) return 0
+  const lines = (await $.fs.read('.ai-sdlc/audit.jsonl')).split('\n').slice(-200)
+  return lines.filter(l => {
+    try {
+      const a = JSON.parse(l)
+      return a.event === 'pre-tool' && a.decision === 'deny' && Date.parse(a.at) >= turnStartedAt
+    } catch {
+      return false
+    }
+  }).length
+}
 
 async function exists($: EngineInterface, p: string) {
   return $.fs.stat(p).then(() => true, () => false)
@@ -118,6 +137,10 @@ async function step($: EngineInterface, b: Board) {
   if (b.isPaused) return off('stopped', 'agents are paused')
   if (!cur) return off('stopped', 'this branch has no feature in Build or Verify')
   if (!b.gateCommand) return off('stopped', 'set gateCommand in .ai-sdlc/config.json')
+  if (deniedThisTurn > 0 || (await hookDenials($)) > 0) {
+    await $.ui.notify(`${cur.feature}: a guardrail refused a step. Read the reason and run it yourself if it is right.`, { title: 'Autopilot handed back' })
+    return off('denied', 'a guardrail refused a step, so this is yours now')
+  }
   if (editsThisTurn === 0) {
     if (ap.last === 'red') {
       await $.ui.notify(`${cur.feature}: the gate is red and the last turn changed nothing.`, { title: 'Autopilot needs you' })
@@ -126,12 +149,10 @@ async function step($: EngineInterface, b: Board) {
     return
   }
   const gate = await runGate($, b.gateCommand)
+  // Green ends the loop: it says so, and starts nothing, so a green turn can never restart itself.
   if (gate.isGreen) {
     await update($, autopilot, a => ({ ...a, attempts: 0, last: 'green' }))
-    $.ui.toast(`${cur.feature}: gate green`)
-    await $.prompt.submit({
-      text: `[autopilot] The gate is green for ${cur.feature}. Record it with "sdlc.mjs gate ${cur.feature}", finish the stage artefact, and request the gate. Do not request a human gate early.`,
-    })
+    $.ui.toast(`${cur.feature}: gate green. Record it with "sdlc.mjs gate ${cur.feature}" and request the gate.`)
     return
   }
   const attempts = ap.attempts + 1
@@ -170,14 +191,19 @@ export const register: Register = on => {
     return ran
   })
 
-  on('prompt.submit', ($, e, next) => {
+  on('prompt.submit', async ($, e, next) => {
     editsThisTurn = 0
+    deniedThisTurn = 0
+    turnStartedAt = await $.clock.now()
     return next(e)
   })
 
-  on('tool.call', ($, e, next) => {
-    if (EDIT_TOOLS.has(e.tool)) editsThisTurn += 1
-    return next(e)
+  // An edit counts only once the tool ran without being refused or failing.
+  on('tool.call', async ($, e, next) => {
+    const r = await next(e)
+    if (r?.deny) deniedThisTurn += 1
+    else if (EDIT_TOOLS.has(e.tool) && !r?.isError) editsThisTurn += 1
+    return r
   })
 
   on('tool.call', { tool: TOOL }, async $ => {
@@ -186,9 +212,16 @@ export const register: Register = on => {
     return { result: json, text: json, isReadOnly: true }
   })
 
+  // An interrupted or failed turn is the person's to steer, never a reason to start another.
   on('turn.complete', async ($, e, next) => {
+    if (e.isAborted || e.reason !== 'answer') return next(e)
     const b = await refresh($).catch(() => null)
-    if (b) await step($, b).catch(() => undefined)
+    if (b) {
+      await step($, b).catch(async err => {
+        await update($, autopilot, a => ({ ...a, isOn: false, last: 'stopped' }))
+        $.ui.toast(`Autopilot stopped: ${err?.message ?? err}`)
+      })
+    }
     return next(e)
   })
 

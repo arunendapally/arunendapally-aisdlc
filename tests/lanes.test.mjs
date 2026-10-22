@@ -141,6 +141,8 @@ test('PR size: the Verify gate refuses an oversized full-lane PR', () => {
   const ok = r.sdlc('request', 'demo')
   assert.equal(ok.status, 0, ok.out)
   assert.match(ok.out, /Rebuilt specs\/demo\/review-packet\.md at HEAD/, 'a stale packet is rebuilt, not refused')
+  assert.equal(r.state('demo').reviewedSha, r.git('rev-parse', 'HEAD'), 'Release checks the commit that was reviewed')
+  assert.ok(r.state('demo').reviewedFiles.includes('specs/demo/pr.md'), 'and what it changed')
 })
 
 test('pre-review: open findings or no risk score refuse the Verify gate', () => {
@@ -190,13 +192,21 @@ test('hotfix: only a human declares it; it runs Build on checks, two human gates
   assert.match(r.sdlc('request', 'api-down').out, /Review deadline: 1h/)
   r.say('sdlc approve api-down 5')
   assert.equal(r.state('api-down').stage, 6)
-  assert.equal(r.sdlc('request', 'api-down').status, 0)
+  r.remote()
+  const live = r.land('the fix')
+  r.fill('specs/api-down/hotfix.md', ALL.filter(h => h !== '## Probes'), `${CLEAN_PRE}\n## Probes\n\n- checkout: pass\n\nLive: ${live}\n`)
+  const release = r.sdlc('request', 'api-down')
+  assert.equal(release.status, 0, release.out)
   assert.match(r.say('sdlc approve api-down 6'), /Postmortem due/)
+  assert.equal(r.state('api-down').liveSha, live)
 
   r.setState('api-down', { postmortemDue: hoursAgo(1) })
   assert.match(r.sdlc('status').out, /POSTMORTEM OVERDUE/)
   r.put('docs/incidents/2026-10-21-api-down.md', '# Incident\n')
-  assert.doesNotMatch(r.sdlc('status').out, /POSTMORTEM OVERDUE/)
+  assert.match(r.sdlc('status').out, /POSTMORTEM OVERDUE/, 'the lesson is still owed')
+  assert.match(r.sdlc('status').out, /LESSON OWED: api-down/)
+  r.put('standards/traps.md', '### Retries hid the outage\n- **What happened:** x.\n- **Source:** api-down\n- **Guard now:** a test in tests/retry.test.ts.\n')
+  assert.doesNotMatch(r.sdlc('status').out, /POSTMORTEM OVERDUE|LESSON OWED/)
 })
 
 test('task lane: small chores start at Build and may touch dependencies', () => {

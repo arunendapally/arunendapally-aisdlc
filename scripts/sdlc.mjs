@@ -7,7 +7,7 @@ import { fileURLToPath } from 'node:url'
 import { spawnSync } from 'node:child_process'
 import { STAGES, root, git, loadConfig, readState, writeState, listFeatures, missingHeadings, isFrozen, destructiveMigrations,
   stageSpec, section, matches, changedFiles, changedLines, createFeature, copyTemplate, TEMPLATES, overdueGates, overduePostmortems,
-  KINDS, trustedGates, promotable, readTrust, writeTrust } from './lib.mjs'
+  KINDS, trustedGates, promotable, readTrust, writeTrust, lessonPaid, lessonProblem, lessonsOwed } from './lib.mjs'
 import { check, relevant, writeIndex } from './knowledge.mjs'
 import { collect, analyze, report } from './retro.mjs'
 import { lint, requirementsFrom } from './gherkin.mjs'
@@ -142,7 +142,7 @@ const commands = {
     if (kinds().includes('data')) fail('A bug that needs a data change is a feature. Use: sdlc init <slug> --kind data')
     const causedBy = flag('caused-by')
     if (causedBy && !readState(dir, causedBy)) fail(`No feature "${causedBy}" to charge this bug to.`)
-    createFeature(dir, { feature, lane: 'bug', branch: flag('branch'), extra: { kinds: kinds(), ...(causedBy ? { causedBy } : {}) } })
+    createFeature(dir, { feature, lane: 'bug', branch: flag('branch'), extra: { kinds: kinds(), ...(causedBy ? { causedBy, lessonOwed: true } : {}) } })
     const doc = copyTemplate(dir, feature, 'bug.md')
     console.log(`Created bug ${feature} at stage 4 (Build). Write the repro test first and run "sdlc gate ${feature}": it must fail before the fix. Document: ${doc}`)
     if (causedBy) console.log(chargeEscape(causedBy, feature))
@@ -196,6 +196,8 @@ const commands = {
       const forbidden = changedFiles(dir, cfg).filter(f => matches(f.file, cfg.bugForbidPaths)).map(f => f.file)
       if (forbidden.length) missing.push(`a bug fix may not change ${forbidden.join(', ')}. Open a feature instead`)
     }
+    // A bug that escaped shipped work merges only once its lesson is a guard (ADR-0004).
+    if (state.lane === 'bug' && state.stage === 5 && state.lessonOwed && !lessonPaid(dir, feature)) missing.push(lessonProblem(feature))
     if (state.stage === 5 || spec.isAuto) {
       const lines = changedLines(dir, cfg)
       const max = cfg.maxPrLines[state.lane] ?? cfg.maxPrLines.full
@@ -242,6 +244,12 @@ const commands = {
     const gate = state.gates[state.stage]
     if (gate?.status === 'approved') fail(`Gate ${state.stage} is already approved. Run: sdlc advance ${feature}`)
     const now = new Date().toISOString()
+    // The commit the reviewer sees is the one Release must find on the remote's main (ADR-0004).
+    if (state.stage === 5) {
+      state.reviewedSha = git('rev-parse HEAD', dir)
+      // After the merge the branch shows no diff against main, so Release reads what was reviewed.
+      state.reviewedFiles = changedFiles(dir, cfg).map(f => f.file)
+    }
     if (spec.isAuto) {
       const earned = trustedGates(dir).includes(`${state.lane}:${state.stage}`) ? 'earned trust' : spec.owner
       state.gates[state.stage] = { status: 'approved', by: `checks: ${earned}`, requestedAt: now, approvedAt: now, auto: true }
@@ -344,6 +352,10 @@ const commands = {
       console.log(`${s.feature}: stage ${s.stage} ${STAGES[s.stage].name} (${s.lane} lane)${s.spike ? ', SPIKE' : ''}, gate ${gate?.status ?? 'not requested'}${wait}`)
     }
     for (const t of readTriggers(dir)) console.log(`RETRO DUE: ${t.reason}. Run: sdlc retro`)
+    for (const s of lessonsOwed(dir)) console.log(`LESSON OWED: ${s.feature}: ${lessonProblem(s.feature)}`)
+    // Which version is live: the last release's build, as its probe read it.
+    const last = listFeatures(dir).filter(s => s.liveSha).sort((a, b) => Date.parse(b.closedAt) - Date.parse(a.closedAt))[0]
+    if (last) console.log(`Live: ${last.liveSha.slice(0, 7)} (${last.feature}, released ${last.closedAt.slice(0, 10)})`)
   },
 
   // The test proof (ADR-0002): the traced tests are green here and red against the base code.

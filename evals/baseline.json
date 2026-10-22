@@ -74,5 +74,17 @@
   {
     "name": "risk-leaves-the-light-lane",
     "passed": true
+  },
+  {
+    "name": "refusal-is-an-answer",
+    "passed": true
+  },
+  {
+    "name": "read-what-governs-first",
+    "passed": true
+  },
+  {
+    "name": "release-is-on-main-and-live",
+    "passed": true
   }
 ]

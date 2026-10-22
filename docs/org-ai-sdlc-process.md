@@ -143,6 +143,20 @@ Decided in [ADR-0002](adr/0002-loop-spine.md), and made lighter by [ADR-0003](ad
 
 ---
 
+## 6b. Gates that catch the real failures
+
+Decided in [ADR-0004](adr/0004-gates-that-catch-real-failures.md), after the feedback in `docs/feedback.md`: a lifecycle that would not have caught the last three real failures is ceremony. `npm run eval` reports whether each is caught.
+
+| Failure | What catches it |
+|---|---|
+| F1. A permission denial retried about thirty times | Every denial says it is a final answer. The pre-tool hook counts denials per session and guard (`denialCap`, 2), hands back on the second, and then holds the session to reading until a human types. The autopilot starts nothing after a denied or aborted turn, and never restarts itself on green. |
+| F2. Context spent before the source of truth | The pre-tool hook refuses a full read of a large file and gives the sliced call. Brownfield and data facts need a `[governing]` fact pinned to implementation code. |
+| F3. A branch deploy erased by the next merge | Release refuses unless the reviewed change is on `origin/main` and `Live: <sha>`, read from the running system, contains it and the previous release. A preview deploy from an unpushed branch asks first. |
+
+**Lessons owed.** A bug filed with `--caused-by`, or a hotfix, owes a trap in `standards/traps.md` that names it under `Source` and is guarded by a check. The bug cannot merge, and the postmortem stays open, until it is paid. This is how Release and incidents feed Plan by mechanism rather than by instruction.
+
+---
+
 ## 7. Knowledge: the agents' memory
 
 What one session learns, the next one must not have to learn again.
@@ -265,9 +279,9 @@ Then, in a product repo: `/ai-sdlc:start <what you want>`. The first `/ai-sdlc:s
 
 ## How it was tested
 
-- `npm test`: 85 tests in throwaway git repos, covering the default path and the lanes end to end, every guard, every lane end to end, the gate chain, review deadlines, PR size, pre-review, kinds, the trust ledger, the knowledge base, the CI scripts, the retro miner, escape charging, both eval runners, and every bypass the two reviews found.
+- `npm test`: 93 tests in throwaway git repos, covering the default path, the lanes end to end, each of the three real failures, every guard, every lane end to end, the gate chain, review deadlines, PR size, pre-review, kinds, the trust ledger, the knowledge base, the CI scripts, the retro miner, escape charging, both eval runners, and every bypass the two reviews found.
 - `npm run eval:agents`: 7 of 8 pass, including all four seeded-bug review evals. The CTO routed an outage to a human-declared hotfix and a schema change to the data kind with a DBA; the pre-reviewer scored risk and flagged the untested branch. The product owner's short brief left out the outcome metric its definition requires. The eval stays strict: that gap is the first input for a retro.
-- `npm run eval`: 19 golden tasks, all passing, saved as the baseline. The plugin's own CI (`.github/workflows/evals.yml`) runs the tests and the golden evals on every PR.
+- `npm run eval`: 22 golden tasks, all passing, saved as the baseline; each of the three real failures in `evals/failures.json` is caught by at least one. The plugin's own CI (`.github/workflows/evals.yml`) runs the tests and the golden evals on every PR.
 - `claude plugin test mods/ai-sdlc-autopilot`: 7 tests of the mod against the engine's test kit: the fix loop (red, green, cap, no-change stop, pause), the system-prompt section, the board's buttons on two surfaces, and the model tool.
 - Guards were mutation-tested: broken on purpose, the matching test failed, then restored. One mutation survived at first (promotion before the threshold); a test was added and it now fails as it should.
 

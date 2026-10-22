@@ -40,7 +40,10 @@ Build passes on checks in every lane. Templates are in `templates/`; write "None
 - `sdlc.mjs request <slug>` runs the stage's checks. A gate that passes on checks moves on by itself; any other waits for its named human owner.
 - Only a human records a decision by typing `sdlc approve <slug> <stage>` or `sdlc reject <slug> <stage> <reason>`. The approval moves the feature on. Never claim a gate is passed. Approval needs a request first.
 - `sdlc.mjs gate <slug>` runs the full gate. The first run in Build is the baseline.
-- `sdlc.mjs retry <slug> <goal>`: past the cap (3), ESCALATE. Never loosen the goal.
+- Two different loops (ADR-0004):
+  - **A failed check** (a red gate after a real change): `sdlc.mjs retry <slug> <goal>`; past the cap (3), ESCALATE. Never loosen the goal.
+  - **A refusal** (a guard or a person said no): it is an answer. Do not retry, rephrase, script or reroute it; give the user the command once and stop. After the second refusal the hook holds the session to reading until the user replies.
+- Read what governs first: the implementation before the documents and schemas around it, and large files in slices (the hook refuses a full read of a big file).
 - Commit `specs/<slug>/` after every gate decision so other sessions and CI see the same state.
 
 ## What each gate checks
@@ -49,8 +52,9 @@ Build passes on checks in every lane. Templates are in `templates/`; write "None
 - **Design (full lane):** each ADR the plan names weighs two options and records its review in `## Review`; a breaking API change is declared in `## Contracts`. ER diagrams and OpenAPI style only warn.
 - **Build:** the gate green at or above the baseline, the diff under the limit; in the light lane, no destructive migration and no high-risk path.
 - **Verify:** every criterion has a test (`sdlc.mjs tests <slug>`); the test proof (`sdlc.mjs proof <slug>`: green here, red on the base code, test files locked); the review packet (rebuilt for you at HEAD) and `review.md` with nothing serious open; `## Pre-review` with `Risk:`, `Open findings: 0`, `Look here first:` and `Lenses run:`. No `proofCommand`: say under `## Not verified` that the proof did not run.
-- **Release:** a rollback with `Tested: <date>, <how>`, a result for every probe, and in the full lane an outcome owner (or `Metric: None, because ...`). Stale knowledge or facts about the changed files, unmarked superseded ADRs and unlinked postmortem actions are warnings: fix what it lists.
+- **Release:** the reviewed change on `origin/main` (a branch deploy is a preview, never a release); `Live: <sha>` under `## Probes`, read from the running system, containing this release and the previous one; a rollback with `Tested: <date>, <how>`; a result for every probe; and in the full lane an outcome owner (or `Metric: None, because ...`). Stale knowledge or facts about the changed files, unmarked superseded ADRs and unlinked postmortem actions are warnings: fix what it lists.
 - **Bugs:** a repro test that fails first. With a `proofCommand`, prove it: `sdlc.mjs proof <slug> --files <repro test>`.
+- **Lessons owed:** a bug filed with `--caused-by`, or a hotfix, owes a trap in `standards/traps.md` with `- **Source:** <slug>` and a `Guard now` that is a test, hook, lint rule, CI check or eval. The bug cannot merge, and the hotfix postmortem stays open, until it is paid.
 
 ## Simplicity
 

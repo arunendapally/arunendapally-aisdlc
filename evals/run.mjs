@@ -2,6 +2,9 @@
 // Golden-task evals for the process itself. Each file in evals/golden/ is one promise the plugin makes
 // ("an agent cannot approve its own work", "a bug fix needs a repro"), replayed step by step in a
 // throwaway repo. A retro's proposed change must keep every golden task that passed before.
+// A task may name the real failures it guards ("catches": ["F3"]); evals/failures.json lists them, and
+// the run fails when a failure has no passing task, so "which gate catches which failure" is checked,
+// not asserted (ADR-0004).
 //
 // node evals/run.mjs [--json] [--save] [--baseline evals/baseline.json] [--only <name>]
 import fs from 'node:fs'
@@ -16,14 +19,26 @@ const pick = (obj, dotted) => dotted.split('.').reduce((o, k) => o?.[k], obj)
 function step(r, gate, s) {
   const re = text => new RegExp(text, 'i')
   // "$HEAD" in a file's content becomes the repo's current short commit.
-  if (s.put) return (r.put(s.put[0], s.put[1].replaceAll('$HEAD', () => r.git('rev-parse', '--short', 'HEAD'))), null)
-  if (s.fill) return (r.fill(s.fill[0], s.fill[1], s.fill[2] ?? ''), null)
+  if (s.put) return (r.put(s.put[0], s.put[1].replaceAll('$HEAD', () => r.git('rev-parse', '--short', 'HEAD')).replaceAll('$MAIN', () => r.git('rev-parse', 'origin/main'))), null)
+  if (s.fill) return (r.fill(s.fill[0], s.fill[1], (s.fill[2] ?? '').replaceAll('$MAIN', () => r.git('rev-parse', 'origin/main'))), null)
   if (s.config) return (r.config(s.config), null)
   if (s.git) return (r.git(...s.git), null)
   if (s.gate) return (gate[s.gate](), null)
   if (s.setState) return (r.setState(s.setState[0], s.setState[1]), null)
+  if (s.remote) return (r.remote(), null)
+  if (s.land) return (r.land(s.land), null)
+  if (s.sayIn) return (r.sayIn(s.sayIn[0], s.sayIn[1]), null)
+  // Any tool call through the pre-tool hook, optionally in a named session, with its reason checked.
+  if (s.tool) {
+    const [name, input, session] = s.tool
+    const fixed = Object.fromEntries(Object.entries(input).map(([k, v]) => [k, k === 'file_path' ? path.join(r.repo, v) : v]))
+    const got = r.tool(name, fixed, session)
+    if (got.decision !== s.expect) return `${name} ${JSON.stringify(input)} was ${got.decision}, expected ${s.expect}`
+    return s.reason && !re(s.reason).test(got.reason) ? `${name} said "${got.reason.slice(0, 200)}", expected /${s.reason}/` : null
+  }
   if (s.sdlc) {
-    const out = r.sdlc(...s.sdlc)
+    // "$HEAD" and "$MAIN" in arguments become the current commit and origin/main.
+    const out = r.sdlc(...s.sdlc.map(a => a.replaceAll('$MAIN', () => r.git('rev-parse', 'origin/main'))))
     if (s.ok === true && out.status !== 0) return `sdlc ${s.sdlc.join(' ')} failed: ${out.out.trim().slice(0, 200)}`
     if (s.ok === false && out.status === 0) return `sdlc ${s.sdlc.join(' ')} should have been refused`
     if (s.out && !re(s.out).test(out.out)) return `sdlc ${s.sdlc.join(' ')} said "${out.out.trim().slice(0, 200)}", expected /${s.out}/`
@@ -74,6 +89,12 @@ export function loadTasks(dir = path.join(here, 'golden')) {
   return fs.readdirSync(dir).filter(f => f.endsWith('.json')).sort().map(f => ({ file: f, ...JSON.parse(fs.readFileSync(path.join(dir, f), 'utf8')) }))
 }
 
+// The real failures each guarded by at least one passing task, and those with none.
+export function coverage(tasks, results, failures = JSON.parse(fs.readFileSync(path.join(here, 'failures.json'), 'utf8'))) {
+  const passed = new Set(results.filter(r => r.passed).map(r => r.name))
+  return failures.map(f => ({ ...f, tasks: tasks.filter(t => (t.catches ?? []).includes(f.id) && passed.has(t.name)).map(t => t.name) }))
+}
+
 // Regressions: golden tasks that passed in the baseline and fail now.
 export function regressions(results, baseline) {
   const before = new Set(baseline.filter(b => b.passed).map(b => b.name))
@@ -91,12 +112,14 @@ if (import.meta.url === pathToFileURL(process.argv[1]).href) {
     for (const r of results) console.log(`${r.passed ? 'PASS' : 'FAIL'} ${r.name}${r.passed ? '' : ` (step ${r.step}): ${r.why}`}`)
     console.log(`\n${passed}/${results.length} golden tasks pass.`)
   }
+  const score = only ? [] : coverage(tasks, results)
+  for (const f of score) if (!args.includes('--json')) console.log(`${f.tasks.length ? 'CAUGHT' : 'NOT CAUGHT'} ${f.id} ${f.name}${f.tasks.length ? `: ${f.tasks.join(', ')}` : ''}`)
   const baselineFile = args.includes('--baseline') ? args[args.indexOf('--baseline') + 1] : null
-  let failed = passed < results.length
+  let failed = passed < results.length || score.some(f => !f.tasks.length)
   if (baselineFile && fs.existsSync(baselineFile)) {
     const lost = regressions(results, JSON.parse(fs.readFileSync(baselineFile, 'utf8')))
     if (lost.length) console.log(`REGRESSION: ${lost.map(l => l.name).join(', ')} passed in the baseline and fail now.`)
-    failed = lost.length > 0
+    failed = lost.length > 0 || score.some(f => !f.tasks.length)
   }
   if (args.includes('--save')) {
     fs.writeFileSync(path.join(here, 'baseline.json'), JSON.stringify(results.map(({ name, passed }) => ({ name, passed })), null, 2) + '\n')

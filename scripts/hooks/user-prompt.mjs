@@ -14,6 +14,18 @@ const say = msg => {
   process.exit(0)
 }
 
+// A human typed something, so a session held after repeated denials may act again (ADR-0004).
+const denialsFile = path.join(dir, '.ai-sdlc', 'denials.json')
+if (fs.existsSync(denialsFile)) {
+  try {
+    const all = JSON.parse(fs.readFileSync(denialsFile, 'utf8'))
+    delete all[input.session_id ?? 'default']
+    fs.writeFileSync(denialsFile, JSON.stringify(all, null, 2) + '\n')
+  } catch {
+    fs.rmSync(denialsFile, { force: true })
+  }
+}
+
 const m = text.match(/^sdlc\s+(approve|reject|lane|hotfix|trust|distrust|pause|resume|freeze|unfreeze)\b\s*(\S+)?\s*(\d)?\s*(.*)$/is)
 if (!m) process.exit(0)
 const [, verb, feature, stageText, note] = m
@@ -45,7 +57,7 @@ if (verb === 'hotfix') {
   if (!feature || !/^[a-z0-9][a-z0-9-]*$/.test(feature)) say('Usage: sdlc hotfix <slug> <what is broken in production>. Nothing recorded.')
   if (!note.trim()) say(`A hotfix needs the incident: sdlc hotfix ${feature} <what is broken>. Nothing recorded.`)
   if (readState(dir, feature)) say(`"${feature}" already exists. Nothing recorded.`)
-  createFeature(dir, { feature, lane: 'hotfix', extra: { incident: note.trim(), declaredBy: who } })
+  createFeature(dir, { feature, lane: 'hotfix', extra: { incident: note.trim(), declaredBy: who, lessonOwed: true } })
   const doc = copyTemplate(dir, feature, 'hotfix.md')
   audit(dir, { event: 'hotfix', feature, by: who, incident: note.trim() })
   say(`${who} declared hotfix ${feature}: "${note.trim()}". It starts at Build on branch hotfix/${feature}, cut from main. Fill ${doc}, fix, run the gate, then request. Review deadline ${loadConfig(dir).reviewSlaHours.hotfix}h.`)

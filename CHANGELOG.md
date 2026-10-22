@@ -4,6 +4,24 @@ All notable changes to this repository. The format follows [Keep a Changelog](ht
 
 ## [Unreleased]
 
+### Gates that catch the real failures ([ADR-0004](docs/adr/0004-gates-that-catch-real-failures.md))
+
+Feedback (`docs/feedback.md`) set the test: a lifecycle that would not have caught the last three real failures is ceremony. Before this, the plugin caught one of three, late. The council record is in [docs/decisions/2026-10-22-gates-are-the-product.md](docs/decisions/2026-10-22-gates-are-the-product.md).
+
+#### Added
+
+- **F1, a denial retried as a failure.** Every denial now says it is a final answer, not an error. Denials are counted per session by the guard that fired, so a rephrase counts too. The second hands back, and after it the session may only read until a human types (`denialCap`, default 2, can only be lowered). The autopilot counts an edit only once the tool succeeded, starts nothing after a denied or aborted turn, and only toasts on green; its old green path restarted itself with no cap.
+- **F2, context spent before the source of truth.** The pre-tool hook refuses a full read (or `cat`) of a file over `maxReadLines` (1,500) or `maxReadBytes` (100KB), with the sliced call. Brownfield and data facts need a `[governing]` fact pinned to implementation code, not a document or schema.
+- **F3, a branch deploy erased by the next merge.** Release refuses unless the reviewed commit, or its squash, is on `origin/main`, and unless `Live: <sha>` under `## Probes` contains it and the previous release. An agent's preview deploy from an unpushed branch asks first. `deployPatterns` now also cover `vercel alias`, `netlify deploy --prod`, `fly deploy`, `firebase deploy`, `wrangler deploy` and `npm run deploy`, and a deploy written into a script or package script asks a human. `sdlc status` prints what is live.
+- **Lessons owed.** A bug filed with `--caused-by`, or a hotfix, owes a trap with `- **Source:** <slug>` and a guard that is a check. The bug cannot merge, and the hotfix postmortem stays open, until it is paid.
+- **The score is checkable.** Golden tasks name the failures they catch (`"catches"`), `evals/failures.json` lists them, and `npm run eval` prints CAUGHT or NOT CAUGHT for each and fails when one has no passing task. Three new golden tasks (22 in all) and `tests/failures.test.mjs`.
+- Three new traps in `templates/repo/standards/traps.md`, one per failure.
+
+#### Changed
+
+- Verify records the reviewed commit and files, so Release checks what was reviewed even after the merge.
+- The QA agent no longer mandates Postman; any API test tool will do, with Setup and Teardown.
+
 ### A simple default path ([ADR-0003](docs/adr/0003-simple-default-path.md))
 
 Seven experts reviewed the plugin and found features far too heavy: 8 to 11 documents, about 50 required sections and 5 human waits. Now a feature waits on a human three times (the spec, the merge, the release) and a bug once. The record is in [docs/decisions/2026-10-22-simplify.md](docs/decisions/2026-10-22-simplify.md).

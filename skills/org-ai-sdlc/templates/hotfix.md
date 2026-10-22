@@ -29,7 +29,11 @@ Look here first: file:line, ... -->
 
 ## Probes
 
-<!-- Read-only checks in production after the deploy, with results. -->
+<!-- Read-only checks in production after the deploy from main, with results, and the build that is
+     running, read from the system itself: "Live: <sha>". Release refuses until the fix is on
+     origin/main and the live build contains it and the previous release. -->
+
+Live: <sha>
 
 ## Follow-up
 

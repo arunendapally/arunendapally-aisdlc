@@ -3,6 +3,9 @@
   "promise": "Release is refused while the rollback is untested or probes have no result; a knowledge page the change made stale is a warning, not a block.",
   "steps": [
     {
+      "remote": true
+    },
+    {
       "put": [
         "src/pay.ts",
         "export const retry = 1\n"
@@ -104,6 +107,34 @@
         "-m",
         "change pay"
       ]
+    },
+    {
+      "land": "land the pay change"
+    },
+    {
+      "fill": [
+        "specs/demo/release.md",
+        [
+          "## Artefact",
+          "## Release order",
+          "## Rollout",
+          "## Runbook",
+          "## Cost delta",
+          "## Traps added"
+        ],
+        "\n## Rollback (tested)\n\nhelm rollback. Tested: 2026-10-21, on staging.\n\n## Probes\n\nLive: $MAIN\n\n- p95 latency: pass\n\n## Outcome metric\n\nMetric: checkout conversion +2%\nOwner: Priya\n"
+      ]
+    },
+    {
+      "setState": [
+        "demo",
+        {
+          "reviewedFiles": [
+            "src/pay.ts"
+          ]
+        }
+      ],
+      "why": "what Verify reviewed"
     },
     {
       "sdlc": [

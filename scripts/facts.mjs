@@ -5,7 +5,10 @@
 // The PRD's assumptions are the other side: what we believe but have not pinned to code or a person.
 import fs from 'node:fs'
 import path from 'node:path'
-import { git, loadConfig, section } from './lib.mjs'
+import { git, loadConfig, section, matches } from './lib.mjs'
+
+// Sources that describe the system without being it.
+const NOT_IMPLEMENTATION = ['docs/**', '**/*.md', '**/*.sql', '**/schema.prisma', '**/*.schema.json', '**/*.graphql', '**/*.yaml', '**/*.yml', '**/*.json', '**/migrations/**']
 
 const FACT = /^\s*[-*]\s*(F\d+):\s*(.+?)\s*Source:\s*([^\s:]+):(\d+)(?:-(\d+))?\.?\s*Verified:\s*([0-9a-f]{4,40})\.?\s*$/i
 
@@ -54,6 +57,12 @@ export function factsGateProblems(dir, state) {
   const problems = [...malformed.map(m => `facts.md ${m}`), ...factProblems(dir, facts).map(p => `facts.md: ${p}`)]
   if (!facts.length && !/None, because\s+\S/i.test(text)) problems.push('facts.md has no facts; write "None, because ..." if there is truly no current system')
   if ((state.kinds ?? []).includes('brownfield') && !facts.length) problems.push('brownfield work needs at least one fact about the current system')
+  // Read what governs before designing against it (ADR-0004, failure F2): one fact is the implementation
+  // the design must follow, pinned to code rather than to a document, a schema or a spec.
+  const changesWhatExists = ['brownfield', 'data'].some(k => (state.kinds ?? []).includes(k))
+  if (changesWhatExists && facts.length && !facts.some(f => /\[governing\]/i.test(f.statement) && !matches(f.file, NOT_IMPLEMENTATION))) {
+    problems.push('facts.md has no "[governing]" fact pinned to implementation code: read the code that governs this behaviour first, then mark that fact "[governing]" (a document, schema or spec does not count)')
+  }
   const defined = new Set(facts.map(f => f.id))
   for (const name of ['prd.md']) {
     const p = path.join(folder, name)
