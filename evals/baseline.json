@@ -52,7 +52,7 @@
     "passed": true
   },
   {
-    "name": "release-needs-fresh-knowledge",
+    "name": "release-needs-tested-rollback",
     "passed": true
   },
   {
@@ -65,6 +65,26 @@
   },
   {
     "name": "escalation-triggers-retro",
+    "passed": true
+  },
+  {
+    "name": "light-by-default",
+    "passed": true
+  },
+  {
+    "name": "risk-leaves-the-light-lane",
+    "passed": true
+  },
+  {
+    "name": "refusal-is-an-answer",
+    "passed": true
+  },
+  {
+    "name": "read-what-governs-first",
+    "passed": true
+  },
+  {
+    "name": "release-is-on-main-and-live",
     "passed": true
   }
 ]

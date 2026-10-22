@@ -4,7 +4,7 @@ import assert from 'node:assert/strict'
 import fs from 'node:fs'
 import path from 'node:path'
 import { makeRepo, switchableGate, plugin } from './helpers.mjs'
-import { STAGES } from '../scripts/lib.mjs'
+import { STAGES, stageSpec, trustedGates } from '../scripts/lib.mjs'
 
 const ci = name => import(path.join(plugin, 'templates', 'repo', '.github', 'scripts', name).replace(/^([A-Z]):/, 'file:///$1:').split(path.sep).join('/'))
 const BUG_BUILD = ['## Repro', '## Expected and actual', '## Root cause', '## Fix']
@@ -31,8 +31,7 @@ test('bug lane: repro red, then green, passes Build on checks; the PR review is 
   assert.equal(r.sdlc('gate', 'demo').status, 0)
   const build = r.sdlc('request', 'demo')
   assert.equal(build.status, 0, build.out)
-  assert.match(build.out, /passed on checks/)
-  assert.equal(r.sdlc('advance', 'demo').status, 0)
+  assert.match(build.out, /passed on checks.*now at stage 5/)
   assert.equal(r.state('demo').stage, 5)
 
   const early = r.sdlc('request', 'demo')
@@ -44,9 +43,25 @@ test('bug lane: repro red, then green, passes Build on checks; the PR review is 
   const verify = r.sdlc('request', 'demo')
   assert.equal(verify.status, 0, verify.out)
   assert.match(verify.out, /Review deadline: 8h/)
-  assert.match(r.say('sdlc approve demo 5'), /approved gate 5/)
-  assert.match(r.sdlc('advance', 'demo').out, /complete/)
+  assert.match(r.say('sdlc approve demo 5'), /approved gate 5 .*demo is complete/)
   assert.ok(r.state('demo').closedAt)
+})
+
+test('bug lane with a proofCommand: the repro test itself must fail on the base code', () => {
+  const r = makeRepo('bug/demo')
+  const gate = switchableGate(r)
+  r.config({ gateCommand: 'node gate.cjs', proofCommand: 'node --test {files}' })
+  r.sdlc('bug', 'demo')
+  r.fill('specs/demo/bug.md', BUG_BUILD)
+  r.put('src/total.cjs', 'module.exports = () => 2\n')
+  r.put('tests/total.test.cjs', "require('node:test').test('total', () => require('node:assert').equal(require('../src/total.cjs')(), 2))\n")
+  gate.red()
+  r.sdlc('gate', 'demo')
+  gate.green()
+  r.sdlc('gate', 'demo')
+  assert.match(r.sdlc('request', 'demo').out, /the repro is not proved/, 'any red gate run is not enough')
+  assert.equal(r.sdlc('proof', 'demo', '--files', 'tests/total.test.cjs').status, 0)
+  assert.match(r.sdlc('request', 'demo').out, /passed on checks/)
 })
 
 test('bug lane: no repro, no pass; too big, no pass; schema work is refused', () => {
@@ -63,19 +78,40 @@ test('bug lane: no repro, no pass; too big, no pass; schema work is refused', ()
   assert.match(r.sdlc('bug', 'other', '--kind', 'data').out, /is a feature/)
 })
 
-test('a full-lane change to the schema must be marked as data work', () => {
+test('a change to the schema must be marked as data work; an additive one stays in the light lane', () => {
   const r = makeRepo()
   const gate = switchableGate(r)
   r.config({ gateCommand: 'node gate.cjs' })
   r.sdlc('init', 'demo')
   r.setState('demo', { stage: 4, stages: { 4: { enteredAt: hoursAgo(1) } } })
-  r.fill('specs/demo/tasks.md', ['## Baseline', '## Tasks'])
+  r.fill('specs/demo/tasks.md', ['## Tasks', '## Down migration'])
   r.put('db/migrations/002_add.sql', 'alter table x add y int;\n')
   gate.green()
   r.sdlc('gate', 'demo')
   assert.match(r.sdlc('request', 'demo').out, /this is data work/)
   assert.equal(r.sdlc('kind', 'demo', 'data').status, 0)
   assert.deepEqual(r.state('demo').kinds, ['data'])
+  assert.match(r.sdlc('request', 'demo').out, /passed on checks/, 'an additive migration is light-lane work')
+  assert.match(stageSpec(r.state('demo'), 5).owner, /DBA/, 'the DBA reviews the PR')
+})
+
+test('the light lane refuses destructive migrations and high-risk paths: those need the full lane', () => {
+  const r = makeRepo()
+  const gate = switchableGate(r)
+  r.config({ gateCommand: 'node gate.cjs' })
+  r.sdlc('init', 'demo', '--kind', 'data')
+  r.setState('demo', { stage: 4, stages: { 4: { enteredAt: hoursAgo(1) } } })
+  r.fill('specs/demo/tasks.md', ['## Tasks', '## Down migration'])
+  r.put('db/migrations/003_drop.sql', 'alter table customers drop column email;\n')
+  gate.green()
+  r.sdlc('gate', 'demo')
+  assert.match(r.sdlc('request', 'demo').out, /003_drop\.sql alter or drop existing data, which needs the full lane/)
+  fs.rmSync(path.join(r.repo, 'db', 'migrations', '003_drop.sql'))
+  r.put('src/auth/login.ts', 'export const x = 1\n')
+  assert.match(r.sdlc('request', 'demo').out, /high-risk paths, which need the full lane/)
+  assert.match(r.sdlc('kind', 'demo', 'nonsense').out, /Kinds:/)
+  r.sdlc('task', 't1')
+  assert.match(r.sdlc('kind', 't1', 'data').out, /Data work is a feature/)
 })
 
 test('approving needs a request first, because the request runs the checks', () => {
@@ -90,17 +126,23 @@ test('PR size: the Verify gate refuses an oversized full-lane PR', () => {
   const r = makeRepo()
   const gate = switchableGate(r)
   r.config({ gateCommand: 'node gate.cjs' })
-  r.sdlc('init', 'demo')
+  r.sdlc('init', 'demo', '--full')
+  fs.rmSync(path.join(r.repo, 'specs', 'demo', 'acceptance.feature'))
   r.setState('demo', { stage: 5, stages: { 5: { enteredAt: hoursAgo(1) } }, baseline: 12 })
-  const PR = ['## Tasks', '## Test results', '## Mutations', '## Defects', '## Security results', '## QA verdict', '## Review honesty']
-  r.fill('specs/demo/pr.md', PR, `${CLEAN_PRE}\n## Not verified\n\nThe test proof did not run: no proofCommand yet.\n`)
+  r.fill('specs/demo/pr.md', ['## Summary', '## Test results'], `${CLEAN_PRE}\n## Not verified\n\nThe test proof did not run: no proofCommand yet.\n`)
   r.put('src/huge.ts', 'x\n'.repeat(450))
   gate.green()
   r.sdlc('gate', 'demo')
   r.sdlc('review', 'demo')
   assert.match(r.sdlc('request', 'demo').out, /over the full lane limit of 400/)
   fs.rmSync(path.join(r.repo, 'src', 'huge.ts'))
-  assert.equal(r.sdlc('request', 'demo').status, 0)
+  r.git('add', '.')
+  r.git('commit', '-m', 'later work')
+  const ok = r.sdlc('request', 'demo')
+  assert.equal(ok.status, 0, ok.out)
+  assert.match(ok.out, /Rebuilt specs\/demo\/review-packet\.md at HEAD/, 'a stale packet is rebuilt, not refused')
+  assert.equal(r.state('demo').reviewedSha, r.git('rev-parse', 'HEAD'), 'Release checks the commit that was reviewed')
+  assert.ok(r.state('demo').reviewedFiles.includes('specs/demo/pr.md'), 'and what it changed')
 })
 
 test('pre-review: open findings or no risk score refuse the Verify gate', () => {
@@ -119,7 +161,7 @@ test('pre-review: open findings or no risk score refuse the Verify gate', () => 
 
 test('review deadlines: an overdue gate is flagged in status and at session start', () => {
   const r = makeRepo()
-  r.sdlc('init', 'demo')
+  r.sdlc('init', 'demo', '--full')
   r.setState('demo', { gates: { 1: { status: 'waiting', requestedAt: hoursAgo(30) } } })
   assert.match(r.sdlc('status').out, /OVERDUE \(deadline 24h\)/)
   assert.match(r.hook('session-start', {}), /OVERDUE: demo gate 1/)
@@ -145,21 +187,26 @@ test('hotfix: only a human declares it; it runs Build on checks, two human gates
   gate.green()
   r.sdlc('gate', 'api-down')
   assert.match(r.sdlc('request', 'api-down').out, /passed on checks/)
-  r.sdlc('advance', 'api-down')
   r.sdlc('gate', 'api-down')
   r.sdlc('review', 'api-down')
   assert.match(r.sdlc('request', 'api-down').out, /Review deadline: 1h/)
   r.say('sdlc approve api-down 5')
-  r.sdlc('advance', 'api-down')
   assert.equal(r.state('api-down').stage, 6)
-  assert.equal(r.sdlc('request', 'api-down').status, 0)
-  r.say('sdlc approve api-down 6')
-  assert.match(r.sdlc('advance', 'api-down').out, /Postmortem due/)
+  r.remote()
+  const live = r.land('the fix')
+  r.fill('specs/api-down/hotfix.md', ALL.filter(h => h !== '## Probes'), `${CLEAN_PRE}\n## Probes\n\n- checkout: pass\n\nLive: ${live}\n`)
+  const release = r.sdlc('request', 'api-down')
+  assert.equal(release.status, 0, release.out)
+  assert.match(r.say('sdlc approve api-down 6'), /Postmortem due/)
+  assert.equal(r.state('api-down').liveSha, live)
 
   r.setState('api-down', { postmortemDue: hoursAgo(1) })
   assert.match(r.sdlc('status').out, /POSTMORTEM OVERDUE/)
   r.put('docs/incidents/2026-10-21-api-down.md', '# Incident\n')
-  assert.doesNotMatch(r.sdlc('status').out, /POSTMORTEM OVERDUE/)
+  assert.match(r.sdlc('status').out, /POSTMORTEM OVERDUE/, 'the lesson is still owed')
+  assert.match(r.sdlc('status').out, /LESSON OWED: api-down/)
+  r.put('standards/traps.md', '### Retries hid the outage\n- **What happened:** x.\n- **Source:** api-down\n- **Guard now:** a test in tests/retry.test.ts.\n')
+  assert.doesNotMatch(r.sdlc('status').out, /POSTMORTEM OVERDUE|LESSON OWED/)
 })
 
 test('task lane: small chores start at Build and may touch dependencies', () => {
@@ -174,20 +221,28 @@ test('kinds add the right sections, stack, and cannot be misused', () => {
   const r = makeRepo()
   r.sdlc('init', 'demo', '--kind', 'brownfield,perf')
   assert.deepEqual(r.state('demo').kinds, ['brownfield', 'perf'])
-  r.setState('demo', { stage: 2, stages: { 2: { enteredAt: hoursAgo(1) } } })
-  r.put('specs/demo/spec.md', '# Spec\n')
   const out = r.sdlc('request', 'demo').out
   assert.match(out, /Current system/)
   assert.match(out, /Performance budget/)
+  assert.match(out, /facts\.md/, 'brownfield work pins facts at the spec gate')
   assert.match(r.sdlc('init', 'x', '--kind', 'nonsense').out, /Unknown kind/)
-  r.sdlc('task', 't1')
-  assert.match(r.sdlc('kind', 't1', 'data').out, /full lane/)
+  assert.match(r.sdlc('init', 'y', '--kind', 'greenfield').out, /Unknown kind/, 'greenfield is gone')
+})
+
+test('earned autonomy is off unless the repo turns it on', () => {
+  const r = makeRepo()
+  assert.match(r.sdlc('trust').out, /Earned trust is off/)
+  assert.match(r.say('sdlc trust bug 5'), /Earned trust is off/)
+  r.put('.ai-sdlc/trust.json', JSON.stringify({ 'bug:5': { streak: 12, promoted: true } }))
+  assert.deepEqual(trustedGates(r.repo), [], 'turning trust off suspends every promotion')
+  r.config({ trust: true })
+  assert.deepEqual(trustedGates(r.repo), ['bug:5'])
 })
 
 test('earned autonomy: clean approvals build a streak, a human promotes, rejection or freeze takes it back', () => {
   const r = makeRepo('bug/b3')
   const gate = switchableGate(r)
-  r.config({ gateCommand: 'node gate.cjs', trustThreshold: 2 })
+  r.config({ gateCommand: 'node gate.cjs', trustThreshold: 2, trust: true })
   gate.green()
   const ready = name => {
     r.sdlc('bug', name)
@@ -256,7 +311,7 @@ test('CI: the PR body check knows each lane and the pre-review rule', async () =
   assert.equal(laneOf(body(BUG_BUILD)), 'bug')
   assert.deepEqual(problems(body([...BUG_BUILD, '## Test results', '## Not verified', '## Review honesty']) + CLEAN_PRE), [])
   assert.ok(problems(body(BUG_BUILD)).some(p => /Test results/.test(p)))
-  assert.ok(problems('## Tasks\n\nx\n').some(p => /QA verdict/.test(p)), 'a body with no lane marks is checked as full')
+  assert.ok(problems('## Tasks\n\nx\n').some(p => /Summary/.test(p)), 'a body with no lane marks is checked as a feature')
   assert.ok(problems(body([...BUG_BUILD, '## Test results', '## Not verified', '## Review honesty']) + '\n## Pre-review\n\nRisk: low\nOpen findings: 1\n').some(p => /open findings/.test(p)))
 })
 

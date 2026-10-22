@@ -135,7 +135,7 @@ export function packet(dir, state) {
   if (all.includes('schema or data change')) lenses.push('data (dba)')
   if (all.includes('API contract change')) lenses.push('API contract, compatibility and consumers (architect)')
   if ((state.kinds ?? []).includes('perf')) lenses.push('performance (performance-engineer)')
-  if (all.includes('CI or infrastructure')) lenses.push('operability (ops-engineer)')
+  if (all.includes('CI or infrastructure')) lenses.push('operability (sre)')
 
   return { feature: state.feature, lane: state.lane, head: git('rev-parse --short HEAD', dir), files: rows, code: code.length, tests: tests.length, deletedTests, untested, lenses, newDeps, oversized, codeLines, criteria }
 }
@@ -202,8 +202,8 @@ export function parseLedger(text) {
 
 // seenIds: every ID the gate has seen before. A finding is closed by fixing or explaining it, never by
 // deleting its row (Q6). "fixed" names the commit that fixed it (Q4); a fixed row may point at a file
-// the fix removed (Q3).
-export function ledgerProblems(dir, findings, seenIds = []) {
+// the fix removed (Q3). Only a high-risk change must show that commit touches the file (ADR-0003).
+export function ledgerProblems(dir, findings, seenIds = [], { strictFixes = true } = {}) {
   const problems = [...(findings.malformed ?? [])]
   const seen = new Set()
   for (const f of findings) {
@@ -225,7 +225,7 @@ export function ledgerProblems(dir, findings, seenIds = []) {
       if (!sha) problems.push(`${f.id}: "fixed" must name the commit that fixed it ("fixed: <sha>")`)
       else if (git(`cat-file -t ${sha}`, dir) !== 'commit') problems.push(`${f.id}: ${sha} is not a commit in this repo`)
       // The fixing commit must touch the file the finding is about (finding F3: any old commit passed).
-      else if (loc && !git(`diff-tree --no-commit-id --name-only -r ${sha}`, dir).split('\n').includes(loc[1])) problems.push(`${f.id}: commit ${sha} does not change ${loc[1]}`)
+      else if (strictFixes && loc && !git(`diff-tree --no-commit-id --name-only -r ${sha}`, dir).split('\n').includes(loc[1])) problems.push(`${f.id}: commit ${sha} does not change ${loc[1]}`)
     }
     if (!/^(open|fixed|wontfix)/.test(status)) problems.push(`${f.id}: status must be open, fixed: <sha> or wontfix: <reason>`)
   }

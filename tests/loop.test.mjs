@@ -98,6 +98,7 @@ test('hotfix: the proof runs after the merge, against the code before the fix, a
   r.git('merge', '--ff-only', 'hotfix/api-down')
   r.setState('api-down', { closedAt: hoursAgo(72), postmortemDue: hoursAgo(24), proofBase: base })
   r.put('docs/incidents/2026-10-20-api-down.md', '# Incident\n')
+  r.put('standards/traps.md', '### Retries hid the outage\n- **What happened:** x.\n- **Source:** api-down\n- **Guard now:** a test in tests/retry.test.ts.\n')
   assert.match(r.sdlc('status').out, /POSTMORTEM OVERDUE.*test proof has not passed/, 'a postmortem without a passing proof is not done')
   assert.match(r.sdlc('proof', 'api-down').out, /name the tests to prove with --files/)
   const out = r.sdlc('proof', 'api-down', '--files', 'tests/api-down.test.cjs')
@@ -105,23 +106,30 @@ test('hotfix: the proof runs after the merge, against the code before the fix, a
   assert.doesNotMatch(r.sdlc('status').out, /POSTMORTEM OVERDUE/)
 })
 
-test('release: rollout readiness needs a tested rollback, probe results and an outcome owner', () => {
+test('release: rollout readiness needs a tested rollback and probe results; the full lane also an outcome owner', () => {
   const r = makeRepo()
-  r.sdlc('init', 'demo')
+  r.sdlc('init', 'demo', '--full')
+  r.remote()
+  const live = r.land()
   const state = r.state('demo')
-  const bare = releaseProblems(r.repo, state, '## Rollback (tested)\n\nhelm rollback\n\n## Probes\n\nTBD\n')
-  assert.match(bare.join('\n'), /no "Tested: <date>/)
-  assert.match(bare.join('\n'), /records no result/)
-  assert.match(bare.join('\n'), /needs "Metric:" and "Owner:"/)
-  const ready = '## Rollback (tested)\n\nhelm rollback. Tested: 2026-10-21, on staging.\n\n## Probes\n\n- p95 latency: pass\n\n## Outcome metric\n\nMetric: checkout conversion +2%\nOwner: Product lead\n'
-  assert.deepEqual(releaseProblems(r.repo, state, ready), [])
-  assert.deepEqual(releaseProblems(r.repo, { ...state, lane: 'hotfix' }, ''), [], 'the incident commander judges a hotfix')
+  const bare = releaseProblems(r.repo, state, '## Rollback (tested)\n\nhelm rollback\n\n## Probes\n\nTBD\n').problems.join('\n')
+  assert.match(bare, /no "Tested: <date>/)
+  assert.match(bare, /records no result/)
+  assert.match(bare, /needs "Metric:" and "Owner:"/)
+  const ready = `## Rollback (tested)\n\nhelm rollback. Tested: 2026-10-21, on staging.\n\n## Probes\n\n- p95 latency: pass\n\nLive: ${live}\n\n## Outcome metric\n\nMetric: checkout conversion +2%\nOwner: Product lead\n`
+  assert.deepEqual(releaseProblems(r.repo, state, ready).problems, [])
+  const none = ready.replace(/Metric: [^\n]*\nOwner: [^\n]*\n/, 'Metric: None, because it is a refactor behind a flag\n')
+  assert.deepEqual(releaseProblems(r.repo, state, none).problems, [], 'a feature may have no outcome to read')
+  const light = ready.replace(/## Outcome metric[\s\S]*/, '')
+  assert.deepEqual(releaseProblems(r.repo, { ...state, lane: 'light' }, light).problems, [], 'the light lane opens no outcome follow-up by default')
+  assert.deepEqual(releaseProblems(r.repo, { ...state, lane: 'hotfix' }, `## Probes\n\nLive: ${live}\n`).problems, [], 'the incident commander judges a hotfix, but not what is live')
 })
 
-test('release: stale knowledge or facts the change touched, unmarked superseded ADRs and unlinked postmortem actions block it', () => {
+test('release: stale knowledge or facts the change touched, unmarked superseded ADRs and unlinked postmortem actions warn', () => {
   const r = makeRepo()
-  r.sdlc('init', 'demo')
-  const ready = '## Rollback (tested)\n\nTested: 2026-10-21, staging.\n\n## Probes\n\n- ok\n\n## Outcome metric\n\nMetric: m\nOwner: o\n'
+  r.sdlc('init', 'demo', '--full')
+  r.remote()
+  const ready = `## Rollback (tested)\n\nTested: 2026-10-21, staging.\n\n## Probes\n\n- ok\n\nLive: ${r.git('rev-parse', 'HEAD')}\n\n## Outcome metric\n\nMetric: m\nOwner: o\n`
   r.put('src/a.js', '1\n')
   r.git('add', '.')
   r.git('commit', '-m', 'a')
@@ -133,7 +141,8 @@ test('release: stale knowledge or facts the change touched, unmarked superseded 
   r.git('commit', '-m', 'pages')
   r.put('src/a.js', '2\n')
   const state = r.state('demo')
-  let problems = releaseProblems(r.repo, state, ready).join('\n')
+  assert.doesNotMatch(releaseProblems(r.repo, state, ready).problems.join('\n'), /knowledge|facts|ADR|incidents/, 'bookkeeping never blocks a release')
+  let problems = releaseProblems(r.repo, state, ready).warnings.join('\n')
   assert.match(problems, /knowledge page knowledge\/a\.md is stale/)
   assert.doesNotMatch(problems, /other\.md/, 'a stale page about code the change did not touch does not block it')
   assert.match(problems, /facts\.md: F1 is stale/)
@@ -143,7 +152,7 @@ test('release: stale knowledge or facts the change touched, unmarked superseded 
   r.put('docs/adr/0001-queue.md', '# ADR-0001\n\nStatus: accepted\n')
   r.put('specs/demo/plan.md', '## Decisions\n\nThis supersedes ADR-0001. It also supersedes ADR-0009.\n')
   r.put('docs/incidents/2026-10-20-x.md', '## Actions\n\n| Action | Becomes | Owner | Due |\n|---|---|---|---|\n| Add a retry | a trap | Sam | 2026-11-01 |\n| Alert on 5xx | #42 | Sam | 2026-11-01 |\n')
-  problems = releaseProblems(r.repo, state, ready).join('\n')
+  problems = releaseProblems(r.repo, state, ready).warnings.join('\n')
   assert.match(problems, /ADR-0001 is superseded by this change/)
   assert.match(problems, /ADR-0009, which docs\/adr does not have/)
   assert.match(problems, /"Add a retry" needs a link/)
@@ -151,12 +160,12 @@ test('release: stale knowledge or facts the change touched, unmarked superseded 
   r.put('docs/adr/0001-queue.md', '# ADR-0001\n\nStatus: superseded by ADR-0002\n')
   r.put('specs/demo/plan.md', '## Decisions\n\nThis supersedes ADR-0001.\n')
   r.put('docs/incidents/2026-10-20-x.md', '## Actions\n\n| Action | Becomes | Owner | Due |\n|---|---|---|---|\n| Add a retry | standards/traps.md | Sam | 2026-11-01 |\n')
-  assert.deepEqual(releaseProblems(r.repo, state, ready), [])
+  assert.deepEqual(releaseProblems(r.repo, state, ready).warnings, [])
 })
 
-test('outcome: the feature closes at release and leaves a follow-up with an owner, a due date and its own flow number', () => {
+test('outcome: a full-lane feature closes at release and leaves a follow-up with an owner, a due date and its own flow number', () => {
   const r = makeRepo()
-  r.sdlc('init', 'demo')
+  r.sdlc('init', 'demo', '--full')
   r.setState('demo', { stage: 6, stages: { 6: { enteredAt: hoursAgo(1) } }, gates: { 6: { status: 'approved' } } })
   r.put('specs/demo/release.md', '## Outcome metric\n\nMetric: checkout conversion +2%\nOwner: Priya\n')
   const closed = r.sdlc('advance', 'demo').out
@@ -175,13 +184,30 @@ test('outcome: the feature closes at release and leaves a follow-up with an owne
   assert.doesNotMatch(r.sdlc('status').out, /OUTCOME/)
 })
 
-test('outcome: release.md can name its own read date', () => {
+test('outcome: release.md can name its own read date; the light lane opens none unless the repo asks', () => {
   const r = makeRepo()
-  r.sdlc('init', 'demo')
+  r.sdlc('init', 'demo', '--full')
   r.setState('demo', { stage: 6, stages: { 6: { enteredAt: hoursAgo(1) } }, gates: { 6: { status: 'approved' } } })
   r.put('specs/demo/release.md', '## Outcome metric\n\nMetric: m\nOwner: o\nRead on: 2026-12-01\n')
   r.sdlc('advance', 'demo')
   assert.equal(r.state('demo').outcome.due.slice(0, 10), '2026-12-01')
+  r.sdlc('init', 'small')
+  r.setState('small', { stage: 6, stages: { 6: { enteredAt: hoursAgo(1) } }, gates: { 6: { status: 'approved' } } })
+  r.put('specs/small/release.md', '## Outcome metric\n\nMetric: m\nOwner: o\n')
+  const closed = r.sdlc('advance', 'small')
+  assert.equal(closed.status, 0, closed.out)
+  assert.equal(r.state('small').outcome, undefined)
+  r.sdlc('init', 'refactor', '--full')
+  r.setState('refactor', { stage: 6, stages: { 6: { enteredAt: hoursAgo(1) } }, gates: { 6: { status: 'approved' } } })
+  r.put('specs/refactor/release.md', '## Outcome metric\n\nMetric: None, because nothing a user sees changes\n')
+  r.sdlc('advance', 'refactor')
+  assert.equal(r.state('refactor').outcome, undefined, '"None, because ..." opens no follow-up')
+  r.config({ outcomeWindowDays: { light: 7 } })
+  r.sdlc('init', 'small2')
+  r.setState('small2', { stage: 6, stages: { 6: { enteredAt: hoursAgo(1) } }, gates: { 6: { status: 'approved' } } })
+  r.put('specs/small2/release.md', '## Outcome metric\n\nMetric: m\nOwner: o\n')
+  r.sdlc('advance', 'small2')
+  assert.equal(r.state('small2').outcome.status, 'open', 'a repo can turn it on for light')
 })
 
 test('freeze: a spent error budget refuses new features but not bugs or tasks', () => {
@@ -195,14 +221,14 @@ test('freeze: a spent error budget refuses new features but not bugs or tasks', 
   assert.match(r.hook('session-start', {}), /no new full or light features/)
 })
 
-test('triggered retro: an escalation past the cap makes the retro due, and running it clears that', () => {
+test('triggered retro: an escalation past the cap makes the retro due in status, and running it clears that', () => {
   const r = makeRepo()
   r.config({ retryCap: 1 })
   r.sdlc('init', 'demo')
   r.sdlc('retry', 'demo', 'flaky-login')
   assert.match(r.sdlc('retry', 'demo', 'flaky-login').out, /ESCALATE/)
   assert.match(r.sdlc('status').out, /RETRO DUE: demo escalated "flaky-login"/)
-  assert.match(r.hook('session-start', {}), /RETRO DUE/)
+  assert.doesNotMatch(r.hook('session-start', {}), /RETRO DUE/, 'status shows it; session start stays short')
   assert.match(r.sdlc('retro').out, /Triggered by: demo escalated/)
   assert.doesNotMatch(r.sdlc('status').out, /RETRO DUE/)
 })

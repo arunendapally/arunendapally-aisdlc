@@ -4,6 +4,7 @@ import fs from 'node:fs'
 import path from 'node:path'
 import { STAGES, root, git, loadConfig, readState, writeState, missingHeadings, isFrozen, createFeature, copyTemplate,
   readTrust, writeTrust, promotable, readStdin, audit } from '../lib.mjs'
+import { advanceFeature } from '../loop.mjs'
 
 const input = readStdin()
 const dir = root(input.cwd)
@@ -11,6 +12,18 @@ const text = (input.prompt ?? '').trim()
 const say = msg => {
   console.log(JSON.stringify({ hookSpecificOutput: { hookEventName: 'UserPromptSubmit', additionalContext: `[ai-sdlc] ${msg}` } }))
   process.exit(0)
+}
+
+// A human typed something, so a session held after repeated denials may act again (ADR-0004).
+const denialsFile = path.join(dir, '.ai-sdlc', 'denials.json')
+if (fs.existsSync(denialsFile)) {
+  try {
+    const all = JSON.parse(fs.readFileSync(denialsFile, 'utf8'))
+    delete all[input.session_id ?? 'default']
+    fs.writeFileSync(denialsFile, JSON.stringify(all, null, 2) + '\n')
+  } catch {
+    fs.rmSync(denialsFile, { force: true })
+  }
 }
 
 const m = text.match(/^sdlc\s+(approve|reject|lane|hotfix|trust|distrust|pause|resume|freeze|unfreeze)\b\s*(\S+)?\s*(\d)?\s*(.*)$/is)
@@ -22,6 +35,7 @@ const who = git('config user.name', dir) || process.env.USERNAME || process.env.
 if (verb === 'trust' || verb === 'distrust') {
   const cfg = loadConfig(dir)
   const key = `${feature}:${stageText}`
+  if (!cfg.trust) say('Earned trust is off in this repo. A human turns it on with "trust": true in .ai-sdlc/config.json. Nothing recorded.')
   if (cfg.trustOwners.length && !cfg.trustOwners.includes(who)) say(`${who} cannot change autonomy (${cfg.trustOwners.join(', ')} can). Nothing recorded.`)
   const ledger = readTrust(dir)
   if (verb === 'distrust') {
@@ -43,7 +57,7 @@ if (verb === 'hotfix') {
   if (!feature || !/^[a-z0-9][a-z0-9-]*$/.test(feature)) say('Usage: sdlc hotfix <slug> <what is broken in production>. Nothing recorded.')
   if (!note.trim()) say(`A hotfix needs the incident: sdlc hotfix ${feature} <what is broken>. Nothing recorded.`)
   if (readState(dir, feature)) say(`"${feature}" already exists. Nothing recorded.`)
-  createFeature(dir, { feature, lane: 'hotfix', extra: { incident: note.trim(), declaredBy: who } })
+  createFeature(dir, { feature, lane: 'hotfix', extra: { incident: note.trim(), declaredBy: who, lessonOwed: true } })
   const doc = copyTemplate(dir, feature, 'hotfix.md')
   audit(dir, { event: 'hotfix', feature, by: who, incident: note.trim() })
   say(`${who} declared hotfix ${feature}: "${note.trim()}". It starts at Build on branch hotfix/${feature}, cut from main. Fill ${doc}, fix, run the gate, then request. Review deadline ${loadConfig(dir).reviewSlaHours.hotfix}h.`)
@@ -53,7 +67,7 @@ if (verb === 'hotfix') {
 const flags = {
   pause: ['PAUSED', true, 'paused all agents. Every write and command is refused until a human types "sdlc resume".'],
   resume: ['PAUSED', false, 'resumed agents.'],
-  freeze: ['BUDGET_FROZEN', true, 'froze the light lane: the error budget is spent, so only reliability work advances.'],
+  freeze: ['BUDGET_FROZEN', true, 'froze new features: the error budget is spent, so only bugs, hotfixes and reliability tasks start.'],
   unfreeze: ['BUDGET_FROZEN', false, 'lifted the error-budget freeze.'],
 }
 if (flags[verb]) {
@@ -69,17 +83,24 @@ if (flags[verb]) {
 const state = feature && readState(dir, feature)
 if (!state) say(`No feature "${feature}" to ${verb}. Nothing recorded.`)
 
-// The lane decides whether the Design gate runs, so a human sets it, before Build.
+// The lane decides whether the Design gate runs, so a human sets it. Moving to full during Build sends
+// the feature back to Design; light is only open before Build.
 if (verb === 'lane') {
   const lane = note.trim().toLowerCase()
   if (!['full', 'light'].includes(lane)) say('Usage: sdlc lane <feature> full|light. Nothing recorded.')
-  if (state.stage > 2) say(`${feature} is past Analyze; its lane is fixed. Nothing recorded.`)
+  if (state.stage > 4 || (lane === 'light' && state.stage > 1)) say(`${feature} is at stage ${state.stage}; it can no longer move to the ${lane} lane. Nothing recorded.`)
   if (lane === 'light' && isFrozen(dir)) say('The error budget is frozen, so only the full lane is open. Nothing recorded.')
+  const back = lane === 'full' && state.stage === 4
+  if (back) {
+    state.stages[4].leftAt = new Date().toISOString()
+    state.stage = 3
+    state.stages[3] = { enteredAt: new Date().toISOString() }
+  }
   state.lane = lane
   state.laneSetBy = who
   writeState(dir, state)
   audit(dir, { event: 'lane', feature, lane, by: who })
-  say(`${who} set ${feature} to the ${lane} lane.`)
+  say(`${who} set ${feature} to the ${lane} lane.${back ? ' It goes back to stage 3 (Design): write plan.md, then request the gate.' : ''}`)
 }
 
 const stage = Number(stageText)
@@ -104,7 +125,7 @@ if (verb === 'approve') {
   ledger[key] = { ...ledger[key], streak: clean ? (ledger[key]?.streak ?? 0) + 1 : 0, promoted: ledger[key]?.promoted ?? false }
   writeTrust(dir, ledger)
   audit(dir, { event: 'approve', feature, stage, by: who, note })
-  say(`${who} approved gate ${stage} (${STAGES[stage].name}) for ${feature}. Run "node <plugin>/scripts/sdlc.mjs advance ${feature}" and continue.`)
+  say(`${who} approved gate ${stage} (${STAGES[stage].name}) for ${feature}. ${advanceFeature(dir, state)}`)
 }
 if (!note) say(`A rejection needs a reason: sdlc reject ${feature} ${stage} <reason>. Nothing recorded.`)
 state.gates[stage] = { ...gate, status: 'rejected', by: who, rejectedAt: now, reason: note, rejections: (gate.rejections ?? 0) + 1 }

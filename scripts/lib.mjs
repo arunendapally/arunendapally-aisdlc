@@ -4,31 +4,29 @@ import path from 'node:path'
 import { execSync } from 'node:child_process'
 import { fileURLToPath } from 'node:url'
 
+// ADR-0003: one spec gate (the PRD plus acceptance.feature), Design only in the full lane, Build on
+// checks in every lane. Stage numbers keep their old meaning; there is no stage 2 any more.
 export const STAGES = {
   1: { name: 'Plan', artefact: 'prd.md', owner: 'product lead',
-    headings: ['## Problem', '## Users and jobs', '## Questions asked', '## Assumptions', '## Evidence', '## Goals and non-goals', '## Requirements', '## Never', '## Out of scope',
-      '## Outcome metric', '## Stakeholders', '## Dependencies', '## Release criteria', '## Open questions'] },
-  2: { name: 'Analyze', artefact: 'spec.md', owner: 'product lead + architect + security owner',
-    headings: ['## Lane', '## Requirements', '## User journey', '## Integration decision', '## Acceptance criteria and test IDs', '## Test plan', '## SLOs and error budget', '## Threat model'] },
+    headings: ['## Problem', '## Users and jobs', '## Questions asked', '## Assumptions', '## Requirements', '## Never', '## Out of scope', '## Outcome metric', '## Open questions'] },
   3: { name: 'Design', artefact: 'plan.md', owner: 'architect + product lead',
-    headings: ['## Data model', '## Contracts', '## Decisions', '## C4 changes', '## Screens', '## Accessibility checks', '## Test strategy', '## Test data', '## Observability', '## Operability'] },
-  4: { name: 'Build', artefact: 'tasks.md', owner: 'tech lead',
-    headings: ['## Baseline', '## Tasks'] },
-  5: { name: 'Verify', artefact: 'pr.md', owner: 'CODEOWNER engineer + security owner (QA verdict attached)',
-    headings: ['## Tasks', '## Test results', '## Mutations', '## Defects', '## Security results', '## QA verdict', '## Not verified', '## Review honesty'] },
-  6: { name: 'Release', artefact: 'release.md', owner: 'release owner (SRE and ops advise)',
-    headings: ['## Artefact', '## Release order', '## Rollout', '## Rollback (tested)', '## Probes', '## Runbook', '## Cost delta', '## Traps added'] },
+    headings: ['## Decisions', '## Data model', '## Contracts', '## Threat model', '## Test plan', '## Run it'] },
+  4: { name: 'Build', artefact: 'tasks.md', owner: 'checks (gate green, small diff)',
+    headings: ['## Tasks'] },
+  5: { name: 'Verify', artefact: 'pr.md', owner: 'CODEOWNER engineer',
+    headings: ['## Summary', '## Test results', '## Pre-review', '## Not verified'] },
+  6: { name: 'Release', artefact: 'release.md', owner: 'release owner',
+    headings: ['## Rollout', '## Rollback (tested)', '## Probes'] },
 }
-STAGES[5].headings.splice(-2, 0, '## Pre-review')
 
 // Which stages each lane runs. Bug and hotfix lanes keep one document for the whole run,
-// which is also the PR body, and their Build gate is passed by checks rather than a person.
+// which is also the PR body. Build passes on checks in every lane.
 const BUG_BUILD = ['## Repro', '## Expected and actual', '## Root cause', '## Fix']
 const HOTFIX_BUILD = ['## Incident', '## Fix', '## Rollback']
-const SMALL_VERIFY = ['## Test results', '## Pre-review', '## Not verified', '## Review honesty']
+const SMALL_VERIFY = ['## Test results', '## Pre-review', '## Not verified']
 export const LANES = {
-  full: { stages: [1, 2, 3, 4, 5, 6] },
-  light: { stages: [1, 2, 4, 5, 6] },
+  full: { stages: [1, 3, 4, 5, 6], auto: [4] },
+  light: { stages: [1, 4, 5, 6], auto: [4] },
   bug: {
     stages: [4, 5], auto: [4], artefact: 'bug.md', branch: 'bug',
     headings: { 4: BUG_BUILD, 5: [...BUG_BUILD, ...SMALL_VERIFY] },
@@ -50,16 +48,23 @@ LANES.task = {
 // What kind of work it is adds sections (and owners) to whatever lane it runs in.
 // Sections are keyed by stage and land in that stage's artefact for the lane.
 export const KINDS = {
-  greenfield: { headings: { 3: ['## Walking skeleton'] } },
-  brownfield: { headings: { 2: ['## Current system'], 4: ['## Characterisation tests'] } },
-  perf: { headings: { 2: ['## Performance budget'], 4: ['## Benchmark before'], 5: ['## Benchmark after'] } },
-  // API work: an OpenAPI file is the contract (checked at Design, viewable in Swagger).
-  api: { headings: { 2: ['## API changes'] } },
+  brownfield: { headings: { 1: ['## Current system'], 4: ['## Characterisation tests'] } },
+  perf: { headings: { 1: ['## Performance budget'], 4: ['## Benchmark before'], 5: ['## Benchmark after'] } },
+  // API work: an OpenAPI file is the contract; a breaking change must be declared.
+  api: { headings: { 1: ['## API changes'] } },
+  // An additive migration runs in the light lane with a down migration and the DBA on the PR. One that
+  // alters or drops what exists needs the full lane (see destructiveMigrations).
   data: {
-    lane: 'full',
-    headings: { 2: ['## Data impact'], 3: ['## Migration plan (expand-contract)', '## Rehearsal'], 6: ['## Backout'] },
-    owners: { 3: 'DBA', 6: 'DBA' },
+    headings: { 1: ['## Data impact'], 3: ['## Migration plan (expand-contract)', '## Rehearsal'], 4: ['## Down migration'], 6: ['## Backout'] },
+    owners: { 3: 'DBA', 5: 'DBA', 6: 'DBA' },
   },
+}
+
+// Migrations that alter or drop what already exists: these are the hard-to-undo changes.
+const DESTRUCTIVE = /\b(DROP\s+(TABLE|COLUMN|INDEX|CONSTRAINT)|TRUNCATE|RENAME\s+(TABLE|COLUMN|TO)|ALTER\s+COLUMN|ALTER\s+TABLE\s+\S+\s+(DROP|RENAME|ALTER|MODIFY))\b|\b(dropTable|dropColumn|renameColumn|renameTable|alterColumn|remove_column|rename_column|drop_table)\b/i
+export function destructiveMigrations(dir, cfg = loadConfig(dir)) {
+  return changedFiles(dir, cfg).map(f => f.file)
+    .filter(f => matches(f, ['**/migrations/**', '**/*.sql', '**/schema.prisma']) && fs.existsSync(path.join(dir, f)) && DESTRUCTIVE.test(fs.readFileSync(path.join(dir, f), 'utf8')))
 }
 
 // The artefact, sections and owner of a stage, as the feature's lane and kinds define them.
@@ -89,7 +94,8 @@ export const DEFAULT_CONFIG = {
   denyPaths: ['.ai-sdlc/**', '.claude/settings*.json', '**/.env', '**/.env.*', '**/*.pem', '**/*.key', '**/id_rsa*', '**/*.tfstate', '**/*.tfstate.*'],
   askPaths: ['.github/workflows/**', '.github/CODEOWNERS', 'CODEOWNERS', '.claude/agents/**', '.claude/hooks/**', '.mcp.json'],
   highRiskPaths: ['**/auth/**', '**/payments/**', '**/migrations/**', 'infra/**', 'terraform/**'],
-  deployPatterns: ['vercel\\b.*(--prod|--target[= ]production|\\bpromote\\b)', 'terraform\\s+apply', 'kubectl\\s+(apply|delete|rollout)', 'helm\\s+(install|upgrade)', 'npm\\s+publish',
+  deployPatterns: ['vercel\\b.*(--prod|--target[= ]production|\\bpromote\\b|\\balias\\b)', 'terraform\\s+apply', 'netlify\\s+deploy\\b.*--prod', 'fly(ctl)?\\s+deploy\\b',
+    'firebase\\s+deploy\\b', 'wrangler\\s+(deploy|publish)\\b', '(npm|pnpm|yarn)\\s+(run\\s+)?deploy\\b', 'kubectl\\s+(apply|delete|rollout)', 'helm\\s+(install|upgrade)', 'npm\\s+publish',
     'gh\\s+pr\\s+merge', 'gh\\s+release\\s+create', 'gh\\s+(ruleset|secret|repo\\s+edit)\\b', 'gh\\s+api\\b.*(-X|--method)\\s*(?!GET\\b)[A-Z]+', 'git\\s+config\\b.*\\balias\\.',
     '\\bsdlc\\s+(approve|reject|lane|hotfix|trust|distrust|resume|unfreeze)\\b'],
   // Production is touched only by read-only probes: a command matching these must also be a probe.
@@ -104,14 +110,27 @@ export const DEFAULT_CONFIG = {
   // MCP tools whose names look like they merge, deploy or change settings are denied unless listed in mcpAllow.
   mcpDenyPattern: '(merge|deploy|promote|rollback|release|publish|delete|apply|push|ruleset|protection|secret|setting|permission)',
   mcpAllow: [],
+  // Two different loops (ADR-0004). retryCap counts failed checks after a real change; denialCap counts
+  // refusals by one guard in one session, after which the session hands back and may only read until a
+  // human types. A repo can lower denialCap, never raise it.
   retryCap: 3,
+  denialCap: 2,
+  // A Read (or a cat) of a file bigger than this, without a slice, is refused with the sliced call.
+  maxReadLines: 1500,
+  maxReadBytes: 100000,
+  // Preview deploys an agent may run, once its branch is on the remote; a preview is never a release.
+  previewPatterns: ['\\bvercel\\b(?![^|;&]*(--prod|\\b(alias|promote|env|login|whoami|ls|list|inspect|logs|pull|link)\\b))', '\\bnetlify\\s+deploy\\b(?![^|;&]*--prod)'],
+  // Files that run what they contain: a deploy written into one asks a human.
+  scriptPaths: ['**/*.sh', '**/*.ps1', '**/*.bat', '**/*.cmd', '**/makefile', '**/justfile', '**/package.json', '**/taskfile.yml'],
   // Small PRs review faster: changed lines allowed per PR, by lane, excluding specs, docs and lock files.
   maxPrLines: { full: 400, light: 300, bug: 200, task: 200, hotfix: 100 },
   prLineExcludes: ['specs/**', 'docs/**', '**/*.md', '**/package-lock.json', '**/yarn.lock', '**/pnpm-lock.yaml', '**/*.lock', '**/*.snap'],
   // Hours a human gate may wait before it is overdue and escalated, by lane.
   reviewSlaHours: { full: 24, light: 8, bug: 8, task: 8, hotfix: 1 },
-  // Earned autonomy: after this many clean human approvals in a row, a gate may be promoted to
-  // run on checks. These gates are never promoted: the merge of a full feature and every release.
+  // Earned autonomy is optional (ADR-0003): with trust on, after this many clean human approvals in a
+  // row a gate may be promoted to run on checks. These gates are never promoted: the merge of a
+  // feature and every release.
+  trust: false,
   trustThreshold: 10,
   // Who may promote or demote a gate, by git user.name. Empty means anyone at the keyboard.
   trustOwners: [],
@@ -123,13 +142,14 @@ export const DEFAULT_CONFIG = {
   // The test proof (ADR-0002): runs the traced test files against the base branch's code, where they
   // must fail. {files} becomes the quoted test files; {report}, if used, a JUnit XML path to write.
   proofCommand: '',
-  // Days after release by which the outcome metric is read, by lane, unless release.md names a date.
-  outcomeWindowDays: { full: 14, light: 7 },
+  // Days after release by which the outcome metric is read, unless release.md names a date. Only the
+  // lanes listed here open an outcome follow-up; add "light" to turn it on there.
+  outcomeWindowDays: { full: 14 },
 }
 
 // List settings in a repo's config can only add to the plugin's defaults, so a repo file
 // (or an agent that slipped past a guard) can never switch a guard off.
-const ADDITIVE = ['bannedText', 'bannedTextPaths', 'protectedBranches', 'denyPaths', 'askPaths', 'highRiskPaths', 'deployPatterns', 'prodPatterns', 'bugForbidPaths']
+const ADDITIVE = ['bannedText', 'bannedTextPaths', 'protectedBranches', 'denyPaths', 'askPaths', 'highRiskPaths', 'deployPatterns', 'prodPatterns', 'bugForbidPaths', 'scriptPaths']
 
 // A read-only production probe: a read verb and no write verb.
 export function isProbe(command) {
@@ -153,11 +173,22 @@ export function git(args, cwd) {
   }
 }
 
+// Whether a git command succeeds, for checks such as "merge-base --is-ancestor" that answer by exit code.
+export function gitOk(args, cwd) {
+  try {
+    execSync(`git ${args}`, { cwd, stdio: 'ignore' })
+    return true
+  } catch {
+    return false
+  }
+}
+
 export function loadConfig(dir) {
   const file = path.join(dir, '.ai-sdlc', 'config.json')
   const own = fs.existsSync(file) ? JSON.parse(fs.readFileSync(file, 'utf8')) : {}
   const cfg = { ...DEFAULT_CONFIG, ...own }
   for (const key of [...ADDITIVE, 'neverTrust']) cfg[key] = [...new Set([...DEFAULT_CONFIG[key], ...(own[key] ?? [])])]
+  cfg.denialCap = Math.max(1, Math.min(DEFAULT_CONFIG.denialCap, Number(own.denialCap) || DEFAULT_CONFIG.denialCap))
   for (const key of ['maxPrLines', 'reviewSlaHours', 'outcomeWindowDays']) cfg[key] = { ...DEFAULT_CONFIG[key], ...(own[key] ?? {}) }
   return cfg
 }
@@ -248,13 +279,28 @@ export function overdueGates(dir, now = Date.now()) {
   })
 }
 
+// The loop with memory (ADR-0004): an escaped bug or a hotfix owes a lesson, paid by a trap in
+// standards/traps.md that names it ("- **Source:** <slug>") and is guarded by a check, not by words.
+export const ENFORCED_GUARD = /\b(tests?|hooks?|lint|ci|ruleset|workflow|assert(ion)?s?|evals?|gate)\b/i
+export function lessonPaid(dir, slug) {
+  const file = path.join(dir, 'standards', 'traps.md')
+  if (!fs.existsSync(file)) return false
+  return fs.readFileSync(file, 'utf8').split(/^### /m).slice(1).some(block =>
+    new RegExp(`\\*\\*Source:\\*\\*[^\\n]*\\b${slug}\\b`).test(block) && ENFORCED_GUARD.test(block.match(/\*\*Guard now:\*\*\s*(.*)/)?.[1] ?? ''))
+}
+export function lessonsOwed(dir) {
+  return listFeatures(dir).filter(s => s.lessonOwed && !lessonPaid(dir, s.feature))
+}
+export const lessonProblem = slug => `a lesson is owed: add a trap to standards/traps.md with "- **Source:** ${slug}" and a "Guard now" that is a test, hook, lint rule, CI check or eval, so this cannot happen again unnoticed`
+
 // Hotfixes shipped without a postmortem past the deadline. A hotfix's test proof runs after the
-// merge, and until it passes the postmortem is not done (ADR-0002).
+// merge, and until it passes the postmortem is not done (ADR-0002); nor is it while its lesson is
+// owed (ADR-0004).
 export function overduePostmortems(dir, now = Date.now()) {
   const incidents = path.join(dir, 'docs', 'incidents')
   const files = fs.existsSync(incidents) ? fs.readdirSync(incidents) : []
   const proofDue = s => loadConfig(dir).proofCommand && !s.proof?.ok
-  return listFeatures(dir).filter(s => s.postmortemDue && Date.parse(s.postmortemDue) < now && (!files.some(f => f.endsWith(`-${s.feature}.md`)) || proofDue(s)))
+  return listFeatures(dir).filter(s => s.postmortemDue && Date.parse(s.postmortemDue) < now && (!files.some(f => f.endsWith(`-${s.feature}.md`)) || proofDue(s) || (s.lessonOwed && !lessonPaid(dir, s.feature))))
 }
 
 export const TEMPLATES = path.join(path.dirname(fileURLToPath(import.meta.url)), '..', 'skills', 'org-ai-sdlc', 'templates')
@@ -303,13 +349,14 @@ export function writeTrust(dir, trust) {
 
 // Gates promoted to run on checks. A frozen error budget suspends every promotion.
 export function trustedGates(dir) {
-  if (isFrozen(dir)) return []
+  if (!loadConfig(dir).trust || isFrozen(dir)) return []
   return Object.entries(readTrust(dir)).filter(([, t]) => t.promoted).map(([key]) => key)
 }
 
 // Gates that earned promotion and wait for a human to grant it.
 export function promotable(dir) {
   const cfg = loadConfig(dir)
+  if (!cfg.trust) return []
   return Object.entries(readTrust(dir))
     .filter(([key, t]) => !t.promoted && t.streak >= cfg.trustThreshold && !cfg.neverTrust.includes(key))
     .map(([key, t]) => ({ key, streak: t.streak }))

@@ -1,18 +1,8 @@
 # Release: <feature>
 
-<!-- Stage 6 Release. Gate: release owner; "sdlc approve <feature> 6". Humans run merge, apply and deploy. -->
-
-## Artefact
-
-<!-- Exact build digest promoted from staging. -->
-
-## Release order
-
-1. Check production is in the shape the change expects.
-2. Rehearse data changes on a copy.
-3. Apply data changes and access rules before any code that needs them.
-4. Deploy.
-5. Probe.
+<!-- Stage 6 Release. Gate: release owner; "sdlc approve <feature> 6". Humans run merge, apply and deploy.
+     Order: check production is in the shape the change expects, rehearse data changes on a copy, apply
+     data changes before the code that needs them, deploy, probe. -->
 
 ## Rollout
 
@@ -24,22 +14,22 @@
 
 ## Probes
 
-<!-- Read-only checks against the SLOs, each with its result (pass or fail). -->
+<!-- After the deploy from main: read-only checks, each with its result (pass or fail), including this
+     feature's own acceptance check, since a generic health check cannot see an old build.
+     Then the build that is running, read from the system itself, not from the deploy log: a version
+     endpoint, a meta tag, or the platform's read-only inspect command. Release refuses unless the
+     reviewed change is on origin/main and this build contains it and the previous release. A deploy
+     from a branch is a preview, never a release. -->
 
-## Runbook
-
-<!-- Link, and the support hand-over owner. -->
-
-## Cost delta
+Live: <sha>
 
 ## Outcome metric
 
-Metric: <the PRD's outcome metric and target>
+Metric: <the PRD's outcome metric and target, or "None, because ...">
 Owner: <who reads it>
 Read on: <YYYY-MM-DD, or leave out for the lane's default watch window>
 
-<!-- The feature closes at release; this opens its outcome follow-up (sdlc outcome <feature> met|missed|breach). -->
+<!-- Full lane: the feature closes at release and this opens its outcome follow-up
+     (sdlc outcome <feature> met|missed|breach). -->
 
-## Traps added
-
-<!-- What this feature taught, added to standards/traps.md. -->
+<!-- Optional: ## Artefact (build digest), ## Runbook, ## Cost delta, ## Traps added. -->

@@ -16,7 +16,7 @@ const kinds = res => res.proposals.map(p => p.kind)
 function troubledRepo() {
   const r = makeRepo()
   r.sdlc('init', 'search')
-  r.sdlc('init', 'checkout')
+  r.sdlc('init', 'checkout', '--full')
   r.setState('search', {
     retries: { '4:fix': 4 },
     gates: { 5: { status: 'approved', by: 'A', requestedAt: hoursAgo(80), approvedAt: hoursAgo(10) } },
@@ -42,7 +42,7 @@ test('retro: each kind of evidence becomes a ranked proposal that names the plug
   const theme = res.proposals.find(p => p.kind === 'rejection-theme')
   assert.match(theme.title, /Gate 5 keeps rejecting work for "pagination"/)
   assert.equal(theme.evidence.length, 2)
-  assert.equal(theme.change.target, 'skills/ai-sdlc/standards/code-review-checklist.md')
+  assert.equal(theme.change.target, 'templates/repo/standards/code-review-checklist.md')
 
   const esc = res.proposals.find(p => p.kind === 'escalation')
   assert.match(esc.title, /goal "fix" escalates/)
@@ -87,7 +87,7 @@ test('retro: --write saves the report, and --repos mines several repos together'
 
 test('an escaped bug is charged to every gate the shipped work passed, and costs its promotion', () => {
   const r = makeRepo()
-  r.sdlc('init', 'checkout')
+  r.sdlc('init', 'checkout', '--full')
   r.setState('checkout', { gates: { 1: { status: 'approved' }, 2: { status: 'approved' }, 5: { status: 'approved', auto: true } } })
   r.put('.ai-sdlc/trust.json', JSON.stringify({ 'full:2': { streak: 7, promoted: false }, 'full:5': { streak: 12, promoted: true } }))
   const out = r.sdlc('bug', 'double-charge', '--caused-by', 'checkout')

@@ -1,21 +1,19 @@
 ---
-description: Stage 3 Design. Plan, contracts, ADRs, C4, screens from real components, test strategy, observability and operability; ends at the architect and product lead's gate.
+description: Stage 3 Design, full lane only. The plan, contracts and an ADR per significant decision, each cross-questioned by another discipline; ends at the architect and product lead's gate.
 argument-hint: <feature-slug>
 ---
 
-Stage 3 for `$ARGUMENTS` (the light lane skips this stage).
+Stage 3 for `$ARGUMENTS` (the light lane skips it).
 
-- `architect`: `specs/$ARGUMENTS/plan.md` from the template (Spec Kit's plan stage if installed): data model, versioned contracts, and an ADR in `docs/adr/` for each new component, datastore, dependency, schema or contract change. Write each interpretation of the constitution as a judgement.
-- For `--kind data`: the `dba` draws the Mermaid ER diagram in `## Data model`, marking changed entities. For `--kind api`: the `architect` writes `openapi.yaml` with `node "${CLAUDE_PLUGIN_ROOT}/scripts/sdlc.mjs" api $ARGUMENTS` and declares breaking changes. The Design gate checks both.
-- `c4-diagrams-expert`: update `docs/architecture/workspace.dsl`, tagging what is new, changed and removed. Agents appear as actors with what they can write.
-- `ux-designer`: screens from the product's real components only, on a canvas humans comment on. One thread per comment; only a human resolves a thread. List unmatched components and the accessibility checks.
-- `qa-engineer`: the test strategy (levels, synthetic data, performance and accessibility budgets).
-- `sre`: observability (logs, golden signals, traces, SLO alerts each with a runbook).
-- `ops-engineer`: operability (environments, IaC modules, secrets needed, cost delta, backup and restore).
-- `safe-ai-sdlc-expert`: check the plan against the threat model.
+1. `architect`: `specs/$ARGUMENTS/plan.md` from the template, and an ADR in `docs/adr/` for each new datastore, dependency, service or breaking contract. Each ADR weighs at least two options.
+2. Only what the change needs:
+   - data work: the `dba` writes the migration plan (expand-contract) and rehearsal, and draws the ER diagram in `## Data model`;
+   - API work: `node "${CLAUDE_PLUGIN_ROOT}/scripts/sdlc.mjs" api $ARGUMENTS` starts `openapi.yaml`; declare any breaking change in `## Contracts`;
+   - a new or changed container: update the C4 model in `docs/architecture/workspace.dsl`;
+   - a screen: the `ux-designer` designs it from the product's real components, with its accessibility checks;
+   - a high-risk path: the `safe-ai-sdlc-expert` writes the threat model.
+3. **Review.** The `design-reviewer` and at least one other discipline question each ADR; the architect answers in the ADR's `## Review`, revising it where a question lands. At most three rounds, then escalate.
 
-Then run `/ai-sdlc:design-review $ARGUMENTS`: the board cross-questions every decision and the architect answers until each has `Verdict: accept`.
-
-**Goal:** every requirement maps to a plan element, the board accepted every decision, every contract has a version, every plan section is filled (or says "None, because ..."), and no human comment thread is open. Cap 3 rounds.
+**Goal:** every requirement maps to a plan element, every ADR it names exists with its review, every breaking contract is declared.
 
 **Gate:** `node "${CLAUDE_PLUGIN_ROOT}/scripts/sdlc.mjs" request $ARGUMENTS`, then stop. The architect and product lead approve with `sdlc approve $ARGUMENTS 3`.

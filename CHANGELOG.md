@@ -4,7 +4,53 @@ All notable changes to this repository. The format follows [Keep a Changelog](ht
 
 ## [Unreleased]
 
-The loop spine from [ADR-0002](docs/adr/0002-loop-spine.md): plan, test, implement, verify, review, release and observe, remember, with improve out-of-band.
+### Gates that catch the real failures ([ADR-0004](docs/adr/0004-gates-that-catch-real-failures.md))
+
+Feedback (`docs/feedback.md`) set the test: a lifecycle that would not have caught the last three real failures is ceremony. Before this, the plugin caught one of three, late. The council record is in [docs/decisions/2026-10-22-gates-are-the-product.md](docs/decisions/2026-10-22-gates-are-the-product.md).
+
+#### Added
+
+- **F1, a denial retried as a failure.** Every denial now says it is a final answer, not an error. Denials are counted per session by the guard that fired, so a rephrase counts too. The second hands back, and after it the session may only read until a human types (`denialCap`, default 2, can only be lowered). The autopilot counts an edit only once the tool succeeded, starts nothing after a denied or aborted turn, and only toasts on green; its old green path restarted itself with no cap.
+- **F2, context spent before the source of truth.** The pre-tool hook refuses a full read (or `cat`) of a file over `maxReadLines` (1,500) or `maxReadBytes` (100KB), with the sliced call. Brownfield and data facts need a `[governing]` fact pinned to implementation code, not a document or schema.
+- **F3, a branch deploy erased by the next merge.** Release refuses unless the reviewed commit, or its squash, is on `origin/main`, and unless `Live: <sha>` under `## Probes` contains it and the previous release. An agent's preview deploy from an unpushed branch asks first. `deployPatterns` now also cover `vercel alias`, `netlify deploy --prod`, `fly deploy`, `firebase deploy`, `wrangler deploy` and `npm run deploy`, and a deploy written into a script or package script asks a human. `sdlc status` prints what is live.
+- **Lessons owed.** A bug filed with `--caused-by`, or a hotfix, owes a trap with `- **Source:** <slug>` and a guard that is a check. The bug cannot merge, and the hotfix postmortem stays open, until it is paid.
+- **The score is checkable.** Golden tasks name the failures they catch (`"catches"`), `evals/failures.json` lists them, and `npm run eval` prints CAUGHT or NOT CAUGHT for each and fails when one has no passing task. Three new golden tasks (22 in all) and `tests/failures.test.mjs`.
+- Three new traps in `templates/repo/standards/traps.md`, one per failure.
+
+#### Changed
+
+- Verify records the reviewed commit and files, so Release checks what was reviewed even after the merge.
+- The QA agent no longer mandates Postman; any API test tool will do, with Setup and Teardown.
+
+### A simple default path ([ADR-0003](docs/adr/0003-simple-default-path.md))
+
+Seven experts reviewed the plugin and found features far too heavy: 8 to 11 documents, about 50 required sections and 5 human waits. Now a feature waits on a human three times (the spec, the merge, the release) and a bug once. The record is in [docs/decisions/2026-10-22-simplify.md](docs/decisions/2026-10-22-simplify.md).
+
+#### Changed
+
+- **Features start in the light lane.** `init <slug> --full` starts one in the full lane. In the light lane, Build refuses a migration that alters or drops data, or a high-risk path; a human types `sdlc lane <feature> full` and the feature goes back to Design.
+- **One spec gate.** Plan and Analyze are one stage: a 9-section PRD plus `acceptance.feature`, one approval. `spec.md` is gone. Facts are required only for brownfield and data work.
+- **Build passes on checks in every lane.** An approval, or a gate that passes on checks, moves the feature on by itself; `sdlc advance` is rarely needed.
+- **Gherkin:** only the `@AC-n` and `@Rn` tags, and a scenario per requirement, are errors. Everything else warns. The test matrix accepts a test at any level.
+- **Design (full lane only):** each ADR the plan names needs two options and a `## Review` section. The board record, the three-discipline minimum and the "downside" keyword check are gone. ER and OpenAPI style only warn; breaking API changes still block.
+- **Data:** an additive migration runs in the light lane with a down migration and the DBA on the PR.
+- **Review:** `sdlc request` rebuilds a stale review packet instead of refusing. A `fixed: <sha>` commit must touch the file only when the pre-review says `Risk: high`.
+- **Release:** a tested rollback and probe results block; stale knowledge and facts, unmarked superseded ADRs and unlinked postmortem actions now warn. The outcome follow-up opens only in the full lane (`outcomeWindowDays`), and `Metric: None, because ...` is allowed.
+- **Bugs:** with a `proofCommand`, the repro test itself must be proved (`sdlc proof <bug> --files <test>`), not just any red gate run.
+- **Templates:** PRD 14 to 9 required sections, plan 10 to 6, PR body 10 to 4, release 8 to 3; optional sections are listed at the bottom of each. `Review honesty` and the Mutations table are gone.
+- **Earned trust is optional**, off unless `"trust": true`.
+- **Agents 21 to 14:** agentic AI absorbs AI agents, SRE absorbs ops, QA absorbs the SDET, the CTO absorbs the project manager, the architect absorbs C4; the Confluence and GitHub experts are removed.
+- **Commands 18 to 14:** `start` absorbs `kickoff`, `plan` absorbs `analyze`, `design` absorbs `design-review`, `build` absorbs `tests`.
+- **Hooks:** no PostToolUse hook (it started a node process on every tool call); the stop hook checks secrets only, since house style is checked when a file is written. The mod no longer puts the knowledge index in every turn.
+- The `greenfield` kind is gone; RETRO DUE shows in `status`, not at session start.
+
+#### Removed
+
+- `skills/ai-sdlc/`, the older cycle that competed with `org-ai-sdlc`. Its standards moved to `templates/repo/standards/`, which `init-repo` copies as before.
+
+### The loop spine ([ADR-0002](docs/adr/0002-loop-spine.md))
+
+Plan, test, implement, verify, review, release and observe, remember, with improve out-of-band.
 
 ### Added
 

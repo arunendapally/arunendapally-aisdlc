@@ -1,7 +1,7 @@
 import { expect, test } from 'claude-code/testing'
 
 // A repo with one bug in Build on the current branch, and a gate that is red until "fixed".
-function world($, on, { isGreen = () => false, extraFiles = {} } = {}) {
+function world($, on, { isGreen = () => false, extraFiles = {}, deniedTool = '' } = {}) {
   const files = {
     '.ai-sdlc/config.json': JSON.stringify({ gateCommand: 'npm test', retryCap: 2 }),
     'specs/demo/state.json': JSON.stringify({ feature: 'demo', lane: 'bug', stage: 4, branch: 'bug/demo', gates: {} }),
@@ -39,7 +39,8 @@ function world($, on, { isGreen = () => false, extraFiles = {} } = {}) {
   on('ui.open', () => ({ value: { isPlaced: true } }))
   on('ui.notify', () => ({ value: { isSent: true, channel: 'test' } }))
   on('session.start', (_, e) => ({ cwd: e.cwd }))
-  on('tool.call', () => ({ result: {} }))
+  // A guardrail refusal comes back as { deny }, the way a hook's or the engine's would.
+  on('tool.call', (_, e) => (e.tool === deniedTool ? { deny: '[ai-sdlc] refused by a guardrail.' } : { result: {} }))
   on('turn.complete', () => ({ text: '' }))
   on('ui.status', () => ({ value: undefined }))
   on('ui.toast', () => ({ value: undefined }))
@@ -87,7 +88,7 @@ test('autopilot: a turn that changed nothing does not loop', async ($, on) => {
   expect(submitted.filter(t => t.startsWith('[autopilot]')).length).toBe(0)
 })
 
-test('autopilot: a green gate says so once and resets the attempts', async ($, on) => {
+test('autopilot: a green gate ends the loop and starts nothing, however often it is green', async ($, on) => {
   let fixed = false
   const { submitted } = world($, on, { isGreen: () => fixed })
   await $.session.start({ cwd: '/repo', surface: 'terminal', isInteractive: true })
@@ -95,11 +96,47 @@ test('autopilot: a green gate says so once and resets the attempts', async ($, o
   await $.prompt.submit({ text: 'go' })
   await $.tool.call(edit)
   await $.turn.complete(turn)
+  expect(submitted.filter(t => t.startsWith('[autopilot] The gate is red')).length).toBe(1)
   fixed = true
+  for (let i = 0; i < 3; i++) {
+    await $.prompt.submit({ text: 'go' })
+    await $.tool.call(edit)
+    await $.turn.complete(turn)
+  }
+  expect(submitted.filter(t => t.startsWith('[autopilot]')).length).toBe(1)
+})
+
+test('autopilot: a denied edit is an answer, so it hands back and starts nothing (F1)', async ($, on) => {
+  const { submitted } = world($, on, { deniedTool: 'Edit' })
+  await $.session.start({ cwd: '/repo', surface: 'terminal', isInteractive: true })
+  await $.command.run({ command: 'sdlc-autopilot', args: '' })
+  for (let i = 0; i < 3; i++) {
+    await $.prompt.submit({ text: 'go' })
+    await $.tool.call(edit)
+    await $.turn.complete(turn)
+  }
+  expect(submitted.filter(t => t.startsWith('[autopilot]')).length).toBe(0)
+})
+
+test('autopilot: a denial the hook logged hands back too, even when the edit went through', async ($, on) => {
+  const denied = JSON.stringify({ at: '2026-10-21T12:00:00.000Z', event: 'pre-tool', decision: 'deny', rule: 'human-action' })
+  const { submitted } = world($, on, { extraFiles: { '.ai-sdlc/audit.jsonl': denied + '\n' } })
+  await $.session.start({ cwd: '/repo', surface: 'terminal', isInteractive: true })
+  await $.command.run({ command: 'sdlc-autopilot', args: '' })
   await $.prompt.submit({ text: 'go' })
   await $.tool.call(edit)
   await $.turn.complete(turn)
-  expect(submitted.some(t => t.startsWith('[autopilot] The gate is green for demo'))).toBe(true)
+  expect(submitted.filter(t => t.startsWith('[autopilot]')).length).toBe(0)
+})
+
+test('autopilot: an interrupted turn starts nothing', async ($, on) => {
+  const { submitted } = world($, on)
+  await $.session.start({ cwd: '/repo', surface: 'terminal', isInteractive: true })
+  await $.command.run({ command: 'sdlc-autopilot', args: '' })
+  await $.prompt.submit({ text: 'go' })
+  await $.tool.call(edit)
+  await $.turn.complete({ ...turn, isAborted: true, reason: 'aborted' })
+  expect(submitted.filter(t => t.startsWith('[autopilot]')).length).toBe(0)
 })
 
 test('autopilot: paused agents stop the loop', async ($, on) => {
@@ -112,7 +149,7 @@ test('autopilot: paused agents stop the loop', async ($, on) => {
   expect(submitted.filter(t => t.startsWith('[autopilot]')).length).toBe(0)
 })
 
-test('every turn carries the stage rules and the knowledge index in the system prompt', async ($, on) => {
+test('every turn carries the stage rules and a pointer to the knowledge, not the whole index', async ($, on) => {
   world($, on)
   on('prompt.compose', () => ({ sections: [] }))
   await $.session.start({ cwd: '/repo', surface: 'terminal', isInteractive: true })
@@ -120,7 +157,8 @@ test('every turn carries the stage rules and the knowledge index in the system p
   const mine = sections.find(s => s.id === 'ai-sdlc-context')
   expect(mine?.text).toContain('demo, bug lane, stage 4 Build')
   expect(mine?.text).toContain('never loosen or skip a test')
-  expect(mine?.text).toContain('payments-retry')
+  expect(mine?.text).toContain('knowledge for <files>')
+  expect(mine?.text).not.toContain('payments-retry')
 })
 
 test('the board puts an approval in the prompt for a human to send, never records it', async ($, on) => {

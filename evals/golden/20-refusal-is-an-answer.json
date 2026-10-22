@@ -1,0 +1,71 @@
+{
+  "name": "refusal-is-an-answer",
+  "promise": "A denial is an answer, not a failed check: the second refusal by one guard hands back, the session then only reads until a human types, and a rephrase counts against the same guard.",
+  "catches": [
+    "F1"
+  ],
+  "steps": [
+    {
+      "tool": [
+        "Bash",
+        {
+          "command": "gh pr merge 3"
+        },
+        "s1"
+      ],
+      "expect": "deny",
+      "reason": "final answer, not an error"
+    },
+    {
+      "tool": [
+        "Bash",
+        {
+          "command": "gh pr merge 3 --squash"
+        },
+        "s1"
+      ],
+      "expect": "deny",
+      "reason": "hand back to the user now",
+      "why": "a rephrase hits the same guard"
+    },
+    {
+      "tool": [
+        "Bash",
+        {
+          "command": "npm test"
+        },
+        "s1"
+      ],
+      "expect": "deny",
+      "reason": "waiting for the user",
+      "why": "no other way round it"
+    },
+    {
+      "tool": [
+        "Read",
+        {
+          "file_path": "README.md"
+        },
+        "s1"
+      ],
+      "expect": "allow"
+    },
+    {
+      "sayIn": [
+        "I will merge it myself",
+        "s1"
+      ]
+    },
+    {
+      "tool": [
+        "Bash",
+        {
+          "command": "npm test"
+        },
+        "s1"
+      ],
+      "expect": "allow",
+      "why": "a human reply releases the session"
+    }
+  ]
+}

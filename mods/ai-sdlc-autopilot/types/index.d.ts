@@ -25,7 +25,7 @@ export type Board = {
 export type Autopilot = {
   isOn: boolean
   attempts: number
-  last: 'none' | 'green' | 'red' | 'stopped'
+  last: 'none' | 'green' | 'red' | 'stopped' | 'denied'
 }
 
 declare module 'claude-code' {

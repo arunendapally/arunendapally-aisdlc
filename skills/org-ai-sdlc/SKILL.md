@@ -1,11 +1,11 @@
 ---
 name: org-ai-sdlc
-description: Run the organisation's AI SDLC, where teams of humans and autonomous agents take any work (features, bugs, hotfixes, chores, performance, data, learning) from request to production through gated lanes. Use when starting or continuing work with /ai-sdlc commands, when asked which lane or kind a change takes, who owns a gate, what an agent may do without asking, or how approvals, earned autonomy, the autopilot loop, knowledge pages, incidents and the kill switch work.
+description: Run the organisation's AI SDLC, where teams of humans and autonomous agents take any work (features, bugs, hotfixes, chores, performance, data, learning) from request to production through gated lanes. Use when starting or continuing work with /ai-sdlc commands, when asked which lane or kind a change takes, who owns a gate, what an agent may do without asking, or how approvals, the test proof, the autopilot loop, knowledge pages, incidents and the kill switch work.
 ---
 
 # Org AI SDLC
 
-The full process is `docs/org-ai-sdlc-process.md` in the plugin repo. This is the working summary every agent follows.
+The full process is `docs/org-ai-sdlc-process.md` in the plugin repo. This is the working summary every agent follows. The default path is short on purpose (ADR-0003): a small mandatory core, and optional steps that only the risk switches on.
 
 ## Start anything with `/ai-sdlc:start`
 
@@ -17,65 +17,65 @@ The CTO triages (what, who, how urgent, how big, how risky) after reading the co
 | Bug, no dependency, schema or infra change | `/ai-sdlc:bug` | bug |
 | Chore users will not notice | `/ai-sdlc:task` | task |
 | Learn an area, become an SME | `/ai-sdlc:learn` | none, knowledge only |
-| New behaviour, new service, data change | `/ai-sdlc:kickoff --kind ...` | full (light only if a human says so) |
-| Big capability | slice it, then one kickoff per slice | per slice |
+| New behaviour | a feature: `init <slug>` | light (the default) |
+| A migration that alters or drops data, a high-risk path, a new datastore, dependency or service | a feature: `init <slug> --full` | full |
+| Big capability | slice it, then one feature per slice | per slice |
 
-Kinds stack and only add requirements: `greenfield`, `brownfield`, `perf`, `data` (data forces the full lane and a DBA).
+Kinds stack and only add what the work needs: `brownfield` (facts), `perf` (budget and benchmarks), `api` (OpenAPI), `data` (down migration, the DBA on the PR).
 
 ## Lanes
 
-| Lane | Stages | Document | Human gates | PR limit | Review deadline |
-|---|---|---|---|---|---|
-| full | 1 Plan, 2 Analyze, 3 Design, 4 Build, 5 Verify, 6 Release | prd; spec, facts, acceptance.feature; plan, design-review; tasks; pr, review; release | 6 | 400 | 24h |
-| light | full without Design | | 5 | 300 | 8h |
-| bug | 4, 5 | bug.md (the PR body) | merge | 200 | 8h |
-| task | 4, 5 | task.md (the PR body) | merge | 200 | 8h |
-| hotfix | 4, 5, 6 | hotfix.md (the PR body) | merge, release | 100 | 1h |
+| Lane | Stages | Human gates | PR limit | Review deadline |
+|---|---|---|---|---|
+| light | 1 Plan, 4 Build, 5 Verify, 6 Release | spec, merge, release | 300 | 8h |
+| full | 1 Plan, 3 Design, 4 Build, 5 Verify, 6 Release | spec, design, merge, release | 400 | 24h |
+| bug | 4, 5 (`bug.md` is the PR body) | merge | 200 | 8h |
+| task | 4, 5 (`task.md`) | merge | 200 | 8h |
+| hotfix | 4, 5, 6 (`hotfix.md`) | merge, release | 100 | 1h |
 
-Templates are in `templates/`. Every required section must hold real content; write "None, because ..." when it does not apply.
+Build passes on checks in every lane. Templates are in `templates/`; write "None, because ..." for a required section that does not apply. Optional sections are listed at the bottom of each template.
 
 ## Moving work
 
-- `sdlc.mjs request <slug>` checks sections, the gate run, PR size and the pre-review. An automatic or earned gate passes on checks; any other waits for its named human owner.
-- Only a human records a decision by typing `sdlc approve <slug> <stage>` or `sdlc reject <slug> <stage> <reason>`. Never claim a gate is passed. Approval needs a request first.
-- `sdlc.mjs advance <slug>` moves on after approval; past the lane's last stage it closes the work.
-- `sdlc.mjs gate <slug>` runs the full gate. The first run in Build is the baseline. In the bug lane, a red run before the fix records the repro and is required.
-- `sdlc.mjs retry <slug> <goal>`: past the cap (3), ESCALATE. Never loosen the goal.
+- `sdlc.mjs request <slug>` runs the stage's checks. A gate that passes on checks moves on by itself; any other waits for its named human owner.
+- Only a human records a decision by typing `sdlc approve <slug> <stage>` or `sdlc reject <slug> <stage> <reason>`. The approval moves the feature on. Never claim a gate is passed. Approval needs a request first.
+- `sdlc.mjs gate <slug>` runs the full gate. The first run in Build is the baseline.
+- Two different loops (ADR-0004):
+  - **A failed check** (a red gate after a real change): `sdlc.mjs retry <slug> <goal>`; past the cap (3), ESCALATE. Never loosen the goal.
+  - **A refusal** (a guard or a person said no): it is an answer. Do not retry, rephrase, script or reroute it; give the user the command once and stop. After the second refusal the hook holds the session to reading until the user replies.
+- Read what governs first: the implementation before the documents and schemas around it, and large files in slices (the hook refuses a full read of a big file).
 - Commit `specs/<slug>/` after every gate decision so other sessions and CI see the same state.
 
-## Quality gates
+## What each gate checks
 
-- **Plan:** ask the questions that would change the PRD before drafting; mark every assumption `[confirmed]` or `[unconfirmed]`; number every testable requirement R1, R2 ...
-- **Analyze:** `facts.md` pins system facts to `file:line` at a commit; `acceptance.feature` holds every criterion as Gherkin tagged `@AC-n @Rn @<level>`; check with `sdlc.mjs gherkin <slug>`.
-- **Design:** every ADR weighs two options and names a downside; `/ai-sdlc:design-review` must end in `Verdict: accept`; data work draws a Mermaid ER diagram with a `%% changed:` line; API work has `openapi.yaml` (`sdlc.mjs api <slug>`, viewable in Swagger) and declares breaking changes.
-- **Build and Verify:** `/ai-sdlc:tests` writes tests at each criterion's level with their own data setup and teardown; `sdlc.mjs tests <slug>` traces them (name the criterion and the feature); `sdlc.mjs gate <slug> --repeat 3` finds flakes.
-- **Simplicity:** climb the ladder before writing code (needed now, standard library, platform, existing dependency or helper, one-liner, own code, and only then a new dependency with its reason). The packet flags new dependencies and changes over 150 code lines per criterion.
-- **Review:** `sdlc.mjs review <slug>` builds the packet; record every finding in `review.md` (F ids for agents, H for humans; `fixed: <commit>`; never delete a row).
+- **Plan (one approval):** the questions asked before drafting; every assumption `[confirmed]` or `[unconfirmed]`; numbered requirements R1, R2 ...; `acceptance.feature` with a scenario per requirement, each tagged `@AC-n @Rn` (a level tag is a hint; style issues only warn; `sdlc.mjs gherkin <slug>`). Brownfield and data work also pin `facts.md` to `file:line` at a commit.
+- **Design (full lane):** each ADR the plan names weighs two options and records its review in `## Review`; a breaking API change is declared in `## Contracts`. ER diagrams and OpenAPI style only warn.
+- **Build:** the gate green at or above the baseline, the diff under the limit; in the light lane, no destructive migration and no high-risk path.
+- **Verify:** every criterion has a test (`sdlc.mjs tests <slug>`); the test proof (`sdlc.mjs proof <slug>`: green here, red on the base code, test files locked); the review packet (rebuilt for you at HEAD) and `review.md` with nothing serious open; `## Pre-review` with `Risk:`, `Open findings: 0`, `Look here first:` and `Lenses run:`. No `proofCommand`: say under `## Not verified` that the proof did not run.
+- **Release:** the reviewed change on `origin/main` (a branch deploy is a preview, never a release); `Live: <sha>` under `## Probes`, read from the running system, containing this release and the previous one; a rollback with `Tested: <date>, <how>`; a result for every probe; and in the full lane an outcome owner (or `Metric: None, because ...`). Stale knowledge or facts about the changed files, unmarked superseded ADRs and unlinked postmortem actions are warnings: fix what it lists.
+- **Bugs:** a repro test that fails first. With a `proofCommand`, prove it: `sdlc.mjs proof <slug> --files <repro test>`.
+- **Lessons owed:** a bug filed with `--caused-by`, or a hotfix, owes a trap in `standards/traps.md` with `- **Source:** <slug>` and a `Guard now` that is a test, hook, lint rule, CI check or eval. The bug cannot merge, and the hotfix postmortem stays open, until it is paid.
 
-## The loop (ADR-0002)
+## Simplicity
 
-- Start each slice with a failing test. At Verify, run `sdlc.mjs proof <feature>`: the traced tests must pass on the branch and fail on the base code. Do not change a test after the proof without proving again. No `proofCommand`: write under `## Not verified` that the proof did not run.
-- A slice that explores is a spike (`sdlc.mjs spike <feature>`); it cannot pass Verify until a non-spike slice replaces it.
-- Before Release: re-verify every stale knowledge page and fact about the files you changed, mark any ADR you supersede, link each postmortem action to what it became, and fill `## Outcome metric` with `Metric:` and `Owner:`.
-- After release, record the outcome when its owner has read it: `sdlc.mjs outcome <feature> met|missed|breach`. A breach goes to the incident commander; never declare a hotfix yourself.
-- When session start says RETRO DUE, tell the human and suggest `/ai-sdlc:retro`.
+Climb the ladder before writing code: needed now, standard library, platform, existing dependency or helper, one-liner, own code, and only then a new dependency with its reason. The packet flags new dependencies and changes over 150 code lines per criterion. A spike (`sdlc.mjs spike <slug>`) cannot pass Verify until a non-spike slice replaces it.
 
-## Before a human reviews
+## Optional, off until the risk calls for it
 
-Run `/ai-sdlc:pre-review`. The `pre-reviewer` writes `## Pre-review` with `Risk:`, `Open findings: 0` and `Look here first:` pointers. Keep PRs under the lane limit; split by slice.
+The QA verdict and security results (when the pre-review says `Risk: high`), C4 changes (a new container), screens and accessibility (UI changes), `gateRepeats` and `dataCheckCommand`, extra review lenses, the outcome follow-up in the light lane, earned trust (`"trust": true`), metrics and the retro.
+
+## After release
+
+Record the outcome when its owner has read it: `sdlc.mjs outcome <slug> met|missed|breach`. A breach goes to the incident commander; never declare a hotfix yourself. When `status` says RETRO DUE, tell the human and suggest `/ai-sdlc:retro`.
 
 ## Autonomy
 
-- Clean human approvals build each gate's streak in the trust ledger; at the threshold a human may type `sdlc trust <lane> <stage>` and that gate then passes on checks. Rejections, `sdlc distrust` and `sdlc freeze` take it back. Feature merges and every release never move.
 - The autopilot mod (`/sdlc-autopilot`) runs the gate after each editing turn in Build or Verify and starts the next fix turn until green or the cap. When it says the gate is red: fix the cause, never skip, weaken or delete a test.
-
-## Improving the plugin
-
-When a bug turns out to come from shipped work, create it with `sdlc.mjs bug <slug> --caused-by <feature>`: that is the evidence the retro learns most from. `/ai-sdlc:retro` turns the recorded evidence into at most three plugin changes, each proven by a golden or agent eval, as a PR a human merges. It never loosens a guard.
+- Earned trust is optional. With it on, clean human approvals build a gate's streak; at the threshold a human may type `sdlc trust <lane> <stage>`. Rejections, `sdlc distrust` and `sdlc freeze` take it back. Feature merges and every release never move.
 
 ## Knowledge
 
-Before changing an area: `sdlc.mjs knowledge for <files>` and read what it lists. After learning something durable: write or update a page in `knowledge/` (frontmatter: name, description, type, sources, verified commit, confidence). `sdlc.mjs knowledge check` flags stale pages; re-verify the ones you touch.
+Before changing an area: `sdlc.mjs knowledge for <files>` and read what it lists. After learning something durable: write or update a page in `knowledge/` (frontmatter: name, description, type, sources, verified commit, confidence).
 
 ## Never
 

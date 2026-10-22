@@ -18,11 +18,21 @@ export function makeRepo(branch = 'feature/demo') {
   g('commit', '-m', 'init')
   g('checkout', '-b', branch)
 
+  // Each call is its own session unless a test names one, so denials in one check never hold the next.
+  let calls = 0
   const hook = (name, input) => spawnSync('node', [path.join(plugin, 'scripts', 'hooks', `${name}.mjs`)], {
-    cwd: repo, input: JSON.stringify({ cwd: repo, ...input }),
+    cwd: repo, input: JSON.stringify({ cwd: repo, session_id: `call-${++calls}`, ...input }),
   }).stdout.toString().trim()
   const decision = out => (out ? JSON.parse(out).hookSpecificOutput?.permissionDecision : 'allow')
+  const reasonOf = out => (out ? JSON.parse(out).hookSpecificOutput?.permissionDecisionReason ?? '' : '')
+  const pre = (tool_name, tool_input, session) => hook('pre-tool', { tool_name, tool_input, ...(session ? { session_id: session } : {}) })
   const api = {
+    // The decision and its reason, for checks on what a denial tells the agent.
+    tool: (tool_name, tool_input, session) => {
+      const out = pre(tool_name, tool_input, session)
+      return { decision: decision(out), reason: reasonOf(out) }
+    },
+    sayIn: (prompt, session) => hook('user-prompt', { prompt, session_id: session }),
     repo,
     git: (...a) => execFileSync('git', a, { cwd: repo, encoding: 'utf8' }).trim(),
     hook,
@@ -45,9 +55,33 @@ export function makeRepo(branch = 'feature/demo') {
     config: cfg => api.put('.ai-sdlc/config.json', JSON.stringify(cfg)),
     // Fill a document's sections with content, in the given order.
     fill: (file, headings, extra = '') => api.put(file, headings.map(h => `${h}\n\nFilled.\n`).join('\n') + extra),
+    // A bare "origin" holding main, so release checks have a remote to look at.
+    remote: () => {
+      const bare = fs.mkdtempSync(path.join(os.tmpdir(), 'ai-sdlc-origin-'))
+      execFileSync('git', ['init', '--bare', '-b', 'main'], { cwd: bare, stdio: 'ignore' })
+      api.git('remote', 'add', 'origin', bare)
+      api.git('push', '-q', 'origin', 'main')
+      return bare
+    },
+    // Commit everything on this branch, merge it into main and push main: the change has landed.
+    land: (message = 'land') => {
+      const branch = api.git('rev-parse', '--abbrev-ref', 'HEAD')
+      api.git('add', '-A')
+      execFileSync('git', ['commit', '-q', '--allow-empty', '-m', message], { cwd: repo, stdio: 'ignore' })
+      api.git('checkout', '-q', 'main')
+      api.git('merge', '-q', '--no-ff', '-m', `merge ${branch}`, branch)
+      api.git('push', '-q', 'origin', 'main')
+      api.git('checkout', '-q', branch)
+      return api.git('rev-parse', 'origin/main')
+    },
   }
   return api
 }
+
+// A spec the Plan gate accepts: every PRD section filled, one requirement, and its scenario.
+export const READY_PRD = ['## Problem', '## Users and jobs', '## Questions asked', '## Assumptions', '## Never', '## Out of scope', '## Outcome metric', '## Open questions']
+  .map(h => `${h}\n\nFilled.\n`).join('\n') + '\n## Requirements\n\n- R1. (must) Save an item.\n'
+export const READY_FEATURE = 'Feature: Save\n  As a shopper\n  I want to save items\n  So that I buy later\n\n  @R1 @AC-1 @unit\n  Scenario: Save an item\n    Given an item\n    When I save it\n    Then it is saved\n'
 
 // A gate command whose result the test flips: node reads a file to decide pass or fail.
 export function switchableGate(api) {

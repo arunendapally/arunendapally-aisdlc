@@ -2,9 +2,9 @@
 // pre-review that names the risk and has no open findings.
 import { pathToFileURL } from 'node:url'
 
-const VERIFY = ['## Test results', '## Pre-review', '## Not verified', '## Review honesty']
+const VERIFY = ['## Test results', '## Pre-review', '## Not verified']
 export const SECTIONS = {
-  full: ['## Tasks', '## Test results', '## Mutations', '## Defects', '## Security results', '## QA verdict', '## Pre-review', '## Not verified', '## Review honesty'],
+  full: ['## Summary', ...VERIFY],
   bug: ['## Repro', '## Expected and actual', '## Root cause', '## Fix', ...VERIFY],
   hotfix: ['## Incident', '## Fix', '## Rollback', ...VERIFY],
 }

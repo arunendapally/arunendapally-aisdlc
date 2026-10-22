@@ -1,5 +1,5 @@
-// The test matrix: every Gherkin scenario (@AC-n) mapped to the tests that prove it, at the level the
-// scenario declares. A criterion with no test at its level fails the Verify gate.
+// The test matrix: every Gherkin scenario (@AC-n) mapped to the tests that prove it. A criterion with no
+// test fails the Verify gate; the scenario's level is a hint, since levels are guessed from paths.
 import fs from 'node:fs'
 import path from 'node:path'
 import { git, loadConfig, matches } from './lib.mjs'
@@ -44,17 +44,14 @@ export function matrix(dir, feature) {
   const rows = scenarios.map(s => {
     const id = s.ac.slice(1)
     const found = texts.filter(t => traces(t.text, t.file, feature, id))
-    const atLevel = found.filter(t => t.level === s.level)
-    return { ac: id, level: s.level, requirements: s.requirements, name: s.name, tests: found.map(t => `${t.file} (${t.level})`), traced: atLevel.length > 0 }
+    return { ac: id, level: s.level, requirements: s.requirements, name: s.name, tests: found.map(t => `${t.file} (${t.level})`), traced: found.length > 0 }
   })
-  const problems = rows.filter(r => !r.traced).map(r => r.tests.length
-    ? `${r.ac} is a ${r.level} criterion, but it is only tested at ${r.tests.join(', ')}`
-    : `${r.ac} (${r.level}) has no test: name a ${r.level} test after it ("${r.ac} ${r.name}") in a file that names ${feature}`)
+  const problems = rows.filter(r => !r.traced).map(r => `${r.ac} has no test: name a test after it ("${r.ac} ${r.name}") in a file that names ${feature}`)
   return { rows, problems }
 }
 
 export function matrixText({ rows, problems }) {
   const lines = ['| AC | Level | Requirements | Scenario | Tests | Traced |', '|---|---|---|---|---|---|']
   for (const r of rows) lines.push(`| ${r.ac} | ${r.level} | ${r.requirements.join(', ')} | ${r.name} | ${r.tests.join('<br>') || 'none'} | ${r.traced ? 'yes' : 'NO'} |`)
-  return [...lines, '', ...(problems.length ? problems.map(p => `- ${p}`) : ['Every criterion is tested at its level.'])].join('\n')
+  return [...lines, '', ...(problems.length ? problems.map(p => `- ${p}`) : ['Every criterion has a test.'])].join('\n')
 }

@@ -1,6 +1,6 @@
 # Test scaffolds
 
-Starting points the `sdet` agent adapts to the repo's stack. They are written for TypeScript with Vitest, Postgres via Testcontainers, Postman with Newman, and Playwright; the rules below hold for any stack.
+Starting points the `qa-engineer` agent adapts to the repo's stack. They are written for TypeScript with Vitest, Postgres via Testcontainers, Postman with Newman, and Playwright; the rules below hold for any stack.
 
 | Level | Proves | Scaffold | Data comes from | Data goes away by |
 |---|---|---|---|---|

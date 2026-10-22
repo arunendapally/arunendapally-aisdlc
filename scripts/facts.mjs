@@ -1,11 +1,14 @@
 // System facts: what is true about the current system, each fact pinned to the code that shows it.
 //   - F1: Orders are soft-deleted (deleted_at), never removed. Source: src/orders/repo.ts:42. Verified: 1a2b3c4.
 // A fact whose source no longer exists, or changed since it was verified, is stale. Requirements cite
-// facts by id (F1), so a requirement resting on a stale or missing fact is caught at the Analyze gate.
+// facts by id (F1), so a requirement resting on a stale or missing fact is caught at the Plan gate.
 // The PRD's assumptions are the other side: what we believe but have not pinned to code or a person.
 import fs from 'node:fs'
 import path from 'node:path'
-import { git, loadConfig, section } from './lib.mjs'
+import { git, loadConfig, section, matches } from './lib.mjs'
+
+// Sources that describe the system without being it.
+const NOT_IMPLEMENTATION = ['docs/**', '**/*.md', '**/*.sql', '**/schema.prisma', '**/*.schema.json', '**/*.graphql', '**/*.yaml', '**/*.yml', '**/*.json', '**/migrations/**']
 
 const FACT = /^\s*[-*]\s*(F\d+):\s*(.+?)\s*Source:\s*([^\s:]+):(\d+)(?:-(\d+))?\.?\s*Verified:\s*([0-9a-f]{4,40})\.?\s*$/i
 
@@ -43,8 +46,8 @@ export function factProblems(dir, facts) {
 // Fact ids cited anywhere in a text (requirements, data needs, the spec).
 export const citedFacts = text => [...new Set([...text.matchAll(/\b(F\d+)\b/g)].map(m => m[1].toUpperCase()))]
 
-// The Analyze gate: facts.md exists, every fact is well formed, current and pinned to real code, and
-// every fact the PRD or spec cites is defined. Brownfield work needs at least one fact.
+// The Plan gate, for brownfield and data work: facts.md exists, every fact is well formed, current and
+// pinned to real code, and every fact the PRD cites is defined. Brownfield work needs at least one fact.
 export function factsGateProblems(dir, state) {
   const folder = path.join(dir, loadConfig(dir).specsDir, state.feature)
   const file = path.join(folder, 'facts.md')
@@ -54,8 +57,14 @@ export function factsGateProblems(dir, state) {
   const problems = [...malformed.map(m => `facts.md ${m}`), ...factProblems(dir, facts).map(p => `facts.md: ${p}`)]
   if (!facts.length && !/None, because\s+\S/i.test(text)) problems.push('facts.md has no facts; write "None, because ..." if there is truly no current system')
   if ((state.kinds ?? []).includes('brownfield') && !facts.length) problems.push('brownfield work needs at least one fact about the current system')
+  // Read what governs before designing against it (ADR-0004, failure F2): one fact is the implementation
+  // the design must follow, pinned to code rather than to a document, a schema or a spec.
+  const changesWhatExists = ['brownfield', 'data'].some(k => (state.kinds ?? []).includes(k))
+  if (changesWhatExists && facts.length && !facts.some(f => /\[governing\]/i.test(f.statement) && !matches(f.file, NOT_IMPLEMENTATION))) {
+    problems.push('facts.md has no "[governing]" fact pinned to implementation code: read the code that governs this behaviour first, then mark that fact "[governing]" (a document, schema or spec does not count)')
+  }
   const defined = new Set(facts.map(f => f.id))
-  for (const name of ['prd.md', 'spec.md']) {
+  for (const name of ['prd.md']) {
     const p = path.join(folder, name)
     if (!fs.existsSync(p)) continue
     for (const id of citedFacts(fs.readFileSync(p, 'utf8').replace(/<!--[\s\S]*?-->/g, ''))) if (!defined.has(id)) problems.push(`${name} cites ${id}, which facts.md does not define`)
