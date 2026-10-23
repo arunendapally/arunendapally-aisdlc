@@ -4,6 +4,8 @@ All notable changes to this repository. The format follows [Keep a Changelog](ht
 
 ## [Unreleased]
 
+## [0.3.0] - 2026-10-23
+
 ### Easier to start
 
 - The README opens with what the plugin is, how to install it and the first command; the original article follows.
@@ -181,5 +183,6 @@ The AI SDLC for organisations, packaged as the `ai-sdlc` Claude Code plugin and 
 - Copy-paste prompts, a worked e-commerce example, and the standards knowledge base (engineering standards, testing standards, code-review checklist, traps).
 - The companion post `docs/first-principles.md`.
 
+[0.3.0]: https://github.com/arunendapally/arunendapally-aisdlc/releases/tag/v0.3.0
 [0.2.0]: https://github.com/arunendapally/arunendapally-aisdlc/pull/2
 [0.1.0]: https://github.com/arunendapally/arunendapally-aisdlc/commit/6007864
