@@ -1,13 +1,36 @@
+# ai-sdlc: the AI software development cycle for teams
+
+A Claude Code plugin. A CTO agent and 13 expert agents take work from idea to production in lanes from hotfix to full feature, and humans own every gate. A feature waits on you three times (the spec, the merge, the release); a bug once. Agents write tests first and prove each one fails without the change. Everything beyond the safety core is optional until the risk calls for it.
+
+## Try it
+
+```bash
+claude plugin marketplace add arunendapally/arunendapally-aisdlc
+```
+
+```bash
+claude plugin install ai-sdlc@arunendapally-aisdlc
+```
+
+Start a new Claude Code session in your product repo and type:
+
+```
+/ai-sdlc:start add a saved-for-later list to the basket
+```
+
+Set `gateCommand` in `.ai-sdlc/config.json` (for example `"npm run gate"`), answer the agents' questions, and approve each gate by typing `sdlc approve <feature> <stage>` in the prompt.
+
+- **Step by step:** [docs/getting-started.md](docs/getting-started.md)
+- **How it works:** [docs/org-ai-sdlc-process.md](docs/org-ai-sdlc-process.md)
+- **What changed:** [CHANGELOG.md](CHANGELOG.md)
+
+The article below is the original one-developer story the plugin grew from.
+
+---
+
 # The AI software development cycle: how I take a feature from idea to production
 
 *October 2026.*
-
-> **The same cycle for teams.** This repo is a Claude Code plugin, `ai-sdlc`: a CTO agent and 13 expert agents, and lanes from hotfix to full feature. A feature takes three human waits (the spec, the merge, the release); a bug takes one. Agents test first and prove each test fails without the change, and everything beyond the safety core is optional until the risk calls for it.
-> - **Start here:** [docs/getting-started.md](docs/getting-started.md)
-> - **How it works:** [docs/org-ai-sdlc-process.md](docs/org-ai-sdlc-process.md)
-> - **What changed:** [CHANGELOG.md](CHANGELOG.md)
->
-> The article below is the original one-developer story the plugin grew from.
 
 ![The AI software development cycle: 1 Planning, product-owner agent. 2 Analysis, supervisor and spec. 3 Design, canvas and comments. 4 Implementation, reviewer and worker. 5 Testing and integration, mutation-tested. 6 Maintenance, human decides.](images/ai-sdlc-cycle.svg)
 

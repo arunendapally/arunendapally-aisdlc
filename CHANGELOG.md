@@ -4,6 +4,11 @@ All notable changes to this repository. The format follows [Keep a Changelog](ht
 
 ## [Unreleased]
 
+### Easier to start
+
+- The README opens with what the plugin is, how to install it and the first command; the original article follows.
+- Getting started leads with three steps to a first feature (start, set `gateCommand`, approve), moves the team setup to its own section, and adds how to update the plugin, the council, and troubleshooting rows for an old plugin and a missing gate command.
+
 ### The council as a dynamic workflow
 
 - `workflows/council.js` runs as `/ai-sdlc:council`: experts in parallel, a sceptic per review that checks the cited code, then the CTO writes a proposal record. Args: `question`, `record`, `date`, and optional `context`, `experts`, `words`.
