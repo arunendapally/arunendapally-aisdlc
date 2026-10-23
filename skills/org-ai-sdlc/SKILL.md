@@ -66,6 +66,8 @@ Climb the ladder before writing code: needed now, standard library, platform, ex
 
 The QA verdict and security results (when the pre-review says `Risk: high`), C4 changes (a new container), screens and accessibility (UI changes), `gateRepeats` and `dataCheckCommand`, extra review lenses, the outcome follow-up in the light lane, earned trust (`"trust": true`), metrics and the retro.
 
+For a decision that changes a guard, a gate or anything security-sensitive, run the council workflow, `/ai-sdlc:council` (`workflows/council.js`): the experts review in parallel, a sceptic checks each review's cited code, and the CTO writes a proposal record. It advises only; a human accepts the proposal.
+
 ## After release
 
 Record the outcome when its owner has read it: `sdlc.mjs outcome <slug> met|missed|breach`. A breach goes to the incident commander; never declare a hotfix yourself. When `status` says RETRO DUE, tell the human and suggest `/ai-sdlc:retro`.

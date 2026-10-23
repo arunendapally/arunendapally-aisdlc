@@ -4,6 +4,12 @@ All notable changes to this repository. The format follows [Keep a Changelog](ht
 
 ## [Unreleased]
 
+### The council as a dynamic workflow
+
+- `workflows/council.js` runs as `/ai-sdlc:council`: experts in parallel, a sceptic per review that checks the cited code, then the CTO writes a proposal record. Args: `question`, `record`, `date`, and optional `context`, `experts`, `words`.
+- Trialled against a manual council on narrowing the Bash guard: [docs/decisions/2026-10-23-council-workflow-trial.md](docs/decisions/2026-10-23-council-workflow-trial.md). The workflow cost more (9 agents, $2.59) and caught a recommendation that would have loosened the guard. The resulting proposal is [docs/decisions/2026-10-23-bash-guard-targets.md](docs/decisions/2026-10-23-bash-guard-targets.md); it is not implemented.
+- `tests/workflows.test.mjs` checks each workflow's meta block and dry-runs the council with fake agents.
+
 ### Review that converges, and risk set by the change ([ADR-0005](docs/adr/0005-review-converges-and-risk-is-set-by-the-change.md))
 
 From the article "How the Claude Code team does code review" and a council of five agents; record in [docs/decisions/2026-10-22-code-review-at-scale.md](docs/decisions/2026-10-22-code-review-at-scale.md).
