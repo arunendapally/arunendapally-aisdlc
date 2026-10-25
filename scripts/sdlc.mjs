@@ -33,6 +33,12 @@ const need = () => {
   if (!state) fail(`No feature "${feature}". Run: sdlc init <feature>`)
   return state
 }
+// The gate, proof, review and Build or Verify requests judge the diff of the branch checked out, so
+// they run only on the feature's own branch: otherwise one feature is judged by another's code.
+const onBranch = state => {
+  const here = git('rev-parse --abbrev-ref HEAD', dir)
+  if (state.branch && here !== state.branch) fail(`${feature} lives on ${state.branch}, but ${here} is checked out, so its diff would be the wrong one. Switch first: git switch ${state.branch}`)
+}
 const kinds = () => {
   const list = (flag('kind') ?? '').split(',').map(k => k.trim()).filter(Boolean)
   const unknown = list.filter(k => !KINDS[k])
@@ -153,17 +159,21 @@ const commands = {
   request() {
     const state = need()
     const cfg = loadConfig(dir)
-    // A spec edited after Plan was approved has not been seen by a person: back to Plan, not on to ship.
-    const plan = state.gates[1]
-    if (state.stage >= 4 && plan?.status === 'approved' && plan.fingerprint && plan.fingerprint !== gateFingerprint(dir, state, 1, cfg)) {
+    if ([4, 5].includes(state.stage)) onBranch(state)
+    // A spec or plan edited after it was approved has not been seen by a person: back to that stage,
+    // not on to ship. The approvals after it went with the old version, so they go too.
+    const drifted = [[1, 'Plan', 'the spec (prd.md or acceptance.feature)'], [3, 'Design', 'the plan (plan.md)']]
+      .find(([s]) => state.stage > s && state.gates[s]?.status === 'approved' && state.gates[s].fingerprint && state.gates[s].fingerprint !== gateFingerprint(dir, state, s, cfg))
+    if (drifted) {
+      const [back, name, what] = drifted
       const now = new Date().toISOString()
       state.stages[state.stage] = { ...state.stages[state.stage], leftAt: now }
-      for (const s of Object.keys(state.gates)) delete state.gates[s]
-      state.stage = 1
-      state.stages[1] = { enteredAt: now }
+      for (const s of Object.keys(state.gates)) if (Number(s) >= back) delete state.gates[s]
+      state.stage = back
+      state.stages[back] = { enteredAt: now }
       writeState(dir, state)
-      audit(dir, { event: 'spec-drift', feature })
-      fail(`The spec has changed since gate 1 was approved (prd.md or acceptance.feature), so ${feature} goes back to stage 1 (Plan). Request gate 1 again so a person approves the new spec. Tests already written stay.`)
+      audit(dir, { event: back === 1 ? 'spec-drift' : 'plan-drift', feature })
+      fail(`${what[0].toUpperCase()}${what.slice(1)} has changed since gate ${back} was approved, so ${feature} goes back to stage ${back} (${name}). Request gate ${back} again so a person approves the new version. Tests already written stay.`)
     }
     const spec = stageSpec(state, state.stage, trustedGates(dir))
     const missing = missingHeadings(dir, state)
@@ -305,6 +315,7 @@ const commands = {
   // In the bug and hotfix lanes, a red run before any green one records the reproduction.
   gate() {
     const state = need()
+    onBranch(state)
     const { gateCommand, testCountPattern, dataCheckCommand, gateRepeats } = loadConfig(dir)
     if (!gateCommand) fail('No gateCommand in .ai-sdlc/config.json. A human sets it, for example "npm run gate".')
     // --repeat N (or config gateRepeats) runs the gate N times: a flaky test shows up as a red run or a
@@ -394,6 +405,8 @@ const commands = {
   // "sdlc proof <feature> [--files a,b] [--base <commit>]"; a hotfix names its repro tests.
   proof() {
     const state = need()
+    // A hotfix proves itself after the merge, on the protected branch.
+    if (!state.closedAt) onBranch(state)
     const cfg = loadConfig(dir)
     if (!cfg.proofCommand) fail('No proofCommand in .ai-sdlc/config.json. A human sets it, for example "npx jest {files}" or "pytest {files}". Until then, the PR says under "## Not verified" that the proof did not run.')
     if (state.lane === 'hotfix' && !state.closedAt) fail('A hotfix proves its repro after the merge, so the fix is never held up: run this once it has shipped.')
@@ -503,6 +516,7 @@ const commands = {
   // Build the review packet (the shared map of the change) and start the findings ledger.
   review() {
     const state = need()
+    onBranch(state)
     const folder = path.join(dir, loadConfig(dir).specsDir, feature)
     const p = packet(dir, state)
     const text = packetText(p)

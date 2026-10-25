@@ -75,7 +75,8 @@ A change to migrations or SQL that is not marked as data work cannot pass its ga
 
 - Features start in the light lane. Triage starts one in the full lane (`init <slug> --full`) for a migration that alters or drops data, a high-risk path, or a new datastore, dependency or service. Only a human moves a feature to light, or declares a hotfix.
 - In the light lane, Build refuses a destructive migration or a high-risk path. A human types `sdlc lane <feature> full`, and the feature goes back to Design.
-- A spec changed after Plan was approved goes back to Plan: at Build, Verify or Release, the request compares `prd.md` and `acceptance.feature` with what the person approved and, if they differ, returns the feature to stage 1 for a new approval. Agents can always send work back; only a person moves it forward.
+- A spec changed after Plan was approved goes back to Plan, and a plan changed after Design goes back to Design: every later request compares `prd.md` and `acceptance.feature` (and `plan.md`) with what the person approved and, if they differ, returns the feature to that stage for a new approval. Agents can always send work back; only a person moves it forward.
+- Every stage reads the same spec because a feature is one folder, `specs/<slug>/`, on one branch, recorded in its `state.json`. The commands that judge the branch's diff (`gate`, `proof`, `review`, and a Build or Verify request) refuse on any other branch.
 - Build passes on checks in every lane: the gate is green at or above the baseline, the diff is under the limit, and for a bug the repro failed first.
 - A bug fix cannot touch dependencies, schema, CI or infrastructure; the hook refuses. A hotfix can, with the on-call engineer's yes.
 - After a hotfix ships, a postmortem is due within two days; session start and status flag it until it exists.

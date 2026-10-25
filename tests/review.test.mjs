@@ -62,11 +62,11 @@ test('a spec changed after Plan was approved sends the feature back to Plan', ()
   r.sdlc('request', 'demo')
   assert.match(r.say('sdlc approve demo 1'), /approved gate 1/)
   assert.equal(r.state('demo').stage, 4)
-  assert.doesNotMatch(r.sdlc('request', 'demo').out, /spec has changed/, 'an unchanged spec stays where it is')
+  assert.doesNotMatch(r.sdlc('request', 'demo').out, /has changed since gate/, 'an unchanged spec stays where it is')
 
   r.put('specs/demo/prd.md', READY_PRD.replace('Save an item', 'Save and share an item'))
   const out = r.sdlc('request', 'demo').out
-  assert.match(out, /The spec has changed since gate 1 was approved/)
+  assert.match(out, /The spec \(prd\.md or acceptance\.feature\) has changed since gate 1 was approved/)
   assert.match(out, /back to stage 1 \(Plan\)/)
   const s = r.state('demo')
   assert.equal(s.stage, 1)
@@ -78,6 +78,39 @@ test('a spec changed after Plan was approved sends the feature back to Plan', ()
   assert.match(r.sdlc('request', 'demo').out, /waiting on/)
   assert.match(r.say('sdlc approve demo 1'), /approved gate 1/)
   assert.equal(r.state('demo').stage, 4)
+})
+
+test('a plan changed after Design was approved sends the feature back to Design, keeping the spec approval', () => {
+  const r = makeRepo()
+  r.sdlc('init', 'demo', '--full')
+  r.setState('demo', { stage: 3, stages: { 3: { enteredAt: hoursAgo(1) } }, gates: { 1: { status: 'approved', by: 'Test Human' } } })
+  const PLAN = ['## Data model', '## Contracts', '## Threat model', '## Test plan', '## Run it']
+  r.fill('specs/demo/plan.md', PLAN, '\n## Decisions\n\nNone, because no ADR.\n')
+  assert.match(r.sdlc('request', 'demo').out, /waiting on/)
+  assert.match(r.say('sdlc approve demo 3'), /approved gate 3/)
+  assert.equal(r.state('demo').stage, 4)
+
+  r.fill('specs/demo/plan.md', PLAN, '\n## Decisions\n\nNone, because no ADR. Also cache the totals.\n')
+  assert.match(r.sdlc('request', 'demo').out, /The plan \(plan\.md\) has changed since gate 3 was approved, so demo goes back to stage 3 \(Design\)/)
+  const s = r.state('demo')
+  assert.equal(s.stage, 3)
+  assert.equal(s.gates['3'], undefined)
+  assert.equal(s.gates['1'].status, 'approved', 'the spec did not change, so its approval stands')
+})
+
+test('the gate, proof, review and a Build request run only on the feature\'s own branch', () => {
+  const r = makeRepo()
+  r.config({ gateCommand: 'node -e "console.log(\'12 passing\')"' })
+  r.sdlc('init', 'demo')
+  r.setState('demo', { stage: 4 })
+  r.git('checkout', '-q', '-b', 'feature/other')
+  for (const verb of ['gate', 'proof', 'review', 'request']) {
+    const out = r.sdlc(verb, 'demo')
+    assert.notEqual(out.status, 0, verb)
+    assert.match(out.out, /demo lives on feature\/demo, but feature\/other is checked out.*git switch feature\/demo/, verb)
+  }
+  r.git('checkout', '-q', 'feature/demo')
+  assert.equal(r.sdlc('gate', 'demo').status, 0, 'on its own branch it runs')
 })
 
 test('the change sets its risk tier, and the pre-review may raise it but never lower it', () => {
