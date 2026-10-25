@@ -3,7 +3,7 @@
 import fs from 'node:fs'
 import path from 'node:path'
 import { STAGES, root, git, loadConfig, readState, writeState, missingHeadings, isFrozen, createFeature, copyTemplate,
-  readTrust, writeTrust, promotable, readStdin, audit, lessonPaid, overduePostmortems } from '../lib.mjs'
+  readTrust, writeTrust, promotable, readStdin, audit, lessonPaid, overduePostmortems, parseIntent, INTENT_PARTS } from '../lib.mjs'
 import { advanceFeature, gateFingerprint } from '../loop.mjs'
 
 const input = readStdin()
@@ -26,7 +26,7 @@ if (fs.existsSync(denialsFile)) {
   }
 }
 
-const m = text.match(/^sdlc\s+(approve|reject|lane|hotfix|trust|distrust|pause|resume|freeze|unfreeze|close)\b\s*(\S+)?\s*(\d)?\s*(.*)$/is)
+const m = text.match(/^sdlc\s+(approve|reject|lane|hotfix|intent|trust|distrust|pause|resume|freeze|unfreeze|close)\b\s*(\S+)?\s*(\d)?\s*(.*)$/is)
 if (!m) process.exit(0)
 const [, verb, feature, stageText, note] = m
 const who = git('config user.name', dir) || process.env.USERNAME || process.env.USER || 'unknown human'
@@ -61,6 +61,30 @@ if (verb === 'hotfix') {
   const doc = copyTemplate(dir, feature, 'hotfix.md')
   audit(dir, { event: 'hotfix', feature, by: who, incident: note.trim() })
   say(`${who} declared hotfix ${feature}: "${note.trim()}". It starts at Build on branch hotfix/${feature}, cut from main. Fill ${doc}, fix, run the gate, then request. Review deadline ${loadConfig(dir).reviewSlaHours.hotfix}h.`)
+}
+
+// Only a person states what the work is for. Agents build to it, show it back at every approval, and
+// never draft, suggest or reword it.
+if (verb === 'intent') {
+  const usage = `sdlc intent ${feature ?? '<feature>'} change: <what changes for the user>; smallest: <the smallest version that tells us it works>; drop if: <the result that would make us drop it>`
+  if (!feature || !/^[a-z0-9][a-z0-9-]*$/.test(feature)) say(`Usage: ${usage}. Nothing recorded.`)
+  const intent = parseIntent(`${stageText ?? ''}${note}`)
+  const missing = INTENT_PARTS.filter(([k]) => !intent[k]).map(([, label]) => label.toLowerCase())
+  if (missing.length) say(`An intent needs all three parts, and ${missing.join(' and ')} ${missing.length > 1 ? 'are' : 'is'} missing. Type: ${usage}. Nothing recorded.`)
+  let state = readState(dir, feature)
+  if (state && !['full', 'light'].includes(state.lane)) say(`${feature} is in the ${state.lane} lane, where the report is the intent. Nothing recorded.`)
+  if (state && state.stage > 1) say(`${feature} is past Plan (stage ${state.stage}); its intent was settled when gate 1 was approved. Nothing recorded.`)
+  const created = !state
+  if (created) {
+    if (isFrozen(dir)) say('The error budget is spent, so new features wait until a human unfreezes it. Nothing recorded.')
+    state = createFeature(dir, { feature, lane: 'light', extra: { kinds: [] } })
+    copyTemplate(dir, feature, 'prd.md')
+    copyTemplate(dir, feature, 'acceptance.feature')
+  }
+  state.intent = { ...intent, by: who, at: new Date().toISOString() }
+  writeState(dir, state)
+  audit(dir, { event: 'intent', feature, by: who, ...intent })
+  say(`${who} set the intent for ${feature}: change: ${intent.change}; smallest: ${intent.smallest}; drop if: ${intent.dropIf}.${created ? ' It starts at stage 1 (Plan) in the light lane.' : ''} Build the PRD to it; do not reword it.`)
 }
 
 // Repo-wide flags only a human sets: the kill switch, and the error-budget freeze.

@@ -144,6 +144,12 @@ if (spec) {
   const state = readState(dir, spec[1])
   if (state && state.stage < 3 && state.gates[1]?.status !== 'approved') deny(`${spec[2]}.md waits for gate 1 (the PRD and acceptance.feature) to be approved first.`, 'artefact-order')
 }
+// The PRD is built to the person's intent, so it waits for them to type one. Never suggest the words.
+const prd = rel.match(new RegExp(`^${cfg.specsDir}/([^/]+)/prd\\.md$`))
+if (prd) {
+  const state = readState(dir, prd[1])
+  if (state && ['full', 'light'].includes(state.lane) && !state.intent) deny(`prd.md waits for the person's intent. Ask them to type, in their own words: sdlc intent ${prd[1]} change: <what changes for the user>; smallest: <the smallest version that tells us it works>; drop if: <the result that would make us drop it>. Do not suggest the answers.`, 'intent-first')
+}
 
 // Code on a feature branch waits until the feature reaches Build.
 const feature = listFeatures(dir).find(s => s.branch === branch)

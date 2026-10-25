@@ -244,6 +244,7 @@ test('earned autonomy: clean approvals build a streak, a human promotes, rejecti
   r.config({ trustThreshold: 2, trust: true })
   const ready = name => {
     r.sdlc('init', name)
+    r.say(`sdlc intent ${name} change: shoppers can save; smallest: a button; drop if: nobody saves`)
     r.put(`specs/${name}/prd.md`, READY_PRD)
     r.put(`specs/${name}/acceptance.feature`, READY_FEATURE)
   }

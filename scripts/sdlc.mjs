@@ -7,7 +7,7 @@ import { fileURLToPath } from 'node:url'
 import { spawnSync } from 'node:child_process'
 import { STAGES, root, git, loadConfig, readState, writeState, listFeatures, missingHeadings, isFrozen, destructiveMigrations,
   stageSpec, section, matches, changedFiles, changedLines, createFeature, copyTemplate, TEMPLATES, overdueGates, overduePostmortems,
-  KINDS, trustedGates, promotable, readTrust, writeTrust, lessonPaid, lessonProblem, lessonsOwed } from './lib.mjs'
+  KINDS, trustedGates, promotable, readTrust, writeTrust, lessonPaid, lessonProblem, lessonsOwed, withIntent, INTENT_PARTS } from './lib.mjs'
 import { check, relevant, writeIndex } from './knowledge.mjs'
 import { collect, analyze, report } from './retro.mjs'
 import { lint, requirementsFrom } from './gherkin.mjs'
@@ -177,6 +177,9 @@ const commands = {
     // One spec gate: the PRD, its acceptance criteria, and facts when the work changes what exists.
     if (state.stage === 1) {
       const prd = path.join(dir, cfg.specsDir, feature, 'prd.md')
+      // The PRD carries the person's intent verbatim, whatever an agent wrote in its place.
+      if (!state.intent) missing.push(`no intent from a person yet. Ask them to type, in their own words: sdlc intent ${feature} change: ...; smallest: ...; drop if: ...`)
+      else if (fs.existsSync(prd)) fs.writeFileSync(prd, withIntent(fs.readFileSync(prd, 'utf8'), state.intent))
       if (fs.existsSync(prd)) missing.push(...assumptionProblems(fs.readFileSync(prd, 'utf8')).map(p => `prd.md: ${p}`))
       missing.push(...acceptanceProblems(state))
       const kinds = state.kinds ?? []
@@ -278,6 +281,14 @@ const commands = {
     writeState(dir, state)
     const sla = cfg.reviewSlaHours[state.lane] ?? cfg.reviewSlaHours.full
     console.log(`Gate ${state.stage} (${spec.name}) is waiting on: ${spec.owner}. Review deadline: ${sla}h.\nArtefact: ${cfg.specsDir}/${feature}/${spec.artefact}\nThe owner approves by typing: sdlc approve ${feature} ${state.stage}`)
+    // What the person judges it against, from what the scripts hold, never the agent's account of itself.
+    const doc = f => (fs.existsSync(path.join(dir, cfg.specsDir, feature, f)) ? fs.readFileSync(path.join(dir, cfg.specsDir, feature, f), 'utf8') : '')
+    if (state.intent) console.log(`\nYour intent:\n${INTENT_PARTS.map(([k, label]) => `- ${label}: ${state.intent[k]}`).join('\n')}`)
+    if (state.stage === 1) {
+      const unconfirmed = (section(doc('prd.md'), '## Assumptions') ?? '').split('\n').filter(l => /\[unconfirmed\]/i.test(l)).map(l => l.match(/A\d+/i)?.[0].toUpperCase()).filter(Boolean)
+      console.log(`Unconfirmed assumptions: ${unconfirmed.join(', ') || 'none'}`)
+    }
+    if (state.stage === 5) console.log(`Risk tier: ${state.riskTier}. Files reviewed: ${state.reviewedFiles.length}.\nNot verified: ${section(doc(spec.artefact), '## Not verified') || 'nothing listed'}`)
   },
 
   // Approvals and gates passed on checks move the feature on by themselves; this is for a feature whose

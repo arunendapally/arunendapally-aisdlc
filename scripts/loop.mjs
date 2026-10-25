@@ -344,7 +344,9 @@ export function riskTier(dir, all, preText = '', cfg = loadConfig(dir)) {
 export function gateFingerprint(dir, state, stage, cfg = loadConfig(dir)) {
   const folder = path.join(dir, cfg.specsDir, state.feature)
   const read = f => (fs.existsSync(path.join(folder, f)) ? fs.readFileSync(path.join(folder, f), 'utf8').replace(/\r\n/g, '\n') : '')
-  if (stage === 1) return sha256(read('prd.md') + read('acceptance.feature'))
+  // The intent is part of what Plan approves, so a new one lapses a waiting gate 1.
+  const intent = state.intent ? JSON.stringify([state.intent.change, state.intent.smallest, state.intent.dropIf]) : ''
+  if (stage === 1) return sha256(read('prd.md') + read('acceptance.feature') + intent)
   if (stage === 3) return sha256(read('plan.md'))
   const files = changedFiles(dir, cfg).map(f => f.file).filter(f => !f.startsWith(`${cfg.specsDir}/`) && !f.startsWith('.ai-sdlc/')).sort()
   const hashes = contentHashes(dir, files)

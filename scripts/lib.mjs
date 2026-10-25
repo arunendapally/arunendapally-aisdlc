@@ -97,7 +97,7 @@ export const DEFAULT_CONFIG = {
   deployPatterns: ['vercel\\b.*(--prod|--target[= ]production|\\bpromote\\b|\\balias\\b)', 'terraform\\s+apply', 'netlify\\s+deploy\\b.*--prod', 'fly(ctl)?\\s+deploy\\b',
     'firebase\\s+deploy\\b', 'wrangler\\s+(deploy|publish)\\b', '(npm|pnpm|yarn)\\s+(run\\s+)?deploy\\b', 'kubectl\\s+(apply|delete|rollout)', 'helm\\s+(install|upgrade)', 'npm\\s+publish',
     'gh\\s+pr\\s+merge', 'gh\\s+release\\s+create', 'gh\\s+(ruleset|secret|repo\\s+edit)\\b', 'gh\\s+api\\b.*(-X|--method)\\s*(?!GET\\b)[A-Z]+', 'git\\s+config\\b.*\\balias\\.',
-    '\\bsdlc\\s+(approve|reject|lane|hotfix|trust|distrust|resume|unfreeze|close)\\b'],
+    '\\bsdlc\\s+(approve|reject|lane|hotfix|intent|trust|distrust|resume|unfreeze|close)\\b'],
   // Production is touched only by read-only probes: a command matching these must also be a probe.
   prodPatterns: ['\\b(aws|gcloud|az)\\b.*\\bprod(uction)?\\b', 'kubectl\\b.*--context[= ]\\S*prod'],
   // House-style text bans apply to these files. A repo can widen it, for example to "**".
@@ -246,6 +246,29 @@ export function section(text, heading) {
   if (at === -1) return null
   const end = lines.findIndex((l, i) => i > at && /^#{1,2} /.test(l))
   return lines.slice(at + 1, end === -1 ? undefined : end).join('\n').trim()
+}
+
+// The person's intent, typed as "change: ...; smallest: ...; drop if: ..." (one per line works too).
+// Only the parts are checked: a word count or a number rule is passed by filler in seconds.
+export const INTENT_PARTS = [['change', 'Change'], ['smallest', 'Smallest'], ['dropIf', 'Drop if']]
+export function parseIntent(text) {
+  const part = label => text.match(new RegExp(`${label}\\s*:\\s*([^;\\n]*)`, 'i'))?.[1]?.trim() ?? ''
+  return { change: part('change'), smallest: part('smallest'), dropIf: part('drop\\s+if') }
+}
+
+// The PRD's "## Intent" section, written from what the person typed, replacing whatever was there.
+export function withIntent(prdText, intent) {
+  const block = `## Intent\n\n<!-- Typed by ${intent.by} on ${intent.at.slice(0, 10)}. Only a person changes it: sdlc intent <feature> change: ...; smallest: ...; drop if: ... -->\n\n${INTENT_PARTS.map(([k, label]) => `- ${label}: ${intent[k]}`).join('\n')}\n`
+  const lines = prdText.replace(/\r\n/g, '\n').split('\n')
+  const at = lines.findIndex(l => l.trim() === '## Intent')
+  if (at !== -1) {
+    const end = lines.findIndex((l, i) => i > at && /^#{1,2} /.test(l))
+    lines.splice(at, (end === -1 ? lines.length : end) - at, ...block.split('\n'))
+    return lines.join('\n')
+  }
+  const first = lines.findIndex(l => /^## /.test(l))
+  lines.splice(first === -1 ? lines.length : first, 0, ...block.split('\n'))
+  return lines.join('\n')
 }
 
 // Lines changed on this branch against the protected branch it came from, uncommitted work
