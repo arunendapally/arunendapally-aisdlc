@@ -94,5 +94,9 @@
   {
     "name": "approval-covers-what-was-checked",
     "passed": true
+  },
+  {
+    "name": "spec-drift-goes-back-to-plan",
+    "passed": true
   }
 ]

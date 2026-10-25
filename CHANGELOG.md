@@ -4,6 +4,14 @@ All notable changes to this repository. The format follows [Keep a Changelog](ht
 
 ## [Unreleased]
 
+### Staying agile when building is cheap
+
+The council record is [docs/decisions/2026-10-25-agile-with-agents.md](docs/decisions/2026-10-25-agile-with-agents.md): not waterfall, but cheap building moves the batch to the spec and to work in flight. Five changes proposed; the first is built.
+
+- **A spec changed after Plan was approved goes back to Plan.** At Build, Verify or Release, `sdlc request` compares `prd.md` and `acceptance.feature` with what the person approved. If they differ, the feature returns to stage 1 and a person approves the new spec; tests already written stay. Before this, an agent could edit the approved spec during Build and ship it unseen.
+- Golden task 25 (`spec-drift-goes-back-to-plan`) and a test in `tests/review.test.mjs`.
+- **Fixed:** `npm test` now runs `tests/workflows.test.mjs`; it was left out of the test script when the council workflow shipped.
+
 ## [0.3.0] - 2026-10-23
 
 ### Easier to start

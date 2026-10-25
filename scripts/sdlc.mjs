@@ -7,7 +7,7 @@ import { fileURLToPath } from 'node:url'
 import { spawnSync } from 'node:child_process'
 import { STAGES, root, git, loadConfig, readState, writeState, listFeatures, missingHeadings, isFrozen, destructiveMigrations,
   stageSpec, section, matches, changedFiles, changedLines, createFeature, copyTemplate, TEMPLATES, overdueGates, overduePostmortems,
-  KINDS, trustedGates, promotable, readTrust, writeTrust, lessonPaid, lessonProblem, lessonsOwed } from './lib.mjs'
+  KINDS, trustedGates, promotable, readTrust, writeTrust, lessonPaid, lessonProblem, lessonsOwed, audit } from './lib.mjs'
 import { check, relevant, writeIndex } from './knowledge.mjs'
 import { collect, analyze, report } from './retro.mjs'
 import { lint, requirementsFrom } from './gherkin.mjs'
@@ -153,6 +153,18 @@ const commands = {
   request() {
     const state = need()
     const cfg = loadConfig(dir)
+    // A spec edited after Plan was approved has not been seen by a person: back to Plan, not on to ship.
+    const plan = state.gates[1]
+    if (state.stage >= 4 && plan?.status === 'approved' && plan.fingerprint && plan.fingerprint !== gateFingerprint(dir, state, 1, cfg)) {
+      const now = new Date().toISOString()
+      state.stages[state.stage] = { ...state.stages[state.stage], leftAt: now }
+      for (const s of Object.keys(state.gates)) delete state.gates[s]
+      state.stage = 1
+      state.stages[1] = { enteredAt: now }
+      writeState(dir, state)
+      audit(dir, { event: 'spec-drift', feature })
+      fail(`The spec has changed since gate 1 was approved (prd.md or acceptance.feature), so ${feature} goes back to stage 1 (Plan). Request gate 1 again so a person approves the new spec. Tests already written stay.`)
+    }
     const spec = stageSpec(state, state.stage, trustedGates(dir))
     const missing = missingHeadings(dir, state)
     const warnings = []
