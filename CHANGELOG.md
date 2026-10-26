@@ -13,6 +13,25 @@ The council record is [docs/decisions/2026-10-25-fewer-better-human-asks.md](doc
 - **Every approval shows it back:** the request prints the intent verbatim, the unconfirmed assumptions at Plan, and at Verify the risk tier, the number of files reviewed and what was not verified. All of it comes from data the scripts hold.
 - Golden task 26 (`intent-comes-from-a-person`) and `tests/intent.test.mjs`.
 
+### Staying agile when building is cheap
+
+The council record is [docs/decisions/2026-10-25-agile-with-agents.md](docs/decisions/2026-10-25-agile-with-agents.md): not waterfall, but cheap building moves the batch to the spec and to work in flight. Five changes proposed; the first is built.
+
+- **A spec changed after Plan was approved goes back to Plan.** At Build, Verify or Release, `sdlc request` compares `prd.md` and `acceptance.feature` with what the person approved. If they differ, the feature returns to stage 1 and a person approves the new spec; tests already written stay. Before this, an agent could edit the approved spec during Build and ship it unseen.
+- **The same for the plan:** `plan.md` changed after Design was approved sends a full-lane feature back to Design; the spec approval stands.
+- **One feature, one branch.** `gate`, `proof`, `review` and a Build or Verify request refuse when the branch checked out is not the feature's, since they judge that branch's diff. A shipped hotfix still proves itself on main.
+- Golden task 25 (`spec-drift-goes-back-to-plan`) and tests in `tests/review.test.mjs`.
+- **Fixed:** `npm test` now runs `tests/workflows.test.mjs`; it was left out of the test script when the council workflow shipped.
+
+### Browser actions and web calls need a person (agile change 4)
+
+From [docs/decisions/2026-10-25-agile-with-agents.md](docs/decisions/2026-10-25-agile-with-agents.md), change 4: the gaps to close before any browser QA.
+
+- **An MCP tool that acts in a browser asks a person**: navigate, click, type, form input, run script, upload, batch (`mcpAskPattern`). Reading a page does not. List a tool in `mcpAllow` to let it run.
+- **Paused or held, a session reads only local files.** `WebFetch` and `WebSearch` no longer count as read-only: a URL or a search query can carry data out.
+- **Fixed:** a repo config could replace `mcpDenyPattern` and so remove the guard. Both MCP patterns now add to the default, never replace it.
+- Golden task 28 (`browser-and-web-need-a-person`) and tests.
+
 ### The Bash guard judges each segment on what it targets
 
 From the council proposal [docs/decisions/2026-10-23-bash-guard-targets.md](docs/decisions/2026-10-23-bash-guard-targets.md). The guard tested a whole command line's text, so it refused harmless chains five times between 22 and 26 Oct, each refusal counting toward `denialCap`, and it let `git push origin +main` through.

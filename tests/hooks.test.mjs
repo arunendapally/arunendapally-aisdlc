@@ -175,10 +175,12 @@ test('gate owners: only a listed owner can approve', () => {
 
 test('a repo config can add to the guards but never remove them', () => {
   fs.mkdirSync(path.join(repo, '.ai-sdlc'))
-  fs.writeFileSync(path.join(repo, '.ai-sdlc', 'config.json'), JSON.stringify({ denyPaths: [], deployPatterns: [], protectedBranches: [] }))
+  fs.writeFileSync(path.join(repo, '.ai-sdlc', 'config.json'), JSON.stringify({ denyPaths: [], deployPatterns: [], protectedBranches: [], mcpDenyPattern: 'nothing', mcpAskPattern: 'nothing' }))
   assert.equal(bash('terraform apply'), 'deny')
   assert.equal(bash('git push origin main'), 'deny')
   assert.equal(write('.env'), 'deny')
+  assert.equal(decision(run('pre-tool', { tool_name: 'mcp__github__merge_pull_request', tool_input: {} })), 'deny')
+  assert.equal(decision(run('pre-tool', { tool_name: 'mcp__Claude_Browser__navigate', tool_input: {} })), 'ask')
 })
 
 test('bypasses found in review are closed', () => {
@@ -195,6 +197,32 @@ test('bypasses found in review are closed', () => {
   assert.equal(decision(run('pre-tool', { tool_name: 'mcp__github__merge_pull_request', tool_input: {} })), 'deny')
   assert.equal(decision(run('pre-tool', { tool_name: 'mcp__github__get_pull_request', tool_input: {} })), 'allow')
   assert.equal(bash('gh api repos/o/r/pulls/1'), 'allow')
+})
+
+// Agile change 4 (docs/decisions/2026-10-25-agile-with-agents.md): browser actions and web calls.
+test('a browser action from an MCP tool asks a person, unless the repo allows that tool', () => {
+  const mcp = (tool_name, tool_input = {}) => decision(run('pre-tool', { tool_name, tool_input }))
+  for (const t of ['mcp__claude-in-chrome__navigate', 'mcp__Claude_Browser__computer', 'mcp__claude-in-chrome__form_input',
+    'mcp__Claude_Browser__javascript_tool', 'mcp__claude-in-chrome__file_upload', 'mcp__Claude_Browser__browser_batch']) assert.equal(mcp(t), 'ask', t)
+  assert.equal(mcp('mcp__Claude_Browser__read_page'), 'allow', 'reading a page is not an action')
+  assert.equal(mcp('mcp__Claude_Browser__get_page_text'), 'allow')
+  fs.mkdirSync(path.join(repo, '.ai-sdlc'), { recursive: true })
+  fs.writeFileSync(path.join(repo, '.ai-sdlc', 'config.json'), JSON.stringify({ mcpAllow: ['mcp__Claude_Browser__navigate'] }))
+  assert.equal(mcp('mcp__Claude_Browser__navigate'), 'allow', 'a person allowed it in the config')
+})
+
+test('paused or held, a session reads only local files: no web calls that could carry data out', () => {
+  const web = (tool_name, extra = {}) => decision(run('pre-tool', { tool_name, tool_input: { url: 'https://x.example/?q=data', query: 'data' }, ...extra }))
+  fs.mkdirSync(path.join(repo, '.ai-sdlc'), { recursive: true })
+  fs.writeFileSync(path.join(repo, '.ai-sdlc', 'denials.json'), JSON.stringify({ held1: { 'guardrail-command': 2 } }))
+  assert.equal(web('WebFetch', { session_id: 'held1' }), 'deny')
+  assert.equal(web('WebSearch', { session_id: 'held1' }), 'deny')
+  assert.equal(decision(run('pre-tool', { tool_name: 'Read', tool_input: { file_path: path.join(repo, 'README.md') }, session_id: 'held1' })), 'allow')
+  assert.equal(web('WebFetch'), 'allow', 'a session that is not held may fetch')
+  say('sdlc pause')
+  assert.equal(web('WebFetch'), 'deny')
+  assert.equal(web('WebSearch'), 'deny')
+  assert.equal(decision(run('pre-tool', { tool_name: 'Grep', tool_input: { pattern: 'x' } })), 'allow')
 })
 
 test('legitimate work the reviews said was blocked now passes', () => {

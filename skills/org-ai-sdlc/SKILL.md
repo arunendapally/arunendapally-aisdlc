@@ -40,6 +40,8 @@ Build passes on checks in every lane. Templates are in `templates/`; write "None
 - `sdlc.mjs request <slug>` runs the stage's checks. A gate that passes on checks moves on by itself; any other waits for its named human owner.
 - A feature starts from the person's intent, typed by them: `sdlc intent <slug> change: ...; smallest: ...; drop if: ...`. The PRD waits for it; never draft, suggest or reword it.
 - Only a human records a decision by typing `sdlc approve <slug> <stage>`, `sdlc reject <slug> <stage> <reason>` or `sdlc close <slug> <reason>` (retire work that will not ship). The approval moves the feature on. Never claim a gate is passed. Approval needs a request first.
+- If the spec (`prd.md` or `acceptance.feature`) changes after Plan was approved, or `plan.md` after Design, the next request sends the feature back to that stage for a person to approve again. That is the way back: change the spec when it is wrong, never build around it.
+- One feature, one folder (`specs/<slug>/`), one branch. `gate`, `proof`, `review` and a Build or Verify request refuse on any other branch.
 - `sdlc.mjs gate <slug>` runs the full gate. The first run in Build is the baseline.
 - Two different loops (ADR-0004):
   - **A failed check** (a red gate after a real change): `sdlc.mjs retry <slug> <goal>`; past the cap (3), ESCALATE. Never loosen the goal.

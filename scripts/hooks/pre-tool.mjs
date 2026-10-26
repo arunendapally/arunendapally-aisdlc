@@ -47,7 +47,8 @@ const decide = (permissionDecision, reason, rule) => {
 const deny = (reason, rule) => decide('deny', reason, rule)
 const ask = (reason, rule) => decide('ask', reason, rule)
 
-const READ_ONLY = ['Read', 'Glob', 'Grep', 'WebSearch', 'WebFetch', 'ToolSearch', 'TodoWrite']
+// Paused or held, a session reads only what is local: a URL or a search query can carry data out.
+const READ_ONLY = ['Read', 'Glob', 'Grep', 'ToolSearch', 'TodoWrite']
 if (isPaused(dir) && !READ_ONLY.includes(tool)) {
   deny('Agents are paused by a human (.ai-sdlc/PAUSED). Stop and wait for "sdlc resume".', 'paused')
 }
@@ -59,6 +60,9 @@ if (held && !READ_ONLY.includes(tool)) {
 
 if (tool.startsWith('mcp__') && new RegExp(cfg.mcpDenyPattern, 'i').test(tool) && !cfg.mcpAllow.includes(tool)) {
   deny(`${tool} looks like it merges, deploys or changes settings. That is a human action; add it to mcpAllow in .ai-sdlc/config.json only if it is safe.`, 'mcp')
+}
+if (tool.startsWith('mcp__') && new RegExp(cfg.mcpAskPattern, 'i').test(tool.split('__').pop()) && !cfg.mcpAllow.includes(tool)) {
+  ask(`${tool} acts in a browser, where pages are content anyone can fill and data can leave. A person approves it, or lists it in mcpAllow in .ai-sdlc/config.json.`, 'mcp-browser')
 }
 
 // Reading order (failure F2): a large file is read in slices, so the context goes to what governs.

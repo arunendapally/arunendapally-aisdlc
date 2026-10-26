@@ -3,18 +3,101 @@
   "promise": "A bug fix passes Build only after a failing run reproduced it, then a green run fixed it.",
   "branch": "bug/demo",
   "steps": [
-    { "config": { "gateCommand": "node gate.cjs" } },
-    { "sdlc": ["bug", "demo"], "ok": true },
-    { "fill": ["specs/demo/bug.md", ["## Repro", "## Expected and actual", "## Root cause", "## Fix"]] },
-    { "gate": "green" },
-    { "sdlc": ["gate", "demo"], "ok": true },
-    { "sdlc": ["request", "demo"], "ok": false, "out": "reproduces it", "why": "green without a repro" },
-    { "gate": "red" },
-    { "sdlc": ["bug", "demo2"], "ok": true },
-    { "fill": ["specs/demo2/bug.md", ["## Repro", "## Expected and actual", "## Root cause", "## Fix"]] },
-    { "sdlc": ["gate", "demo2"], "out": "Repro recorded" },
-    { "gate": "green" },
-    { "sdlc": ["gate", "demo2"], "ok": true },
-    { "sdlc": ["request", "demo2"], "ok": true, "out": "passed on checks" }
+    {
+      "config": {
+        "gateCommand": "node gate.cjs"
+      }
+    },
+    {
+      "sdlc": [
+        "bug",
+        "demo"
+      ],
+      "ok": true
+    },
+    {
+      "fill": [
+        "specs/demo/bug.md",
+        [
+          "## Repro",
+          "## Expected and actual",
+          "## Root cause",
+          "## Fix"
+        ]
+      ]
+    },
+    {
+      "gate": "green"
+    },
+    {
+      "sdlc": [
+        "gate",
+        "demo"
+      ],
+      "ok": true
+    },
+    {
+      "sdlc": [
+        "request",
+        "demo"
+      ],
+      "ok": false,
+      "out": "reproduces it",
+      "why": "green without a repro"
+    },
+    {
+      "gate": "red"
+    },
+    {
+      "sdlc": [
+        "bug",
+        "demo2"
+      ],
+      "ok": true
+    },
+    {
+      "git": [
+        "checkout",
+        "-q",
+        "-b",
+        "bug/demo2"
+      ]
+    },
+    {
+      "fill": [
+        "specs/demo2/bug.md",
+        [
+          "## Repro",
+          "## Expected and actual",
+          "## Root cause",
+          "## Fix"
+        ]
+      ]
+    },
+    {
+      "sdlc": [
+        "gate",
+        "demo2"
+      ],
+      "out": "Repro recorded"
+    },
+    {
+      "gate": "green"
+    },
+    {
+      "sdlc": [
+        "gate",
+        "demo2"
+      ],
+      "ok": true
+    },
+    {
+      "sdlc": [
+        "request",
+        "demo2"
+      ],
+      "ok": true,
+      "out": "passed on checks"
+    }
   ]
 }

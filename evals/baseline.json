@@ -96,11 +96,19 @@
     "passed": true
   },
   {
+    "name": "spec-drift-goes-back-to-plan",
+    "passed": true
+  },
+  {
     "name": "intent-comes-from-a-person",
     "passed": true
   },
   {
     "name": "guard-judges-each-segment",
+    "passed": true
+  },
+  {
+    "name": "browser-and-web-need-a-person",
     "passed": true
   }
 ]
