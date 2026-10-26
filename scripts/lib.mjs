@@ -109,6 +109,9 @@ export const DEFAULT_CONFIG = {
   testCountPattern: '(\\d+)\\s+(?:tests?\\s+)?pass(?:ed|ing)?|pass(?:ed)?[:\\s]+(\\d+)',
   // MCP tools whose names look like they merge, deploy or change settings are denied unless listed in mcpAllow.
   mcpDenyPattern: '(merge|deploy|promote|rollback|release|publish|delete|apply|push|ruleset|protection|secret|setting|permission)',
+  // MCP tools that act in a browser (navigate, click, type, run script, upload) ask a person unless listed
+  // in mcpAllow: pages are content anyone can fill, and a browser can send data anywhere.
+  mcpAskPattern: '^(navigate|computer|click|type|form_input|fill.*|javascript.*|evaluate.*|file_upload|upload.*|browser_batch)$',
   mcpAllow: [],
   // Two different loops (ADR-0004). retryCap counts failed checks after a real change; denialCap counts
   // refusals by one guard in one session, after which the session hands back and may only read until a
@@ -191,6 +194,8 @@ export function loadConfig(dir) {
   const own = fs.existsSync(file) ? JSON.parse(fs.readFileSync(file, 'utf8')) : {}
   const cfg = { ...DEFAULT_CONFIG, ...own }
   for (const key of [...ADDITIVE, 'neverTrust']) cfg[key] = [...new Set([...DEFAULT_CONFIG[key], ...(own[key] ?? [])])]
+  // A repo can widen the MCP patterns, never narrow them: its pattern is added to the default.
+  for (const key of ['mcpDenyPattern', 'mcpAskPattern']) cfg[key] = own[key] ? `(?:${DEFAULT_CONFIG[key]})|(?:${own[key]})` : DEFAULT_CONFIG[key]
   cfg.denialCap = Math.max(1, Math.min(DEFAULT_CONFIG.denialCap, Number(own.denialCap) || DEFAULT_CONFIG.denialCap))
   for (const key of ['maxPrLines', 'reviewSlaHours', 'outcomeWindowDays']) cfg[key] = { ...DEFAULT_CONFIG[key], ...(own[key] ?? {}) }
   return cfg

@@ -14,6 +14,15 @@ The council record is [docs/decisions/2026-10-25-agile-with-agents.md](docs/deci
 - Golden task 25 (`spec-drift-goes-back-to-plan`) and tests in `tests/review.test.mjs`.
 - **Fixed:** `npm test` now runs `tests/workflows.test.mjs`; it was left out of the test script when the council workflow shipped.
 
+### Browser actions and web calls need a person (agile change 4)
+
+From [docs/decisions/2026-10-25-agile-with-agents.md](docs/decisions/2026-10-25-agile-with-agents.md), change 4: the gaps to close before any browser QA.
+
+- **An MCP tool that acts in a browser asks a person**: navigate, click, type, form input, run script, upload, batch (`mcpAskPattern`). Reading a page does not. List a tool in `mcpAllow` to let it run.
+- **Paused or held, a session reads only local files.** `WebFetch` and `WebSearch` no longer count as read-only: a URL or a search query can carry data out.
+- **Fixed:** a repo config could replace `mcpDenyPattern` and so remove the guard. Both MCP patterns now add to the default, never replace it.
+- Golden task 28 (`browser-and-web-need-a-person`) and tests.
+
 ### The Bash guard judges each segment on what it targets
 
 From the council proposal [docs/decisions/2026-10-23-bash-guard-targets.md](docs/decisions/2026-10-23-bash-guard-targets.md). The guard tested a whole command line's text, so it refused harmless chains five times between 22 and 26 Oct, each refusal counting toward `denialCap`, and it let `git push origin +main` through.
