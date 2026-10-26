@@ -350,7 +350,7 @@ test('AC-14 every criterion must have a test; its level is a hint', () => {
 })
 
 test('AC-17 data work shows an ER diagram that marks the entities it changes', () => {
-  const r = makeRepo()
+  const r = makeRepo('feature/loyalty')
   r.sdlc('init', 'loyalty', '--kind', 'data')
   r.setState('loyalty', { stage: 3 })
   const plan = model => r.put('specs/loyalty/plan.md', `## Data model\n\n${model}\n\n## Decisions\n\nNone, because no ADR.\n`)
@@ -400,7 +400,7 @@ test('AC-18 API work has a valid OpenAPI contract, and breaking changes must be 
 })
 
 test('AC-19 sdlc api starts the contract and puts a Swagger viewer beside it', () => {
-  const r = makeRepo()
+  const r = makeRepo('feature/orders')
   r.sdlc('init', 'orders')
   const out = r.sdlc('api', 'orders')
   assert.equal(out.status, 0, out.out)

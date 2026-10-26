@@ -152,6 +152,8 @@ Off by default, so the default path stays short. Turn them on when the risk call
 | "has lapsed" when you approve | The change moved after the agent requested the gate | Ask the agent to request it again, and look at what changed |
 | "Refused 2 times this session: hand back" | A guard refused the same step twice | Read the reason; run the step yourself if it is right, then reply so the session can act again |
 | "in slices" when reading a file | The file is large | Read the code that governs it first, then the file with an offset and limit |
+| "has changed since gate 1 (or 3) was approved" | The spec (`prd.md`, `acceptance.feature`) or the plan (`plan.md`) changed after you approved it | Read what changed, then approve that gate again; the feature carries on from there |
+| "lives on feature/x, but ... is checked out" | The command was run for one feature on another feature's branch | `git switch` to the branch it names, then run it again |
 | "needs the full lane" at Build | The light lane is for additive, low-risk work, and this change alters or drops data or touches a high-risk path | Type `sdlc lane <feature> full`; it goes back to Design |
 | The Swagger page is blank | The contract changed since the viewer was written, or you are offline | Run `sdlc api <feature>` again; the page loads Swagger UI from the internet |
 | The band shows a feature you do not recognise | A feature folder under `specs/` from earlier work | Press Hide, or finish or close that feature |

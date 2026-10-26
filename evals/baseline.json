@@ -96,6 +96,10 @@
     "passed": true
   },
   {
+    "name": "spec-drift-goes-back-to-plan",
+    "passed": true
+  },
+  {
     "name": "guard-judges-each-segment",
     "passed": true
   },

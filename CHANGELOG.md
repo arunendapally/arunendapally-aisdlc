@@ -4,6 +4,16 @@ All notable changes to this repository. The format follows [Keep a Changelog](ht
 
 ## [Unreleased]
 
+### Staying agile when building is cheap
+
+The council record is [docs/decisions/2026-10-25-agile-with-agents.md](docs/decisions/2026-10-25-agile-with-agents.md): not waterfall, but cheap building moves the batch to the spec and to work in flight. Five changes proposed; the first is built.
+
+- **A spec changed after Plan was approved goes back to Plan.** At Build, Verify or Release, `sdlc request` compares `prd.md` and `acceptance.feature` with what the person approved. If they differ, the feature returns to stage 1 and a person approves the new spec; tests already written stay. Before this, an agent could edit the approved spec during Build and ship it unseen.
+- **The same for the plan:** `plan.md` changed after Design was approved sends a full-lane feature back to Design; the spec approval stands.
+- **One feature, one branch.** `gate`, `proof`, `review` and a Build or Verify request refuse when the branch checked out is not the feature's, since they judge that branch's diff. A shipped hotfix still proves itself on main.
+- Golden task 25 (`spec-drift-goes-back-to-plan`) and tests in `tests/review.test.mjs`.
+- **Fixed:** `npm test` now runs `tests/workflows.test.mjs`; it was left out of the test script when the council workflow shipped.
+
 ### Browser actions and web calls need a person (agile change 4)
 
 From [docs/decisions/2026-10-25-agile-with-agents.md](docs/decisions/2026-10-25-agile-with-agents.md), change 4: the gaps to close before any browser QA.
