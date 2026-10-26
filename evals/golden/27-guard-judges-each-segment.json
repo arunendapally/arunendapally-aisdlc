@@ -1,0 +1,49 @@
+{
+  "name": "guard-judges-each-segment",
+  "promise": "The Bash guard judges each segment of a command on what it targets: the harmless chains it refused on 22 to 26 Oct pass, and splitting opens no hole.",
+  "steps": [
+    {
+      "bash": "cat >> scripts/loop.mjs <<'EOF'\nconst state = '.ai-sdlc/state.json'\nEOF",
+      "expect": "allow",
+      "why": "a quoted heredoc into a normal file is data"
+    },
+    {
+      "bash": "cat templates/repo/.ai-sdlc/.gitignore; sed -n 554,558p scripts/sdlc.mjs",
+      "expect": "allow",
+      "why": "a chain of reads"
+    },
+    {
+      "bash": "git push -q -u origin feature/demo; gh pr create --title x --base main",
+      "expect": "allow",
+      "why": "main belongs to gh, not to the push"
+    },
+    {
+      "bash": "grep -n \"paused\" tests/hooks.test.mjs | head -12",
+      "expect": "allow",
+      "why": "a search piped into a read"
+    },
+    {
+      "bash": "git push origin +main",
+      "expect": "deny",
+      "why": "the +refspec bypass"
+    },
+    {
+      "bash": "npm test && git push origin main",
+      "expect": "deny"
+    },
+    {
+      "bash": "cat a | tee specs/demo/state.json",
+      "expect": "deny"
+    },
+    {
+      "bash": "bash <<'EOF'\nrm .ai-sdlc/PAUSED\nEOF",
+      "expect": "deny",
+      "why": "a heredoc fed to a shell is code"
+    },
+    {
+      "bash": "cat > notes.md <<EOF\n$(rm .ai-sdlc/PAUSED)\nEOF",
+      "expect": "deny",
+      "why": "an unquoted heredoc runs $( )"
+    }
+  ]
+}

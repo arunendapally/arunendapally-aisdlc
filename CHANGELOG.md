@@ -14,6 +14,16 @@ The council record is [docs/decisions/2026-10-25-agile-with-agents.md](docs/deci
 - Golden task 25 (`spec-drift-goes-back-to-plan`) and tests in `tests/review.test.mjs`.
 - **Fixed:** `npm test` now runs `tests/workflows.test.mjs`; it was left out of the test script when the council workflow shipped.
 
+### The Bash guard judges each segment on what it targets
+
+From the council proposal [docs/decisions/2026-10-23-bash-guard-targets.md](docs/decisions/2026-10-23-bash-guard-targets.md). The guard tested a whole command line's text, so it refused harmless chains five times between 22 and 26 Oct, each refusal counting toward `denialCap`, and it let `git push origin +main` through.
+
+- **Split, then judge each part** (`scripts/segments.mjs`): on `;` `&&` `||` `|` `&` and newlines, never inside quotes, `$( )`, backticks or a heredoc body, never on a redirect's `&`. When the parse is unsure (an unclosed quote or heredoc), the whole line is judged, as before.
+- **The push check** reads only the push's own arguments: `+main`, `HEAD:main`, `refs/heads/main`, `--mirror` and `--all` are refused; a `+refspec` or force flag counts only inside the push, so `rm -f` no longer reads as a force push; `sudo`, `env`, subshells and `bash -c` are still caught.
+- **Guardrail files** may be named by a read segment (`cat`, `grep`, `rg` without `--pre`, `head`, `tail`, `ls`, `wc`, `jq`, and `sed -n 'N,Mp' FILE` only), by `git add`, `commit`, `status`, `diff`, `log`, `show`, or by the state CLI. Anything with a redirect, `$( )` or backticks is a write.
+- **Heredocs:** a body behind a quoted delimiter, fed to `cat >`/`>>`, `tee` or a commit message, is data and skips the guardrail check; its target must not be a guardrail, CI or ownership file. Any other heredoc is code and is judged with its segment. A secret anywhere in a command is now refused.
+- Golden task 27 (`guard-judges-each-segment`) and tests replaying the refused commands.
+
 ## [0.3.0] - 2026-10-23
 
 ### Easier to start
