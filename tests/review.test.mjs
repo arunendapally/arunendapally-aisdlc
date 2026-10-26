@@ -45,6 +45,7 @@ test('a commit with the same change does not lapse an approval; a spec edit laps
 
   const s = makeRepo()
   s.sdlc('init', 'demo')
+  s.say('sdlc intent demo change: shoppers can save; smallest: a button; drop if: nobody saves')
   s.put('specs/demo/prd.md', READY_PRD)
   s.put('specs/demo/acceptance.feature', READY_FEATURE)
   s.sdlc('request', 'demo')
@@ -57,6 +58,7 @@ test('a commit with the same change does not lapse an approval; a spec edit laps
 test('a spec changed after Plan was approved sends the feature back to Plan', () => {
   const r = makeRepo()
   r.sdlc('init', 'demo')
+  r.say('sdlc intent demo change: shoppers can save; smallest: a button; drop if: nobody saves')
   r.put('specs/demo/prd.md', READY_PRD)
   r.put('specs/demo/acceptance.feature', READY_FEATURE)
   r.sdlc('request', 'demo')
@@ -211,4 +213,11 @@ test('sdlc close: only a person retires work, with a reason, and never while a l
   r.sdlc('init', 'checkout', '--full')
   r.sdlc('bug', 'double-charge', '--caused-by', 'checkout')
   assert.match(r.say('sdlc close double-charge cannot reproduce'), /owes a lesson/, 'closing never buries an escape')
+})
+
+test('the merge request shows the risk tier, how much was reviewed and what was not verified', () => {
+  const r = verifyRepo()
+  const out = r.sdlc('request', 'demo').out
+  assert.match(out, /waiting on/)
+  assert.match(out, /Risk tier: medium\. Files reviewed: \d+\.\nNot verified: Filled\./)
 })

@@ -24,6 +24,7 @@ const bash = command => decision(run('pre-tool', { tool_name: 'Bash', tool_input
 const write = (file_path, content = 'x') => decision(run('pre-tool', { tool_name: 'Write', tool_input: { file_path: path.join(repo, file_path), content } }))
 const say = prompt => run('user-prompt', { prompt })
 const state = () => JSON.parse(fs.readFileSync(path.join(repo, 'specs', 'demo', 'state.json'), 'utf8'))
+const INTENT = 'sdlc intent demo change: shoppers can save items; smallest: a save button; drop if: nobody saves in two weeks'
 const fill = (file, headings) => fs.writeFileSync(path.join(repo, 'specs', 'demo', file), headings.map(h => `${h}\n\nFilled.\n`).join('\n'))
 
 beforeEach(() => {
@@ -82,6 +83,9 @@ test('the gate chain: one human approval of the spec, then the feature moves on 
   assert.equal(write('specs/demo/plan.md'), 'deny')
   assert.equal(write('src/app.ts'), 'deny')
   assert.equal(write('specs/demo/acceptance.feature'), 'allow', 'the acceptance criteria are part of the spec')
+  assert.equal(write('specs/demo/prd.md'), 'deny', 'the PRD waits for the person\'s intent')
+  say(INTENT)
+  assert.equal(write('specs/demo/prd.md'), 'allow')
 
   assert.notEqual(sdlc('request', 'demo').status, 0, 'template comments do not count as content')
   assert.notEqual(sdlc('advance', 'demo').status, 0, 'cannot advance without approval')
@@ -102,6 +106,7 @@ test('the gate chain: one human approval of the spec, then the feature moves on 
 
 test('a full-lane feature goes from the spec to Design', () => {
   sdlc('init', 'demo', '--full')
+  say(INTENT)
   assert.equal(state().lane, 'full')
   fs.writeFileSync(path.join(repo, 'specs', 'demo', 'prd.md'), READY_PRD)
   fs.writeFileSync(path.join(repo, 'specs', 'demo', 'acceptance.feature'), READY_FEATURE)

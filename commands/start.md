@@ -26,5 +26,6 @@ Kinds add only what the work needs, and stack: `brownfield` (facts pinned to the
    - If `.ai-sdlc/config.json` or `CONSTITUTION.md` is missing, run `node "${CLAUDE_PLUGIN_ROOT}/scripts/sdlc.mjs" init-repo` and ask the human to set `gateCommand` (and optionally `proofCommand` and `gateOwners`) in `.ai-sdlc/config.json`; agents cannot edit it.
    - Create the branch `feature/<slug>` in its own worktree and work inside it.
    - Run `node "${CLAUDE_PLUGIN_ROOT}/scripts/sdlc.mjs" init <slug> [--full] [--kind <kinds>]` and commit `specs/<slug>/`, so other sessions and CI see the same state. Commit it after every gate decision too.
+   - For a feature, ask the person to type its intent in their own words before anything is drafted: `sdlc intent <slug> change: ...; smallest: ...; drop if: ...`. Do not suggest the answers. (Typing it first also creates the feature, in the light lane.)
    - Hand off to `/ai-sdlc:plan <slug>`.
 5. Say the route and why in one line each, then start it. If two routes fit, take the one with more human gates and say so.

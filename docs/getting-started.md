@@ -30,7 +30,7 @@ claude plugin marketplace update arunendapally-aisdlc
 claude plugin update ai-sdlc@arunendapally-aisdlc
 ```
 
-## 2. Three steps to your first feature
+## 2. Four steps to your first feature
 
 1. **Start the work.** In Claude Code, inside your product repo:
 
@@ -42,7 +42,15 @@ claude plugin update ai-sdlc@arunendapally-aisdlc
 
 2. **Set your gate command** in `.ai-sdlc/config.json`: the one command that runs your types, lint and tests, for example `"gateCommand": "npm run gate"`. Agents cannot edit this file, so you do it. Build refuses to pass without it.
 
-3. **Answer and approve.** The agents ask their questions, write the spec, then build and test. You approve by typing in the Claude Code prompt (not a terminal). The approval moves the feature on by itself:
+3. **Say what it is for.** Before any spec is written, type your intent in the Claude Code prompt (not a terminal), in your own words:
+
+   ```
+   sdlc intent saved-items change: shoppers can come back to items they liked; smallest: a save button and a saved list; drop if: under 5% of shoppers save anything in two weeks
+   ```
+
+   Only you can type it; agents build to it and show it back to you at every approval.
+
+4. **Answer and approve.** The agents ask their questions, write the spec, then build and test. You approve by typing in the prompt. The approval moves the feature on by itself:
 
    ```
    sdlc approve saved-items 1
@@ -58,7 +66,7 @@ A feature waits on you three times: the spec, the merge and the release. Agents 
 
 | Stage | You run | The agents produce | You decide |
 |---|---|---|---|
-| Start | `/ai-sdlc:start add a saved-items list` | The route and lane, a feature branch and `specs/saved-items/` | Nothing yet |
+| Start | `/ai-sdlc:start add a saved-items list` | The route and lane, a feature branch and `specs/saved-items/` | Your intent: `sdlc intent saved-items change: ...; smallest: ...; drop if: ...` |
 | 1 Plan | `/ai-sdlc:plan saved-items` | Their questions first (you answer them), then a short `prd.md` and `acceptance.feature`: a Gherkin scenario per requirement | `sdlc approve saved-items 1` |
 | 4 Build | `/ai-sdlc:build saved-items` | Tests first, then code from the builder, reviewed by the tech lead. Passes on checks | Nothing: no wait |
 | 5 Verify | `/ai-sdlc:verify saved-items` | The test proof, the review packet, the findings ledger `review.md`, and a PR whose body says what was not verified | Review the PR from "Look here first", add what you find to `review.md` as H rows, then `sdlc approve saved-items 5` |

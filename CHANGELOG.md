@@ -4,6 +4,15 @@ All notable changes to this repository. The format follows [Keep a Changelog](ht
 
 ## [Unreleased]
 
+### The person's intent comes first
+
+The council record is [docs/decisions/2026-10-25-fewer-better-human-asks.md](docs/decisions/2026-10-25-fewer-better-human-asks.md): a strong intent from the person, and approvals that show it back, instead of more asks.
+
+- **`sdlc intent <feature> change: ...; smallest: ...; drop if: ...`**, typed by a person in the prompt like `sdlc approve`; agents cannot type it. It records who and when, creates the feature in the light lane if it does not exist, and is refused past Plan or with a part missing. No word count or number rule: filler passes those.
+- **The PRD waits for it:** writing `prd.md` is refused until the intent exists, and Plan cannot be requested without it. The request writes the person's words into the PRD's `## Intent`, replacing whatever an agent put there. A new intent while gate 1 waits lapses it.
+- **Every approval shows it back:** the request prints the intent verbatim, the unconfirmed assumptions at Plan, and at Verify the risk tier, the number of files reviewed and what was not verified. All of it comes from data the scripts hold.
+- Golden task 26 (`intent-comes-from-a-person`) and `tests/intent.test.mjs`.
+
 ### Staying agile when building is cheap
 
 The council record is [docs/decisions/2026-10-25-agile-with-agents.md](docs/decisions/2026-10-25-agile-with-agents.md): not waterfall, but cheap building moves the batch to the spec and to work in flight. Five changes proposed; the first is built.

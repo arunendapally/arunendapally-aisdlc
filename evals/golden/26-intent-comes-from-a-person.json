@@ -1,0 +1,72 @@
+{
+  "name": "intent-comes-from-a-person",
+  "promise": "The PRD waits for an intent only a person can type, Plan cannot be requested without it, and the approval shows it back verbatim.",
+  "steps": [
+    {
+      "sdlc": [
+        "init",
+        "demo"
+      ],
+      "ok": true
+    },
+    {
+      "write": [
+        "specs/demo/prd.md",
+        "## Problem\n\nFilled.\n\n## Users and jobs\n\nFilled.\n\n## Questions asked\n\nFilled.\n\n## Assumptions\n\nFilled.\n\n## Never\n\nFilled.\n\n## Out of scope\n\nFilled.\n\n## Outcome metric\n\nFilled.\n\n## Open questions\n\nFilled.\n\n## Requirements\n\n- R1. (must) Save an item.\n"
+      ],
+      "expect": "deny",
+      "why": "an agent drafting the PRD before the person said what it is for"
+    },
+    {
+      "put": [
+        "specs/demo/prd.md",
+        "## Problem\n\nFilled.\n\n## Users and jobs\n\nFilled.\n\n## Questions asked\n\nFilled.\n\n## Assumptions\n\nFilled.\n\n## Never\n\nFilled.\n\n## Out of scope\n\nFilled.\n\n## Outcome metric\n\nFilled.\n\n## Open questions\n\nFilled.\n\n## Requirements\n\n- R1. (must) Save an item.\n"
+      ]
+    },
+    {
+      "put": [
+        "specs/demo/acceptance.feature",
+        "Feature: Save\n  As a shopper\n  I want to save items\n  So that I buy later\n\n  @R1 @AC-1 @unit\n  Scenario: Save an item\n    Given an item\n    When I save it\n    Then it is saved\n"
+      ]
+    },
+    {
+      "sdlc": [
+        "request",
+        "demo"
+      ],
+      "ok": false,
+      "out": "no intent from a person yet"
+    },
+    {
+      "bash": "claude -p \"sdlc intent demo change: x; smallest: y; drop if: z\"",
+      "expect": "deny",
+      "why": "an agent typing the intent for the person"
+    },
+    {
+      "say": "sdlc intent demo change: shoppers can save; smallest: a button",
+      "out": "drop if is missing"
+    },
+    {
+      "say": "sdlc intent demo change: shoppers can save items; smallest: a save button; drop if: nobody saves in two weeks"
+    },
+    {
+      "write": [
+        "specs/demo/prd.md",
+        "## Problem\n\nFilled.\n\n## Users and jobs\n\nFilled.\n\n## Questions asked\n\nFilled.\n\n## Assumptions\n\nFilled.\n\n## Never\n\nFilled.\n\n## Out of scope\n\nFilled.\n\n## Outcome metric\n\nFilled.\n\n## Open questions\n\nFilled.\n\n## Requirements\n\n- R1. (must) Save an item.\n"
+      ],
+      "expect": "allow"
+    },
+    {
+      "sdlc": [
+        "request",
+        "demo"
+      ],
+      "ok": true,
+      "out": "Drop if: nobody saves in two weeks"
+    },
+    {
+      "say": "sdlc approve demo 1",
+      "out": "approved gate 1"
+    }
+  ]
+}
