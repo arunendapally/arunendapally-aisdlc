@@ -98,5 +98,9 @@
   {
     "name": "intent-comes-from-a-person",
     "passed": true
+  },
+  {
+    "name": "guard-judges-each-segment",
+    "passed": true
   }
 ]
