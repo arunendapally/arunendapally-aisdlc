@@ -98,5 +98,9 @@
   {
     "name": "guard-judges-each-segment",
     "passed": true
+  },
+  {
+    "name": "browser-and-web-need-a-person",
+    "passed": true
   }
 ]
