@@ -5,6 +5,7 @@
 import fs from 'node:fs'
 import path from 'node:path'
 import { root, git, loadConfig, isPaused, isProbe, readState, listFeatures, matches, relPath, readStdin, audit } from '../lib.mjs'
+import { segments } from '../segments.mjs'
 
 const SECRET = /(AKIA[0-9A-Z]{16}|-----BEGIN [A-Z ]*PRIVATE KEY-----|ghp_[A-Za-z0-9]{36}|github_pat_[A-Za-z0-9_]{40,}|xox[baprs]-[A-Za-z0-9-]{10,}|sk-[A-Za-z0-9_-]{32,})/
 const ANSWER = 'This is a final answer, not an error: do not retry, rephrase, wrap it in a script or reach for another tool. Give the user the command once if one is needed, then stop.'
@@ -82,11 +83,30 @@ const onProtected = cfg.protectedBranches.includes(branch)
 
 if (tool === 'Bash' || tool === 'PowerShell') {
   const c = ti.command ?? ''
-  const protectedRef = cfg.protectedBranches.map(b => `(?:^|[\\s:/])${b}(?:\\s|$)`).join('|')
-  if (/\bgit\b[^;&|]*\bpush\b/.test(c)) {
-    if (/\s(--force|-f|--force-with-lease)\b/.test(c)) deny('Force push is not allowed for agents.', 'force-push')
-    if (new RegExp(protectedRef).test(c.replace(/.*\bpush\b/, '')) || onProtected) deny(`Agents never push to ${cfg.protectedBranches.join('/')}. Push the feature branch and open a PR.`, 'push-protected')
+  // Each segment is judged on what it runs (docs/decisions/2026-10-23-bash-guard-targets.md). A heredoc
+  // body is data only when a quoted delimiter feeds it to a file write or a commit message; fed to
+  // anything else, or unquoted (so $( ) runs), it is code and is judged with its segment. When the
+  // parse is unsure, the whole line is one segment, as before.
+  const parts = segments(c) ?? [{ text: c, heredocs: [], unsure: true }]
+  const quotedOnly = p => p.heredocs.every(h => h.quoted)
+  const commitShape = t => /^git\s+commit\b[^\n]*\s-m\s+"\$\(cat\s+<<'(\w+)'\n[\s\S]*?\n\1\n\)"\s*$/.test(t)
+  const writeTarget = p => {
+    const t = p.text.replace(/<<-?\s*(['"])\w+\1/, '').trim()
+    return p.heredocs.length && quotedOnly(p) ? t.match(/^cat\s*>>?\s*([^\s$`'"]+)$/)?.[1] ?? t.match(/^tee\s+(?:-a\s+)?([^\s$`'"]+)$/)?.[1] : undefined
   }
+  const isData = p => !p.unsure && p.heredocs.length > 0 && quotedOnly(p) && (writeTarget(p) !== undefined || /^git\s+commit\b/.test(p.text))
+  const code = p => (isData(p) ? p.text : [p.text, ...p.heredocs.map(h => h.body)].join('\n'))
+
+  // A push is judged on its own arguments: a protected branch in any form, a +refspec, a force flag.
+  const protectedRef = new RegExp(cfg.protectedBranches.map(b => `(?:^|[\\s:/+])${b}(?:\\s|$|["')])`).join('|'))
+  for (const p of parts) {
+    const run = code(p)
+    if (!/\bgit\b[^;&|\n]*\bpush\b/.test(run)) continue
+    const args = run.replace(/[\s\S]*?\bpush\b/, '')
+    if (/(^|\s)(--force|-f|--force-with-lease|--force-if-includes)\b|(^|\s)\+\S/.test(args)) deny('Force push is not allowed for agents.', 'force-push')
+    if (protectedRef.test(args) || /(^|\s)--(mirror|all)\b/.test(args) || onProtected) deny(`Agents never push to ${cfg.protectedBranches.join('/')}. Push the feature branch and open a PR.`, 'push-protected')
+  }
+  if (SECRET.test(c)) deny('The command contains what looks like a secret. Use the secret store and reference it by name.', 'secret')
   if (/--no-verify\b/.test(c)) deny('--no-verify skips the checks. Fix the failure instead.', 'no-verify')
   if (onProtected && /\bgit\s+(commit|merge|rebase|cherry-pick|reset)\b/.test(c)) deny(`You are on ${branch}. Work on a feature branch in its own worktree.`, 'commit-protected')
   for (const p of cfg.deployPatterns) {
@@ -97,14 +117,26 @@ if (tool === 'Bash' || tool === 'PowerShell') {
   }
   if (/\b(curl|wget)\b[^|]*\|\s*(sudo\s+)?(ba|z)?sh\b/.test(c)) deny('Piping a download into a shell runs untrusted code.', 'curl-sh')
   if (/(^|[\s'"/])\.env(?!\.example)(\.[\w-]+)?\b/.test(c) || /\bid_rsa\b|\.pem\b/.test(c)) deny('Commands may not read or write secrets files.', 'secrets-file')
-  // The state CLI is exempt only when it is the whole command, never one part of a chain.
-  // Staging, committing and reading git history are exempt too, since they change no file content.
-  const single = !/[;&|`$<>]/.test(c.replace(/^node\s+"[^"]*"/, 'node x'))
-  const isStateCli = single && /^node\s+("[^"]*sdlc\.mjs"|\S*sdlc\.mjs)(\s+[\w.=-]+)*\s*$/.test(c.trim())
-  const isGitRecord = single && /^git\s+(add|commit|status|diff|log|show)\b/.test(c.trim())
-  const isRead = single && /^(cat|grep|rg|head|tail|less|jq|type|Get-Content|Select-String)\b/i.test(c.trim())
+  // A segment may name a guardrail file only to read it, to stage, commit or read git history (no file
+  // content changes), or to run the state CLI. Redirects, $( ) and backticks make any of them a write.
   const guardrail = /(state\.json|\.ai-sdlc|PAUSED|BUDGET_FROZEN|settings(\.local)?\.json|\.github[\\/]workflows|CODEOWNERS)/i
-  if (guardrail.test(c) && !isStateCli && !isGitRecord && !isRead) deny('Commands may not touch feature state, guardrails, settings, CI or ownership files. Use sdlc.mjs, or ask a human.', 'guardrail-command')
+  const plain = t => !/[>`]|\$\(/.test(t.replace(/<<-?\s*'\w+'/g, ''))
+  const exempt = p => {
+    if (p.unsure || !quotedOnly(p)) return false
+    const t = p.text
+    if (commitShape(t)) return true
+    if (/^node\s+("[^"]*sdlc\.mjs"|\S*sdlc\.mjs)(\s+[\w.=-]+)*\s*$/.test(t)) return true
+    if (!plain(t)) return false
+    if (/^git\s+(add|commit|status|diff|log|show)\b/.test(t)) return true
+    if (/^sed\s+-n\s+(['"]?)\d+(,\d+)?p\1(\s+[^\s'"]+)+$/.test(t)) return true
+    return /^(cat|grep|rg|head|tail|less|jq|type|ls|wc|Get-Content|Select-String)\b/i.test(t) && !/\s--pre\b/.test(t) && !p.heredocs.length
+  }
+  for (const p of parts) {
+    const target = writeTarget(p)
+    if (target && (matches(target, cfg.denyPaths) || matches(target, cfg.askPaths))) deny(`${target} is a guardrail, CI or ownership file: a shell write to it is never allowed. Use the Write tool, which asks a human.`, 'guardrail-command')
+    if (guardrail.test(code(p)) && !exempt(p)) deny('Commands may not touch feature state, guardrails, settings, CI or ownership files. Use sdlc.mjs, or ask a human.', 'guardrail-command')
+  }
+  const single = !/[;&|`$<>]/.test(c.replace(/^node\s+"[^"]*"/, 'node x'))
   // A whole-file dump of a large file is the same mistake as a full Read.
   const dump = single && c.trim().match(/^(cat|type|Get-Content)\s+("[^"]+"|'[^']+'|\S+)\s*$/i)
   if (dump) {
