@@ -200,6 +200,49 @@ test('legitimate work the reviews said was blocked now passes', () => {
   assert.equal(write('tests/fixtures/quote.json', 'a \u2014 b'), 'allow', 'banned text is scoped to bannedTextPaths')
 })
 
+// The Bash guard judges each command segment on what it targets (docs/decisions/2026-10-23-bash-guard-targets.md).
+test('harmless commands the guard refused on 22 to 26 Oct now pass', () => {
+  assert.equal(bash("cat >> scripts/loop.mjs <<'EOF'\nconst state = '.ai-sdlc/state.json'\nconst ci = '.github/workflows/ci.yml'\nEOF"), 'allow', 'a quoted heredoc into a normal file is data')
+  assert.equal(bash('cat templates/repo/.ai-sdlc/.gitignore; sed -n 554,558p scripts/sdlc.mjs'), 'allow', 'a chain of reads')
+  assert.equal(bash('git push -q -u origin claude/review-convergence; gh pr create --title x --base main'), 'allow', 'main belongs to gh, not to the push')
+  assert.equal(bash('grep -n "mcp\\|paused" tests/hooks.test.mjs | head -12'), 'allow', 'a search piped into a read')
+  assert.equal(bash("git commit -q -F - <<'EOF'\nGuard the .ai-sdlc/state.json file\nEOF"), 'allow', 'a commit message is data')
+  assert.equal(bash("git commit -m \"$(cat <<'EOF'\nGuard the .ai-sdlc folder\nEOF\n)\""), 'allow', 'the usual commit-message shape')
+  assert.equal(bash('rm -f build.log && git push origin feature/demo'), 'allow', 'rm -f is not a force push')
+  assert.equal(bash('ls .ai-sdlc'), 'allow')
+})
+
+test('a command splits where a shell would run its parts, and nowhere else', async () => {
+  const { segments } = await import('../scripts/segments.mjs')
+  const texts = c => segments(c)?.map(s => s.text)
+  assert.deepEqual(texts('npm test 2>&1 | tail -5'), ['npm test 2>&1', 'tail -5'], 'a redirect & is not a separator')
+  assert.deepEqual(texts('echo "a;b|c" && ls'), ['echo "a;b|c"', 'ls'], 'quotes hold')
+  assert.deepEqual(texts('echo $(a; b) || x &>log'), ['echo $(a; b)', 'x &>log'], '$( ) holds')
+  const [doc] = segments("cat > f <<'EOF'\na; b\nEOF\nls")
+  assert.deepEqual([doc.text, doc.heredocs[0].quoted, doc.heredocs[0].body], ["cat > f <<'EOF'", true, 'a; b'])
+  assert.equal(segments('cat "open'), null, 'unsure: the caller judges the whole line')
+  assert.equal(segments("cat <<'EOF'\nno end"), null)
+})
+
+test('splitting a command closes holes instead of opening them', () => {
+  for (const c of ['git push origin +main', 'git push origin HEAD:main', 'git push origin refs/heads/main', 'sudo git push origin main',
+    'env X=1 git push origin main', '(git push origin main)', 'bash -c "git push origin main"', 'git -C . push origin main',
+    'git push --mirror origin', 'git push --all origin', 'npm test && git push origin main']) assert.equal(bash(c), 'deny', c)
+  assert.equal(bash('git push origin +feature/demo'), 'deny', 'a +refspec is a force push')
+  assert.equal(bash('cat a | tee specs/demo/state.json'), 'deny')
+  assert.equal(bash('cat x; rm .ai-sdlc/state.json'), 'deny')
+  assert.equal(bash('sed -i s/a/b/ .ai-sdlc/config.json'), 'deny')
+  assert.equal(bash("sed -n '1w .ai-sdlc/x' notes.md"), 'deny', 'sed w writes')
+  assert.equal(bash('rg --pre ./x secret .ai-sdlc'), 'deny', 'rg --pre runs a program')
+  assert.equal(bash("cat > .ai-sdlc/config.json <<'EOF'\n{}\nEOF"), 'deny', 'a heredoc into a guardrail file')
+  assert.equal(bash('cat > notes.md <<EOF\n$(rm .ai-sdlc/PAUSED)\nEOF'), 'deny', 'an unquoted heredoc runs $( )')
+  assert.equal(bash("cat > notes.md <<'EOF'\nx\nEOF\nrm .ai-sdlc/PAUSED"), 'deny', 'something after the terminator')
+  assert.equal(bash("bash <<'EOF'\nrm .ai-sdlc/PAUSED\nEOF"), 'deny', 'a heredoc fed to a shell is code')
+  assert.equal(bash("cat > run.sh <<'EOF'\nvercel deploy --prod\nEOF"), 'deny', 'a heredoc body is still checked for deploys')
+  assert.equal(bash(`cat > notes.md <<'EOF'\nkey AKIA${'A'.repeat(16)}\nEOF`), 'deny', 'and for secrets')
+  assert.equal(bash('cat "unbalanced .ai-sdlc; ls'), 'deny', 'when the parse is unsure, the whole line is judged')
+})
+
 test('the build gate records a baseline and refuses a request below it', () => {
   fs.mkdirSync(path.join(repo, '.ai-sdlc'))
   const cfg = count => fs.writeFileSync(path.join(repo, '.ai-sdlc', 'config.json'), JSON.stringify({ gateCommand: `node -e "console.log('${count} passing')"` }))

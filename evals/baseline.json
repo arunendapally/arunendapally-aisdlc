@@ -94,5 +94,9 @@
   {
     "name": "approval-covers-what-was-checked",
     "passed": true
+  },
+  {
+    "name": "guard-judges-each-segment",
+    "passed": true
   }
 ]
