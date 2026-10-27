@@ -8,7 +8,9 @@ import { advanceFeature, gateFingerprint } from '../loop.mjs'
 
 const input = readStdin()
 const dir = root(input.cwd)
-const text = (input.prompt ?? '').trim()
+// The app may put context blocks (<system-reminder> and the like) before what the person typed. They
+// are not the person's words, so they are dropped, and a command inside one is never recorded.
+const text = (input.prompt ?? '').replace(/^(\s*<([\w-]+)[^>]*>[\s\S]*?<\/\2>)+/, '').trim()
 const say = msg => {
   console.log(JSON.stringify({ hookSpecificOutput: { hookEventName: 'UserPromptSubmit', additionalContext: `[ai-sdlc] ${msg}` } }))
   process.exit(0)
@@ -26,8 +28,17 @@ if (fs.existsSync(denialsFile)) {
   }
 }
 
-const m = text.match(/^sdlc\s+(approve|reject|lane|hotfix|intent|trust|distrust|pause|resume|freeze|unfreeze|close)\b\s*(\S+)?\s*(\d)?\s*(.*)$/is)
-if (!m) process.exit(0)
+const VERBS = 'approve|reject|lane|hotfix|intent|trust|distrust|pause|resume|freeze|unfreeze|close'
+const m = text.match(new RegExp(`^sdlc\\s+(${VERBS})\\b\\s*(\\S+)?\\s*(\\d)?\\s*(.*)$`, 'is'))
+if (!m) {
+  // A command anywhere else in the message is not recorded, and the person is told so, never left
+  // thinking it worked.
+  const later = text.match(new RegExp(`\\bsdlc\\s+(${VERBS})\\b`, 'i'))
+  if (later) {
+    console.log(JSON.stringify({ hookSpecificOutput: { hookEventName: 'UserPromptSubmit', additionalContext: `[ai-sdlc] Nothing recorded: "sdlc ${later[1]}" counts only at the start of your message. Tell the person to send it again as a message of its own; never type it for them.` } }))
+  }
+  process.exit(0)
+}
 const [, verb, feature, stageText, note] = m
 const who = git('config user.name', dir) || process.env.USERNAME || process.env.USER || 'unknown human'
 

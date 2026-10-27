@@ -4,6 +4,16 @@ All notable changes to this repository. The format follows [Keep a Changelog](ht
 
 ## [Unreleased]
 
+### Human commands that are never lost ([#15](https://github.com/arunendapally/arunendapally-aisdlc/issues/15))
+
+From a real feature in another repo on plugin 0.4.0, where `sdlc intent` could not be recorded by any route.
+
+- **Fixed: a command after a context block was ignored with no message.** The desktop app can put a context block before what the person typed, so the hook never saw `sdlc ...` at the start. The hook now drops leading context blocks and never records a command found inside one, since that text is not the person's.
+- **Never silent:** a message that mentions `sdlc <verb>` anywhere but the start now says nothing was recorded.
+- **A terminal path:** `node scripts/sdlc.mjs intent|approve|reject|lane|hotfix|distrust|close|...` in a person's own terminal runs the same hook with the same checks. Agents are refused it through the shell, through a terminal or remote-shell MCP tool, and by feeding the hook a prompt by hand.
+- **Fixed: a quoted `gh issue|pr create|comment|edit` title or body tripped the guard** when it only mentioned a command or a guarded path. It is now text; a double-quoted body with `$( )` or backticks is still checked, because that part runs.
+- Failure F5 (a person's command lost without a word) in `evals/failures.json`, caught by golden task 29 (`human-commands-are-never-lost`), and `tests/human-verbs.test.mjs`.
+
 ## [0.4.0] - 2026-10-26
 
 ### The person's intent comes first

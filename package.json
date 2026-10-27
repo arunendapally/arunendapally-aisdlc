@@ -3,7 +3,7 @@
   "private": true,
   "type": "module",
   "scripts": {
-    "test": "node --test tests/hooks.test.mjs tests/lanes.test.mjs tests/retro.test.mjs tests/quality.test.mjs tests/loop.test.mjs tests/failures.test.mjs tests/review.test.mjs tests/workflows.test.mjs tests/intent.test.mjs",
+    "test": "node --test tests/hooks.test.mjs tests/lanes.test.mjs tests/retro.test.mjs tests/quality.test.mjs tests/loop.test.mjs tests/failures.test.mjs tests/review.test.mjs tests/workflows.test.mjs tests/intent.test.mjs tests/human-verbs.test.mjs",
     "eval": "node evals/run.mjs --baseline evals/baseline.json",
     "eval:agents": "node evals/agents.mjs"
   }

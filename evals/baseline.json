@@ -110,5 +110,9 @@
   {
     "name": "browser-and-web-need-a-person",
     "passed": true
+  },
+  {
+    "name": "human-commands-are-never-lost",
+    "passed": true
   }
 ]

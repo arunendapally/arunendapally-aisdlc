@@ -632,7 +632,20 @@ const commands = {
   },
 }
 
+// A person's own terminal, for when the chat hook is not there (issue #15). The same hook records the
+// verb with the same checks and the same git user.name; the pre-tool guard refuses these to agents.
+const HUMAN_VERBS = ['intent', 'approve', 'reject', 'lane', 'hotfix', 'distrust', 'pause', 'resume', 'freeze', 'unfreeze', 'close']
+if (HUMAN_VERBS.includes(cmd)) {
+  const prompt = ['sdlc', cmd, feature, ...rest].filter(Boolean).join(' ')
+  const hook = path.join(path.dirname(fileURLToPath(import.meta.url)), 'hooks', 'user-prompt.mjs')
+  const r = spawnSync('node', [hook], { cwd: dir, input: JSON.stringify({ prompt, cwd: dir, session_id: 'terminal' }), encoding: 'utf8' })
+  const said = r.stdout.trim() ? JSON.parse(r.stdout).hookSpecificOutput.additionalContext.replace(/^\[ai-sdlc\] /, '') : 'Nothing recorded.'
+  if (/Nothing recorded|^Usage:/.test(said)) fail(said)
+  console.log(said)
+  process.exit(0)
+}
+
 if (!commands[cmd]) {
-  fail('Usage: sdlc <init|bug|task|kind|request|advance|gate|tests|proof|spike|review|gherkin|api|retry|status|outcome|trust|metrics|retro|incident|knowledge|init-repo> [feature] [...]')
+  fail(`Usage: sdlc <init|bug|task|kind|request|advance|gate|tests|proof|spike|review|gherkin|api|retry|status|outcome|trust|metrics|retro|incident|knowledge|init-repo> [feature] [...]\nA person, in their own terminal: sdlc <${HUMAN_VERBS.join('|')}> ...`)
 }
 commands[cmd]()
