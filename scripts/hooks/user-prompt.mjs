@@ -8,9 +8,15 @@ import { advanceFeature, gateFingerprint } from '../loop.mjs'
 
 const input = readStdin()
 const dir = root(input.cwd)
-// The app may put context blocks (<system-reminder> and the like) before what the person typed. They
-// are not the person's words, so they are dropped, and a command inside one is never recorded.
-const text = (input.prompt ?? '').replace(/^(\s*<([\w-]+)[^>]*>[\s\S]*?<\/\2>)+/, '').trim()
+const raw = (input.prompt ?? '').replace(/\r\n/g, '\n')
+// Checked on 27 Oct: a subagent's report reaches this hook as a prompt in the parent's session, wrapped
+// in <agent-message>. It is another agent's text, never a person's: it records nothing and releases
+// nothing.
+if (/^\s*<agent-message\b/.test(raw)) process.exit(0)
+// The app may put <system-reminder> blocks before what the person typed. Whole blocks, opening and
+// closing on lines of their own, are dropped, so a command inside one, or after an indented closing tag
+// quoted inside one, is never recorded.
+const text = raw.replace(/^(\s*<system-reminder>\n[\s\S]*?\n<\/system-reminder>[ \t]*(\n|$))+/, '').trim()
 const say = msg => {
   console.log(JSON.stringify({ hookSpecificOutput: { hookEventName: 'UserPromptSubmit', additionalContext: `[ai-sdlc] ${msg}` } }))
   process.exit(0)
