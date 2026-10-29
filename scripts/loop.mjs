@@ -99,7 +99,7 @@ export function runProof(dir, state, opts = {}, cfg = loadConfig(dir)) {
   const linked = []
   try {
     const green = runIn(dir, files, cfg, report)
-    if (green.status !== 0) return { ok: false, problems: [`the traced tests do not pass on this branch, so there is no green run to prove: ${green.output.trim().split('\n').slice(-3).join(' ')}`] }
+    if (green.status !== 0) return { ok: false, problems: [`the traced tests do not pass on this branch, so there is no green run to prove: ${green.output.trim().split('\n').slice(-3).join(' ')}. If the gate passes these tests, the proof command itself may be broken: run it by hand with these files to see why (${files.join(' ')})`] }
     git(`worktree add --detach "${tree}" ${base}`, dir)
     if (!fs.existsSync(path.join(tree, '.git'))) return { ok: false, problems: [`could not create a worktree at the base commit ${base.slice(0, 7)}`] }
     // Installed dependencies are not in git: share them, or every test would fail for that reason alone.

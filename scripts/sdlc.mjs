@@ -255,7 +255,12 @@ const commands = {
     if (state.stage === 5 || spec.isAuto) {
       const lines = changedLines(dir, cfg)
       const max = cfg.maxPrLines[state.lane] ?? cfg.maxPrLines.full
-      if (lines > max) missing.push(`${lines} changed lines is over the ${state.lane} lane limit of ${max}. Split it into smaller PRs, one slice each`)
+      // Once a PR's size passed at Verify, the fixes its review asks for get 20% room: refusing the
+      // review's own fix for size is the process fighting itself.
+      const room = state.sizeChecked ? Math.max(max, Math.round(state.sizeChecked * 1.2)) : max
+      if (lines > room) missing.push(`${lines} changed lines is over the ${state.lane} lane limit of ${max}. Split it into smaller PRs, one slice each`)
+      else if (lines > max) warnings.push(`${lines} changed lines is over the ${state.lane} lane limit of ${max}, within the room for review fixes (${room}) because ${state.sizeChecked} lines passed at Verify.`)
+      else if (state.stage === 5 && state.sizeChecked === undefined) state.sizeChecked = lines
     }
     if (state.stage === 5) {
       // Review has to converge (ADR-0005): past the round cap, step back instead of another round.
@@ -311,7 +316,13 @@ const commands = {
       writeState(dir, state)
       console.log(`Risk tier: ${state.riskTier}. Review round ${state.reviewRounds ?? 0} of ${cfg.reviewRoundCap}.`)
     }
-    if (missing.length) fail(`Gate ${state.stage} cannot be requested:\n- ${missing.join('\n- ')}`)
+    // A refusal leaves a trace for status, and under autonomy says what to do, since no one approves.
+    if (missing.length) {
+      state.lastRefusal = { stage: state.stage, at: new Date().toISOString(), reasons: missing.slice(0, 5) }
+      writeState(dir, state)
+      fail(`Gate ${state.stage} cannot be requested:\n- ${missing.join('\n- ')}${granted ? '\nUnder autonomy no one approves around a check: fix each reason above and request again. A check you believe is wrong is a finding for the plugin (record it for the retro), never a reason to work around it.' : ''}`)
+    }
+    delete state.lastRefusal
     const gate = state.gates[state.stage]
     if (gate?.status === 'approved') fail(`Gate ${state.stage} is already approved. Run: sdlc advance ${feature}`)
     const now = new Date().toISOString()
@@ -441,6 +452,9 @@ const commands = {
     if (flaky) console.log(`FLAKY: ${runs.length} runs gave ${runs.map(r => `${r.ok ? 'green' : 'red'} ${r.count}`).join(', ')}. Quarantine with an owner and a date, or fix it; never retry until green.`)
     if (leaked) console.log(`TEST DATA LEAKED: the data check failed after a run. Each test must tear down what it creates.\n${runs.find(r => r.leaked).leakOut.trim().slice(0, 400)}`)
     if (state.stage === 4 && state.baseline === undefined) state.baseline = count
+    // The baseline ratchets: a green run raises it, so tests the feature has passed cannot quietly go.
+    const floor = state.baseline ?? 0
+    if (ok && count > floor && state.baseline !== undefined) state.baseline = count
     // The code before any fix: a hotfix proves its repro against it after the merge.
     if (state.stage === 4 && !state.proofBase) state.proofBase = loadConfig(dir).protectedBranches.map(b => git(`merge-base ${b} HEAD`, dir)).find(Boolean)
     if (!ok && !flaky && !leaked && !hadGreen && !state.reproRedAt && state.stage === 4 && ['bug', 'hotfix'].includes(state.lane)) {
@@ -450,8 +464,11 @@ const commands = {
     }
     writeState(dir, state)
     console.log(out.split('\n').slice(-15).join('\n'))
-    const verdict = `Gate ${ok ? 'green' : 'RED'}: ${count} passing (baseline ${state.baseline ?? 'not set'}).`
-    if (!ok || count < (state.baseline ?? 0)) fail(verdict)
+    const cfg = loadConfig(dir)
+    const size = `PR size: ${changedLines(dir, cfg)} of ${cfg.maxPrLines[state.lane] ?? cfg.maxPrLines.full} code lines.`
+    if (ok && count < floor) fail(`Gate RED: ${count} passing is below the ${floor} this feature has reached: a test was removed or skipped. Restore it, or replace it with one that proves the same criterion. ${size}`)
+    const verdict = `Gate ${ok ? 'green' : 'RED'}: ${count} passing (baseline ${state.baseline ?? 'not set'}). ${size}`
+    if (!ok) fail(verdict)
     console.log(verdict)
   },
 
@@ -494,6 +511,7 @@ const commands = {
       const wait = gate?.status === 'waiting' ? `, waiting on ${stageSpec(s).owner} for ${hours(gate.requestedAt)}h${deadline}` : ''
       const revisions = Object.entries(s.revisions ?? {}).map(([n, v]) => `${STAGES[n].name} v${v}`).join(', ')
       console.log(`${s.feature}: stage ${s.stage} ${STAGES[s.stage].name} (${s.lane} lane)${s.spike ? ', SPIKE' : ''}, gate ${gate?.status ?? 'not requested'}${wait}${revisions ? ` [${revisions}]` : ''}`)
+      if (s.lastRefusal?.stage === s.stage) console.log(`  last request refused ${hours(s.lastRefusal.at)}h ago: ${s.lastRefusal.reasons.join('; ')}`)
     }
     for (const t of readTriggers(dir)) console.log(`RETRO DUE: ${t.reason}. Run: sdlc retro`)
     for (const s of lessonsOwed(dir)) console.log(`LESSON OWED: ${s.feature}: ${lessonProblem(s.feature)}`)
