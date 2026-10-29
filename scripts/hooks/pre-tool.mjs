@@ -133,7 +133,8 @@ if (tool === 'Bash' || tool === 'PowerShell') {
   if (/(^|[\s'"/])\.env(?!\.example)(\.[\w-]+)?\b/.test(c) || /\bid_rsa\b|\.pem\b/.test(c)) deny('Commands may not read or write secrets files.', 'secrets-file')
   // A segment may name a guardrail file only to read it, to stage, commit or read git history (no file
   // content changes), or to run the state CLI. Redirects, $( ) and backticks make any of them a write.
-  const guardrail = /(state\.json|\.ai-sdlc|PAUSED|BUDGET_FROZEN|settings(\.local)?\.json|\.github[\\/]workflows|CODEOWNERS)/i
+  // settings.json only as a name of its own: .NET's appsettings.json is not Claude's settings.
+  const guardrail = /(state\.json|\.ai-sdlc|PAUSED|BUDGET_FROZEN|(^|[^\w.-])settings(\.local)?\.json|\.github[\\/]workflows|CODEOWNERS)/i
   const plain = t => !/[>`]|\$\(/.test(t.replace(/<<-?\s*'\w+'/g, ''))
   const exempt = p => {
     if (p.unsure || !quotedOnly(p)) return false

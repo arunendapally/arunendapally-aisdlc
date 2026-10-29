@@ -243,6 +243,10 @@ test('harmless commands the guard refused on 22 to 26 Oct now pass', () => {
   assert.equal(bash("git commit -m \"$(cat <<'EOF'\nGuard the .ai-sdlc folder\nEOF\n)\""), 'allow', 'the usual commit-message shape')
   assert.equal(bash('rm -f build.log && git push origin feature/demo'), 'allow', 'rm -f is not a force push')
   assert.equal(bash('ls .ai-sdlc'), 'allow')
+  // F-12 of the calculator run: .NET's appsettings.json is not Claude's settings.json.
+  assert.equal(bash('git rm -q api/Calc.Api/appsettings.json api/Calc.Api/appsettings.Development.json'), 'allow')
+  assert.equal(bash('rm .claude/settings.json'), 'deny')
+  assert.equal(bash('echo {} > settings.local.json'), 'deny')
 })
 
 test('a command splits where a shell would run its parts, and nowhere else', async () => {

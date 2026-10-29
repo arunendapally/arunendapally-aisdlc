@@ -143,6 +143,7 @@ test('PR size: the Verify gate refuses an oversized full-lane PR', () => {
   r.put('Huge.sln', 'x\n'.repeat(450))
   r.put('api/Huge.csproj', 'x\n'.repeat(450))
   r.put('web/tsconfig.app.json', 'x\n'.repeat(450))
+  r.put('api/appsettings.json', 'x\n'.repeat(450))
   assert.doesNotMatch(r.sdlc('request', 'demo').out, /over the full lane limit/)
   r.git('add', '.')
   r.git('commit', '-m', 'later work')
