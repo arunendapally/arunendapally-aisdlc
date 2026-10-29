@@ -7,7 +7,7 @@ import path from 'node:path'
 import { execFileSync, spawnSync } from 'node:child_process'
 import { fileURLToPath } from 'node:url'
 import { STAGES } from '../scripts/lib.mjs'
-import { READY_PRD, READY_FEATURE } from './helpers.mjs'
+import { READY_PRD, READY_FEATURE, makeRepo } from './helpers.mjs'
 
 const plugin = path.join(path.dirname(fileURLToPath(import.meta.url)), '..')
 const hook = name => path.join(plugin, 'scripts', 'hooks', `${name}.mjs`)
@@ -352,4 +352,47 @@ test('the mod keeps the same review deadlines and never-promoted gates as the pl
   const never = Function(`return ${mod.match(/const NEVER_TRUST = (\[[^\]]*\])/)[1]}`)()
   assert.deepEqual(sla, DEFAULT_CONFIG.reviewSlaHours)
   assert.deepEqual(never, DEFAULT_CONFIG.neverTrust)
+})
+
+// F-4 of the calculator run: a session sitting in one repo that writes or commits in another is
+// judged by the repo it acts in, with that repo's config, state, branch and pause flag.
+test('a write into another repo is judged by that repo', () => {
+  const session = makeRepo()
+  const other = makeRepo()
+  other.sdlc('init', 'demo')
+  const write = file => session.tool('Write', { file_path: path.join(other.repo, file), content: 'x' }).decision
+  assert.equal(write('src/app.ts'), 'deny', 'the other repo\'s feature is at Plan, so its code waits')
+  assert.equal(write('.ai-sdlc/config.json'), 'deny', 'the other repo\'s guardrails are guarded')
+  assert.equal(write('specs/demo/plan.md'), 'deny', 'the other repo\'s artefact order holds')
+  assert.equal(write('specs/demo/acceptance.feature'), 'allow')
+  other.say('sdlc pause')
+  assert.equal(write('specs/demo/acceptance.feature'), 'deny', 'the other repo is paused')
+
+  const plain = makeRepo()
+  assert.equal(session.tool('Write', { file_path: path.join(plain.repo, 'src', 'app.ts'), content: 'x' }).decision, 'allow', 'a repo without the plugin is not judged')
+  const loose = fs.mkdtempSync(path.join(os.tmpdir(), 'ai-sdlc-loose-'))
+  assert.equal(session.tool('Write', { file_path: path.join(loose, 'new', 'a.ts'), content: 'x' }).decision, 'allow', 'a file outside any repo is not judged')
+})
+
+test('a command that starts with cd into another repo is judged by that repo\'s branch', () => {
+  const session = makeRepo()
+  const other = makeRepo()
+  other.git('checkout', '-q', 'main')
+  assert.equal(session.bash(`cd "${other.repo}" && git commit -m x`), 'deny', 'the other repo is on main')
+  assert.equal(session.bash(`cd ${other.repo} && git push`), 'deny')
+  assert.equal(session.tool('PowerShell', { command: `Set-Location "${other.repo}"; git commit -m x` }).decision, 'deny')
+  assert.equal(session.bash(`cd "${other.repo}" && gh pr merge 1`), 'deny', 'text rules still apply')
+
+  // The other way round: the session's repo is on main, the repo the command acts in is not.
+  session.git('checkout', '-q', 'main')
+  other.git('checkout', '-q', 'feature/demo')
+  assert.equal(session.bash('git commit -m x'), 'deny')
+  assert.equal(session.bash(`cd "${other.repo}" && git commit -m x`), 'allow', 'the other repo is on a feature branch')
+
+  // The first push of main goes to the other repo's remote, which has no main yet.
+  other.git('checkout', '-q', 'main')
+  const bare = fs.mkdtempSync(path.join(os.tmpdir(), 'ai-sdlc-empty-origin-'))
+  other.git('init', '-q', '--bare', bare)
+  other.git('remote', 'add', 'origin', bare)
+  assert.equal(session.bash(`cd "${other.repo}" && git push -u origin main`), 'allow')
 })

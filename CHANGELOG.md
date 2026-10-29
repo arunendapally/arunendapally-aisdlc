@@ -28,6 +28,14 @@ The owner ran a scientific calculator (.NET minimal API and React) through the p
 
 - The guard read .NET's `appsettings.json` as Claude's own settings file.
 
+### The guard judges the repo an action targets (F-4 of the calculator run)
+
+From [docs/feedback/2026-10-29-calculator-run.md](docs/feedback/2026-10-29-calculator-run.md), where a session sitting in the plugin repo built a calculator in another repo.
+
+- **Fixed: a write into another repo skipped every check.** A Write, Edit, MultiEdit or NotebookEdit outside the session's repo is now judged by the repo that holds the file, when that repo has the plugin set up (`.ai-sdlc` or `specs/`): its guardrail files, artefact order, intent, stage, lane, autonomy, pause flag and branch. A file in a repo without the plugin, or outside any repo, is not judged, as before.
+- **Fixed: a command that starts with `cd <path> &&` or `Set-Location <path>;` was judged by the session's branch.** Committing on a protected branch, pushing to one, the first push of a new repo and the preview check now use the branch and remote of the repo the command changes into. Text rules (deploys, production, secrets) apply as before.
+- Git is asked about another repo only when the target is outside the session's repo. Tests in `tests/hooks.test.mjs`.
+
 ### Human commands that are never lost ([#15](https://github.com/arunendapally/arunendapally-aisdlc/issues/15))
 
 From a real feature in another repo on plugin 0.4.0, where `sdlc intent` could not be recorded by any route.
