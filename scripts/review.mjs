@@ -7,10 +7,11 @@
 import fs from 'node:fs'
 import path from 'node:path'
 import { git, loadConfig, matches, changedFiles } from './lib.mjs'
-import { matrix } from './testmatrix.mjs'
+import { matrix, levels, levelOf } from './testmatrix.mjs'
 
-const TEST_FILE = /(^|\/)(tests?|__tests__|spec|e2e|cypress|playwright)\/|\.(test|spec|e2e)\.[a-z]+$|_test\.(go|py)$|(^|\/)test_[^/]+\.py$|\.postman_collection\.json$/i
-const DEPENDENCY = /(^|\/)(package\.json|requirements[^/]*\.txt|pyproject\.toml|go\.mod|cargo\.toml|pom\.xml|build\.gradle[^/]*|gemfile|composer\.json)$/i
+// A test file is one the test matrix gives a level, or anything in a test folder (helpers, fixtures).
+const TEST_FOLDER = /(^|\/)(tests?|__tests__|spec|e2e|cypress|playwright)\//i
+const DEPENDENCY = /(^|\/)(package\.json|requirements[^/]*\.txt|pyproject\.toml|go\.mod|cargo\.toml|pom\.xml|build\.gradle[^/]*|gemfile|composer\.json|[^/]+\.csproj)$/i
 const SCHEMA = /(^|\/)migrations\/|\.sql$|schema\.prisma$/i
 const PLATFORM = /^(\.github\/|infra\/|terraform\/|helm\/|k8s\/)|dockerfile$/i
 const CONTRACT = /(^|\/)(openapi|swagger)[^/]*\.(ya?ml|json)$|\.proto$|(^|\/)schema\.graphql$/i
@@ -23,25 +24,30 @@ export const SEVERITIES = ['blocker', 'major', 'minor', 'nit']
 export const SOURCES = /^(pre-review|human|lens:[a-z-]+)$/
 
 // Lines added per file on this branch, with their line numbers in the new file.
-// Dependency names declared in a manifest, so the packet can name exactly what a change adds.
-// null means the format is not understood here; the file still gets the generic dependency signal.
-export function dependencyNames(file, text) {
-  if (!text) return []
+// Dependencies declared in a manifest, as { name: version }, so the packet can name exactly what a
+// change adds and ignore edits that touch no dependency (a package.json "scripts" entry).
+// null means the format is not understood here; any change to the file is then a dependency change.
+export function dependencies(file, text) {
+  if (!text) return {}
   const name = path.basename(file).toLowerCase()
   if (name === 'package.json') {
     try {
       const pkg = JSON.parse(text)
-      return ['dependencies', 'devDependencies', 'peerDependencies', 'optionalDependencies'].flatMap(k => Object.keys(pkg[k] ?? {}))
+      return Object.assign({}, ...['dependencies', 'devDependencies', 'peerDependencies', 'optionalDependencies'].map(k => pkg[k] ?? {}))
     } catch {
       return null
     }
   }
   if (/^requirements[^/]*\.txt$/.test(name)) {
-    return text.split(/\r?\n/).map(l => l.replace(/#.*/, '').trim()).filter(l => l && !l.startsWith('-'))
-      .map(l => l.split(/[<>=!~;\[\s]/)[0].toLowerCase())
+    return Object.fromEntries(text.split(/\r?\n/).map(l => l.replace(/#.*/, '').trim()).filter(l => l && !l.startsWith('-'))
+      .map(l => [l.split(/[<>=!~;\[\s]/)[0].toLowerCase(), l]))
   }
   if (name === 'go.mod') {
-    return [...text.matchAll(/^\s*(?:require\s+)?([\w.-]+\.[\w./-]+)\s+v[\d.]+/gm)].map(m => m[1]).filter(m => !/^module\b/.test(m))
+    return Object.fromEntries([...text.matchAll(/^\s*(?:require\s+)?([\w.-]+\.[\w./-]+)\s+(v[\w.+-]+)/gm)].map(m => [m[1], m[2]]))
+  }
+  if (name.endsWith('.csproj')) {
+    return Object.fromEntries([...text.matchAll(/<PackageReference\b[^>]*\bInclude="([^"]+)"([^>]*?)(?:\/>|>([\s\S]*?)<\/PackageReference>)/g)]
+      .map(m => [m[1], (m[2].match(/\bVersion="([^"]*)"/) ?? m[3]?.match(/<Version>([^<]*)</))?.[1] ?? '']))
   }
   return null
 }
@@ -74,9 +80,22 @@ export function packet(dir, state) {
   const planChanged = allChanged.some(f => f.file === `${cfg.specsDir}/${state.feature}/plan.md`)
   const files = allChanged.filter(f => !f.file.startsWith('.ai-sdlc/') && (!f.file.startsWith(`${cfg.specsDir}/`) || CONTRACT.test(f.file)))
   const added = base ? addedLines(dir, base) : {}
-  const tests = files.filter(f => TEST_FILE.test(f.file))
-  const code = files.filter(f => !TEST_FILE.test(f.file) && !/\.md$/i.test(f.file))
-  const deletedTests = git(`diff --name-only --diff-filter=D ${base ?? 'HEAD'}`, dir).split('\n').filter(f => f && TEST_FILE.test(f))
+  const testLevels = levels(dir)
+  const isTest = file => TEST_FOLDER.test(file) || levelOf(file, testLevels) !== null
+  const tests = files.filter(f => isTest(f.file))
+  const code = files.filter(f => !isTest(f.file) && !/\.md$/i.test(f.file))
+  const deletedTests = git(`diff --name-only --diff-filter=D ${base ?? 'HEAD'}`, dir).split('\n').filter(f => f && isTest(f))
+
+  // A manifest is a dependency change when a dependency is added or its version changes, compared with
+  // the merge base; a manifest whose format is not understood here counts whenever it changes.
+  const deps = Object.fromEntries(files.filter(f => DEPENDENCY.test(f.file)).map(f => {
+    const now = fs.existsSync(path.join(dir, f.file)) ? fs.readFileSync(path.join(dir, f.file), 'utf8') : ''
+    const after = dependencies(f.file, now)
+    const before = dependencies(f.file, base ? git(`show ${base}:${f.file}`, dir) : '') ?? {}
+    if (after === null) return [f.file, { changed: true, added: [] }]
+    const names = Object.keys(after)
+    return [f.file, { changed: names.some(d => before[d] !== after[d]), added: names.filter(d => !(d in before)) }]
+  }))
 
   // A code file counts as tested when a changed test file is named after it or mentions it.
   const testTexts = tests.map(t => {
@@ -86,16 +105,16 @@ export function packet(dir, state) {
   const rows = files.map(f => {
     const signals = []
     if (matches(f.file, cfg.highRiskPaths)) signals.push('high-risk path')
-    if (DEPENDENCY.test(f.file)) signals.push('dependency change')
+    if (deps[f.file]?.changed) signals.push('dependency change')
     if (SCHEMA.test(f.file)) signals.push('schema or data change')
     if (SCHEMA.test(f.file) && !planChanged) signals.push('schema changed but the plan and its ER diagram did not')
     if (CONTRACT.test(f.file)) signals.push('API contract change')
     if (PLATFORM.test(f.file)) signals.push('CI or infrastructure')
     const stem = path.basename(f.file).replace(/\.[^.]+$/, '')
-    const isCode = !TEST_FILE.test(f.file) && !/\.(md|json|ya?ml|txt|feature)$/i.test(f.file)
+    const isCode = !isTest(f.file) && !/\.(md|json|ya?ml|txt|feature)$/i.test(f.file)
     if (isCode && !new RegExp(`\\b${stem.replace(/[.*+?^${}()|[\]\\]/g, '\\$&')}\\b`).test(testTexts)) signals.push('no changed test mentions it')
     if (f.lines > 150) signals.push(`large change (${f.lines} lines)`)
-    const printsOk = PRINTS_BY_DESIGN.test(f.file) || TEST_FILE.test(f.file)
+    const printsOk = PRINTS_BY_DESIGN.test(f.file) || isTest(f.file)
     const leftovers = (added[f.file] ?? []).filter(l => LEFTOVER.test(l.text) || (!printsOk && DEBUG_PRINT.test(l.text)))
     if (leftovers.length) signals.push(`${leftovers.length} leftover${leftovers.length > 1 ? 's' : ''} (${leftovers.slice(0, 3).map(l => `line ${l.n}: ${l.text.trim().slice(0, 40)}`).join('; ')}${leftovers.length > 3 ? '; ...' : ''})`)
     const weight = { 'high-risk path': 5, 'schema or data change': 5, 'dependency change': 3, 'CI or infrastructure': 4, 'no changed test mentions it': 2 }
@@ -109,14 +128,7 @@ export function packet(dir, state) {
 
   const all = rows.flatMap(r => r.signals)
   // Simplicity: what new dependencies this change adds, and whether it is large for what it delivers.
-  const newDeps = files.filter(f => DEPENDENCY.test(f.file)).flatMap(f => {
-    const now = fs.existsSync(path.join(dir, f.file)) ? fs.readFileSync(path.join(dir, f.file), 'utf8') : ''
-    const before = base ? git(`show ${base}:${f.file}`, dir) : ''
-    const after = dependencyNames(f.file, now)
-    if (after === null) return []
-    const had = new Set(dependencyNames(f.file, before) ?? [])
-    return after.filter(d => !had.has(d)).map(d => ({ manifest: f.file, name: d }))
-  })
+  const newDeps = Object.entries(deps).flatMap(([manifest, d]) => d.added.map(name => ({ manifest, name })))
   for (const r of rows) {
     const mine = newDeps.filter(d => d.manifest === r.file).map(d => d.name)
     if (mine.length) {
@@ -125,7 +137,7 @@ export function packet(dir, state) {
     }
   }
   rows.sort((a, b) => b.score - a.score)
-  const codeLines = files.filter(f => !TEST_FILE.test(f.file) && !/\.(md|json|ya?ml|txt|feature|lock)$/i.test(f.file)).reduce((n, f) => n + f.lines, 0)
+  const codeLines = files.filter(f => !isTest(f.file) &&!/\.(md|json|ya?ml|txt|feature|lock)$/i.test(f.file)).reduce((n, f) => n + f.lines, 0)
   const criteria = traceRows.length
   const oversized = criteria && codeLines / criteria > OVERSIZED_PER_CRITERION
     ? { codeLines, criteria, perCriterion: Math.round(codeLines / criteria) } : null

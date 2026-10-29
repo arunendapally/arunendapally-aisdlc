@@ -20,6 +20,7 @@ The owner ran a scientific calculator (.NET minimal API and React) through the p
 
 - **The PR size counts only code:** tests, project and tool boilerplate (`.sln`, `.csproj`, `tsconfig`, launch and app settings, `.gitignore`) and the plugin's state no longer count, in the gate and the CI script.
 - **.NET and Java tests are recognised** by the test matrix (`*Tests.cs`, `*ApiTests.cs`, `*IntegrationTests.cs`, `*Test.java`, `*IT.java`), and a file that names a criterion but is not a known test file is called out by name.
+- **The review packet knows a test file by the test matrix's patterns,** so .NET and Java tests count as tests in its file counts, "no changed test mentions it" and code lines. A manifest is a dependency change only when a dependency is added or its version changes (a `package.json` "scripts" edit is not), and `.csproj` `PackageReference` additions are named as new dependencies.
 - **The proof shares every installed `node_modules`,** not only the root one, and a base run that failed on a missing package no longer counts as red.
 - **A gate passed on its checks records a fingerprint,** so spec or plan drift still sends work back without a person's approval.
 - **The intent parser anchors its labels** ("exchange:" is not "change:") and keeps semicolons and lines inside a part; "drop:" means "drop if:".

@@ -247,3 +247,48 @@ test('the merge request shows the risk tier, how much was reviewed and what was 
   assert.match(out, /waiting on/)
   assert.match(out, /Risk tier: medium\. Files reviewed: \d+\.\nNot verified: Filled\./)
 })
+
+test('the review packet counts .NET and Java tests as tests, with the patterns the test matrix uses', () => {
+  const r = makeRepo()
+  r.sdlc('init', 'demo')
+  r.put('src/Calc/CalculatorEngine.cs', 'namespace Calc;\npublic class CalculatorEngine\n{\n  public int Add(int a, int b) => a + b;\n}\n')
+  r.put('src/Calc.Tests/CalculatorEngineTests.cs', 'public class CalculatorEngineTests\n{\n  [Fact] public void Adds() => Assert.Equal(2, new CalculatorEngine().Add(1, 1));\n}\n')
+  r.put('src/Calc.Tests/CalculatorApiTests.cs', 'public class CalculatorApiTests\n{\n  [Fact] public void Ok() { }\n}\n')
+  r.put('src/main/java/Pricing.java', 'class Pricing {}\n')
+  r.put('src/test/java/PricingTest.java', 'class PricingTest { Pricing p; }\n')
+  const out = r.sdlc('review', 'demo').out
+  assert.match(out, /5 files changed: 2 code, 3 test\./)
+  for (const f of ['CalculatorEngineTests.cs', 'CalculatorApiTests.cs', 'PricingTest.java']) {
+    assert.doesNotMatch(out, new RegExp(`${f}\` \\|[^\\n]*no changed test mentions it`), `${f} is a test, not untested code`)
+  }
+  assert.doesNotMatch(out, /CalculatorEngine\.cs` \|[^\n]*no changed test mentions it/, 'CalculatorEngineTests.cs names it')
+  assert.match(out, /- 8 code lines for/, 'test lines are not code lines')
+})
+
+test('a manifest is a dependency change only when a dependency is added or changed', () => {
+  const r = makeRepo()
+  const csproj = (framework, refs = '') => `<Project Sdk="Microsoft.NET.Sdk">\n  <PropertyGroup><TargetFramework>${framework}</TargetFramework></PropertyGroup>\n  <ItemGroup>\n${refs}  </ItemGroup>\n</Project>\n`
+  const serilog = '    <PackageReference Include="Serilog" Version="3.1.0" />\n'
+  r.put('package.json', JSON.stringify({ name: 'shop', scripts: { gate: 'node gate.mjs' }, dependencies: { express: '^4.19.0' } }, null, 2))
+  r.put('App/App.csproj', csproj('net8.0', serilog))
+  r.put('Lib/Lib.csproj', csproj('net8.0'))
+  r.put('requirements.txt', 'requests==2.31.0\n')
+  r.git('add', '.')
+  r.git('commit', '-m', 'manifests')
+  r.git('branch', '-f', 'main')
+  r.sdlc('init', 'demo')
+  r.put('package.json', JSON.stringify({ name: 'shop', scripts: { gate: 'node tools/gate.mjs', proof: 'node tools/proof.mjs' }, dependencies: { express: '^4.19.0' } }, null, 2))
+  r.put('Lib/Lib.csproj', csproj('net9.0'))
+  r.put('App/App.csproj', csproj('net8.0', `${serilog}    <PackageReference Include="Polly">\n      <Version>8.4.0</Version>\n    </PackageReference>\n`))
+  r.put('requirements.txt', 'requests==2.32.0\n')
+  let out = r.sdlc('review', 'demo').out
+  assert.doesNotMatch(out, /`package\.json` \|[^\n]*dependency change/, 'only the scripts changed')
+  assert.doesNotMatch(out, /`Lib\/Lib\.csproj` \|[^\n]*dependency change/, 'only the target framework changed')
+  assert.match(out, /`App\/App\.csproj` \|[^\n]*dependency change[^\n]*new dependency: Polly/)
+  assert.match(out, /New dependency `Polly` in `App\/App\.csproj`/)
+  assert.match(out, /`requirements\.txt` \|[^\n]*dependency change/, 'a version bump is still a dependency change')
+  r.put('package.json', JSON.stringify({ name: 'shop', scripts: { gate: 'node gate.mjs' }, dependencies: { express: '^4.21.0' } }, null, 2))
+  out = r.sdlc('review', 'demo').out
+  assert.match(out, /`package\.json` \|[^\n]*dependency change/, 'a changed version is a dependency change')
+  assert.doesNotMatch(out, /New dependency `express`/, 'but not a new dependency')
+})
