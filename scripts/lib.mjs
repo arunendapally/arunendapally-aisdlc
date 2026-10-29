@@ -264,9 +264,17 @@ export function section(text, heading) {
 // The person's intent, typed as "change: ...; smallest: ...; drop if: ..." (one per line works too).
 // Only the parts are checked: a word count or a number rule is passed by filler in seconds.
 export const INTENT_PARTS = [['change', 'Change'], ['smallest', 'Smallest'], ['dropIf', 'Drop if']]
+// A label counts only at the start of the text, of a line, or after ";" ("exchange:" is not "change:"),
+// and a part runs to the next label, keeping its own semicolons and lines. "drop:" means "drop if:".
 export function parseIntent(text) {
-  const part = label => text.match(new RegExp(`${label}\\s*:\\s*([^;\\n]*)`, 'i'))?.[1]?.trim() ?? ''
-  return { change: part('change'), smallest: part('smallest'), dropIf: part('drop\\s+if') }
+  const labels = [...text.matchAll(/(^|\n|;)[ \t]*(change|smallest|drop[ \t]+if|drop)[ \t]*:/gi)]
+  const out = { change: '', smallest: '', dropIf: '' }
+  labels.forEach((m, i) => {
+    const key = { change: 'change', smallest: 'smallest' }[m[2].toLowerCase()] ?? 'dropIf'
+    const end = i + 1 < labels.length ? labels[i + 1].index : text.length
+    out[key] = text.slice(m.index + m[0].length, end).trim()
+  })
+  return out
 }
 
 // The PRD's "## Intent" section, written from what the person typed, replacing whatever was there.
