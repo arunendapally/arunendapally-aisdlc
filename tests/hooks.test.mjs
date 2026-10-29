@@ -261,6 +261,23 @@ test('a command splits where a shell would run its parts, and nowhere else', asy
   assert.equal(segments("cat <<'EOF'\nno end"), null)
 })
 
+// F-1 of the calculator run: an empty repo has no main to protect, so its first commit and its first
+// push of main are not a breach. Once the remote has main, it is protected as before.
+test('a new repo can be started: the first commit, and the first push of main to a remote without one', async () => {
+  const { makeRepo: make } = await import('./helpers.mjs')
+  const r = make()
+  r.git('checkout', '-q', 'main')
+  const bare = fs.mkdtempSync(path.join(os.tmpdir(), 'ai-sdlc-empty-origin-'))
+  r.git('init', '-q', '--bare', bare)
+  r.git('remote', 'add', 'origin', bare)
+  assert.equal(r.bash('git push -u origin main'), 'allow', 'the remote has no main yet')
+  r.git('push', '-q', '-u', 'origin', 'main')
+  assert.equal(r.bash('git push origin main'), 'deny', 'now it does')
+  assert.equal(r.bash('git commit -m more'), 'deny', 'committing on main with history is still refused')
+  r.git('update-ref', '-d', 'refs/heads/main')
+  assert.equal(r.bash('git commit -m first'), 'allow', 'a repo with no commits has no main to protect')
+})
+
 test('splitting a command closes holes instead of opening them', () => {
   for (const c of ['git push origin +main', 'git push origin HEAD:main', 'git push origin refs/heads/main', 'sudo git push origin main',
     'env X=1 git push origin main', '(git push origin main)', 'bash -c "git push origin main"', 'git -C . push origin main',

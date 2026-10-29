@@ -4,6 +4,7 @@
 // per session by the rule that fired, and past denialCap the session may only read until a human types.
 import fs from 'node:fs'
 import path from 'node:path'
+import { spawnSync } from 'node:child_process'
 import { root, git, loadConfig, isPaused, isProbe, readState, listFeatures, matches, relPath, readStdin, audit, autonomy } from '../lib.mjs'
 import { segments } from '../segments.mjs'
 
@@ -117,16 +118,26 @@ if (tool === 'Bash' || tool === 'PowerShell') {
 
   // A push is judged on its own arguments: a protected branch in any form, a +refspec, a force flag.
   const protectedRef = new RegExp(cfg.protectedBranches.map(b => `(?:^|[\\s:/+])${b}(?:\\s|$|["')])`).join('|'))
+  // A new repo (F-1 of the calculator run): a remote with no protected branch yet has nothing to
+  // protect, so the first push of main to it is the start of the repo, not a breach.
+  const firstPush = args => {
+    const remote = args.trim().split(/\s+/).find(a => a && !a.startsWith('-')) ?? 'origin'
+    if (!/^[\w.-]+$/.test(remote) || git(`remote get-url ${remote}`, dir) === '') return false
+    // Only a remote that answered, and answered with no refs at all; an unreachable one is not empty.
+    const r = spawnSync('git', ['ls-remote', remote], { cwd: dir, encoding: 'utf8', timeout: 15000 })
+    return r.status === 0 && r.stdout.trim() === ''
+  }
   for (const p of parts) {
     const run = code(p)
     if (!/\bgit\b[^;&|\n]*\bpush\b/.test(run)) continue
     const args = run.replace(/[\s\S]*?\bpush\b/, '')
     if (/(^|\s)(--force|-f|--force-with-lease|--force-if-includes)\b|(^|\s)\+\S/.test(args)) deny('Force push is not allowed for agents.', 'force-push')
-    if (protectedRef.test(args) || /(^|\s)--(mirror|all)\b/.test(args) || onProtected) deny(`Agents never push to ${cfg.protectedBranches.join('/')}. Push the feature branch and open a PR.`, 'push-protected')
+    if ((protectedRef.test(args) || /(^|\s)--(mirror|all)\b/.test(args) || onProtected) && !firstPush(args)) deny(`Agents never push to ${cfg.protectedBranches.join('/')}. Push the feature branch and open a PR.`, 'push-protected')
   }
   if (SECRET.test(c)) deny('The command contains what looks like a secret. Use the secret store and reference it by name.', 'secret')
   if (/--no-verify\b/.test(c)) deny('--no-verify skips the checks. Fix the failure instead.', 'no-verify')
-  if (onProtected && /\bgit\s+(commit|merge|rebase|cherry-pick|reset)\b/.test(c)) deny(`You are on ${branch}. Work on a feature branch in its own worktree.`, 'commit-protected')
+  // A repo with no commits has no main to protect yet: its first commit starts it.
+  if (onProtected && /\bgit\s+(commit|merge|rebase|cherry-pick|reset)\b/.test(c) && git('rev-parse --verify -q HEAD', dir) !== '') deny(`You are on ${branch}. Work on a feature branch in its own worktree.`, 'commit-protected')
   for (const p of cfg.deployPatterns) {
     if (new RegExp(p, 'i').test(scan)) deny(`"${c.slice(0, 60)}" merges, deploys, changes settings or records a human decision. A human runs it.`, 'human-action')
   }

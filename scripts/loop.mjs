@@ -52,6 +52,9 @@ export function judgeProof(acs, run) {
     })
   }
   if (notCollected.test(run.output)) return acs.map(ac => ({ ac, red: false, why: 'the runner collected no tests' }))
+  // Red because a package is missing is not red because the code under test is missing.
+  const pkg = run.output?.match(/Cannot find (?:module|package) '((?:@[\w.-]+\/)?[\w][\w.-]*)'/)?.[1]
+  if (run.status !== 0 && pkg) return acs.map(ac => ({ ac, red: false, why: `the base run failed on a missing package (${pkg}), not on the code under test` }))
   return acs.map(ac => (run.status !== 0 ? { ac, red: true } : { ac, red: false, why: 'the run passed against the base code' }))
 }
 
@@ -88,17 +91,24 @@ export function runProof(dir, state, opts = {}, cfg = loadConfig(dir)) {
   if (missing.length) return { ok: false, problems: [`${missing.join(', ')} does not exist`] }
   const tree = fs.mkdtempSync(path.join(os.tmpdir(), 'sdlc-proof-'))
   const report = path.join(os.tmpdir(), `sdlc-proof-${process.pid}.xml`)
-  const shared = path.join(tree, 'node_modules')
-  let linked = false
+  // Every installed node_modules, at the root and in subfolders such as web/ or packages/x/.
+  const modules = ['node_modules', ...fs.readdirSync(dir, { withFileTypes: true }).filter(e => e.isDirectory() && !e.name.startsWith('.') && e.name !== 'node_modules')
+    .flatMap(e => [path.join(e.name, 'node_modules'), ...fs.readdirSync(path.join(dir, e.name), { withFileTypes: true })
+      .filter(s => s.isDirectory() && !s.name.startsWith('.') && s.name !== 'node_modules').map(s => path.join(e.name, s.name, 'node_modules'))])]
+    .filter(m => fs.existsSync(path.join(dir, m)))
+  const linked = []
   try {
     const green = runIn(dir, files, cfg, report)
     if (green.status !== 0) return { ok: false, problems: [`the traced tests do not pass on this branch, so there is no green run to prove: ${green.output.trim().split('\n').slice(-3).join(' ')}`] }
     git(`worktree add --detach "${tree}" ${base}`, dir)
     if (!fs.existsSync(path.join(tree, '.git'))) return { ok: false, problems: [`could not create a worktree at the base commit ${base.slice(0, 7)}`] }
     // Installed dependencies are not in git: share them, or every test would fail for that reason alone.
-    if (fs.existsSync(path.join(dir, 'node_modules')) && !fs.existsSync(shared)) {
-      fs.symlinkSync(path.join(dir, 'node_modules'), shared, 'junction')
-      linked = true
+    for (const m of modules) {
+      const shared = path.join(tree, m)
+      if (fs.existsSync(shared)) continue
+      fs.mkdirSync(path.dirname(shared), { recursive: true })
+      fs.symlinkSync(path.join(dir, m), shared, 'junction')
+      linked.push(shared)
     }
     for (const f of files) {
       fs.mkdirSync(path.dirname(path.join(tree, f)), { recursive: true })
@@ -111,7 +121,7 @@ export function runProof(dir, state, opts = {}, cfg = loadConfig(dir)) {
     return { ok: !problems.length, problems, base: base.slice(0, 7), files: hashes, acs, perTest: Boolean(red.cases) && !opts.files, at: new Date().toISOString() }
   } finally {
     // Unlink the shared folder first, so removing the worktree cannot reach through it.
-    if (linked) fs.unlinkSync(shared)
+    for (const shared of linked) fs.unlinkSync(shared)
     git(`worktree remove --force "${tree}"`, dir)
     fs.rmSync(tree, { recursive: true, force: true })
     fs.rmSync(report, { force: true })
