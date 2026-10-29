@@ -37,6 +37,17 @@ From [docs/feedback/2026-10-29-calculator-run.md](docs/feedback/2026-10-29-calcu
 - **Fixed: a command that starts with `cd <path> &&` or `Set-Location <path>;` was judged by the session's branch.** Committing on a protected branch, pushing to one, the first push of a new repo and the preview check now use the branch and remote of the repo the command changes into. Text rules (deploys, production, secrets) apply as before.
 - Git is asked about another repo only when the target is outside the session's repo. Tests in `tests/hooks.test.mjs`.
 
+### Knowledge pages in the Open Knowledge Format
+
+`knowledge/` is now an [Open Knowledge Format](https://github.com/GoogleCloudPlatform/knowledge-catalog/blob/main/okf/SPEC.md) (OKF 0.2) bundle, so tools that read OKF can read what agents learned.
+
+- **The page format is OKF:** `type`, `title`, `description`, `sources` as `- resource: <path>`, `generated: { by, at }` and `verified: [{ by, at }]`, plus the plugin's own `verified_commit` and `confidence`. The knowledge template and `/ai-sdlc:learn` write this format. Pages in the older format (`name`, `sources: [paths]`, `verified: <commit>`) are still read and checked, and go stale the same way.
+- **Staleness stays git-based:** a page is stale when a source changed since `verified_commit` (or the older `verified`). An OKF `stale_after` in the past also makes it stale; sources that are URLs are not looked for on disk.
+- **The frontmatter reader handles nested YAML:** block and flow lists and mappings, quotes and comments, with no new dependency.
+- **`sdlc knowledge index` writes `knowledge/index.md`** in the OKF shape (`okf_version: "0.2"`, one `* [Title](page.md) - description` line per page) and replaces the older `INDEX.md`. It adds what changed (created, updated, removed pages) to `knowledge/log.md`, newest first. The autopilot mod reads `index.md`, falling back to `INDEX.md`.
+- **`sdlc knowledge check` reports OKF conformance:** every file but `index.md` and `log.md` needs frontmatter with a non-empty `type`. Files that are not OKF are listed as `NOT OKF` and do not fail the check. The repo kit's `knowledge/README.md` now has frontmatter, so a new repo's bundle conforms.
+- `tests/knowledge.test.mjs`.
+
 ### Human commands that are never lost ([#15](https://github.com/arunendapally/arunendapally-aisdlc/issues/15))
 
 From a real feature in another repo on plugin 0.4.0, where `sdlc intent` could not be recorded by any route.

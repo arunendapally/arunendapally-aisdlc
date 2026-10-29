@@ -308,7 +308,7 @@ test('knowledge: source-backed pages go stale when their sources change, and bro
   fs.rmSync(path.join(r.repo, 'knowledge', 'bad.md'))
 
   r.sdlc('knowledge', 'index')
-  const index = fs.readFileSync(path.join(r.repo, 'knowledge', 'INDEX.md'), 'utf8')
+  const index = fs.readFileSync(path.join(r.repo, 'knowledge', 'index.md'), 'utf8')
   assert.match(index, /payments-retry.*STALE/)
   assert.match(r.hook('session-start', {}), /Knowledge: 2 pages/)
 })

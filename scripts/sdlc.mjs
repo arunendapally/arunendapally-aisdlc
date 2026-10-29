@@ -8,7 +8,7 @@ import { spawnSync } from 'node:child_process'
 import { STAGES, root, git, loadConfig, readState, writeState, listFeatures, missingHeadings, isFrozen, destructiveMigrations,
   stageSpec, section, matches, changedFiles, changedLines, createFeature, copyTemplate, TEMPLATES, overdueGates, overduePostmortems,
   KINDS, trustedGates, promotable, readTrust, writeTrust, lessonPaid, lessonProblem, lessonsOwed, audit, withIntent, INTENT_PARTS, autonomy } from './lib.mjs'
-import { check, relevant, writeIndex } from './knowledge.mjs'
+import { check, conformance, OKF_VERSION, relevant, writeIndex } from './knowledge.mjs'
 import { collect, analyze, report } from './retro.mjs'
 import { lint, requirementsFrom } from './gherkin.mjs'
 import { packet, packetText, parseLedger, ledgerProblems } from './review.mjs'
@@ -581,10 +581,14 @@ const commands = {
   },
 
   // The knowledge base: "check" fails on unusable pages and lists stale ones; "index" rebuilds
-  // knowledge/INDEX.md; "for <file>..." lists the pages to read before touching those files.
+  // knowledge/index.md and logs changes in knowledge/log.md; "for <file>..." lists the pages to read
+  // before touching those files. "check" also reports files that are not Open Knowledge Format.
   knowledge() {
     const sub = feature
-    if (sub === 'index') return console.log(`Wrote knowledge/INDEX.md (${writeIndex(dir)} lines).`)
+    if (sub === 'index') {
+      const { lines, logged } = writeIndex(dir)
+      return console.log(`Wrote knowledge/index.md (${lines} lines)${logged ? ` and ${logged} entries in knowledge/log.md` : ''}.`)
+    }
     if (sub === 'for') {
       const found = relevant(dir, rest)
       return console.log(found.length ? found.map(p => `${p.file}: ${p.meta.description}`).join('\n') : 'No pages cover these files yet. Write one after you learn the area.')
@@ -593,6 +597,9 @@ const commands = {
     const { invalid, stale, count } = check(dir)
     console.log(`${count} pages, ${invalid.length} invalid, ${stale.length} stale.`)
     for (const s of stale) console.log(`STALE ${s.file}: ${s.why}`)
+    const okf = conformance(dir)
+    if (okf.files) console.log(`OKF: ${okf.files - okf.problems.length} of ${okf.files} files conform to Open Knowledge Format ${OKF_VERSION}.`)
+    for (const p of okf.problems) console.log(`NOT OKF ${p}`)
     if (invalid.length) fail(invalid.map(i => `INVALID ${i}`).join('\n'))
   },
 

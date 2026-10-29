@@ -1,23 +1,34 @@
+---
+type: guide
+title: Knowledge
+description: How this folder of knowledge pages is written, checked and kept current.
+---
+
 # Knowledge
 
 What this team and its agents have learned about this system, written down so nobody (human or agent) has to learn it twice. It is the agents' memory: every session starts by reading the index, and every change starts by reading the pages for the files it touches.
 
 ## Format
 
-Plain Markdown, one subject per page, with frontmatter:
+The folder is an [Open Knowledge Format](https://github.com/GoogleCloudPlatform/knowledge-catalog/blob/main/okf/SPEC.md) (OKF 0.2) bundle: plain Markdown, one subject per page, with frontmatter:
 
 ```
 ---
-name: payments-retry
-description: One line on what the page answers.
 type: system | component | decision | trap | runbook | howto | glossary | playbook
-sources: [path/one.ts, path/two.ts]
-verified: <commit the sources were read at>
+title: Payments retry
+description: One line on what the page answers.
+sources:
+  - resource: path/one.ts
+  - resource: path/two.ts
+generated: { by: ai-sdlc/architect, at: 2026-01-01T00:00:00Z }
+verified:
+  - { by: ai-sdlc/architect, at: 2026-01-01T00:00:00Z }
+verified_commit: <commit the sources were read at>
 confidence: Established | Moderate | Preliminary
 ---
 ```
 
-Link pages with `[[name]]`. Any wiki tool that reads Markdown with frontmatter can read these pages.
+`verified_commit` and `confidence` are this plugin's own keys; OKF readers keep them. Link pages with `[[file-name]]`. Any tool that reads OKF, or Markdown with frontmatter, can read these pages. Older pages with `name`, `sources: [paths]` and `verified: <commit>` are still read and checked.
 
 ## Rules
 
@@ -26,4 +37,4 @@ Link pages with `[[name]]`. Any wiki tool that reads Markdown with frontmatter c
 - **Written as you go.** Learning tasks (`/ai-sdlc:learn`) write pages; every stage that learns something durable adds or updates one; Release and postmortems add traps.
 - **Pruned.** A page whose sources are gone is deleted or rewritten, never left to mislead.
 
-`sdlc knowledge index` rebuilds `INDEX.md`. `sdlc knowledge for <files>` lists the pages to read first.
+`sdlc knowledge index` rebuilds `index.md` and adds what changed to `log.md`, newest first. `sdlc knowledge for <files>` lists the pages to read first. `sdlc knowledge check` also lists any file here that is not OKF.

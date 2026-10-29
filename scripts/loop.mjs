@@ -215,7 +215,7 @@ export function rememberWarnings(dir, state, changed, cfg = loadConfig(dir)) {
 
   // Remember: no knowledge page or fact this change touched may be stale.
   const { stale } = knowledgeCheck(dir)
-  const touched = new Set(knowledgePages(dir).filter(p => Array.isArray(p.meta?.sources) && p.meta.sources.some(s => changed.some(c => c === s || c.startsWith(s.replace(/\/?$/, '/'))))).map(p => p.file))
+  const touched = new Set(knowledgePages(dir).filter(p => p.sources.some(s => changed.some(c => c === s || c.startsWith(s.replace(/\/?$/, '/'))))).map(p => p.file))
   for (const s of stale.filter(s => touched.has(s.file))) problems.push(`knowledge page ${s.file} is stale (${s.why}): re-verify it against the code`)
   const facts = path.join(dir, cfg.specsDir, state.feature, 'facts.md')
   if (fs.existsSync(facts)) {
