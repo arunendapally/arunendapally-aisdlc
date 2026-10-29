@@ -255,12 +255,12 @@ const commands = {
     if (state.stage === 5 || spec.isAuto) {
       const lines = changedLines(dir, cfg)
       const max = cfg.maxPrLines[state.lane] ?? cfg.maxPrLines.full
-      // Once a PR's size passed at Verify, the fixes its review asks for get 20% room: refusing the
+      // Once a PR's size passed at Build or Verify, the fixes its review asks for get 20% room: refusing the
       // review's own fix for size is the process fighting itself.
       const room = state.sizeChecked ? Math.max(max, Math.round(state.sizeChecked * 1.2)) : max
       if (lines > room) missing.push(`${lines} changed lines is over the ${state.lane} lane limit of ${max}. Split it into smaller PRs, one slice each`)
       else if (lines > max) warnings.push(`${lines} changed lines is over the ${state.lane} lane limit of ${max}, within the room for review fixes (${room}) because ${state.sizeChecked} lines passed at Verify.`)
-      else if (state.stage === 5 && state.sizeChecked === undefined) state.sizeChecked = lines
+      else if ([4, 5].includes(state.stage) && state.sizeChecked === undefined) state.sizeChecked = lines
     }
     if (state.stage === 5) {
       // Review has to converge (ADR-0005): past the round cap, step back instead of another round.
