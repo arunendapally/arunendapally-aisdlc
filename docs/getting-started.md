@@ -151,7 +151,8 @@ Off by default, so the default path stays short. Turn them on when the risk call
 
 | Symptom | Why | What to do |
 |---|---|---|
-| `sdlc approve` records nothing | The `ai-sdlc` plugin is not installed in this session, the gate was never requested, or you typed it in a terminal | Type it in the Claude Code prompt; install the plugin and start a new session; ask the agent to run `sdlc request <feature>` first |
+| `sdlc approve` records nothing | The `ai-sdlc` plugin is not installed in this session, the gate was never requested, or the command was not at the start of your message | Send it as a message of its own; install the plugin and start a new session; ask the agent to run `sdlc request <feature>` first |
+| The chat does not record your command at all | The session has no plugin hooks, for example one started from another session | In your own terminal, run the same command through the CLI: `node <plugin>/scripts/sdlc.mjs approve <feature> <stage>` (also `intent`, `reject`, `close`, `lane`). Agents are refused this path |
 | An `sdlc` command or a slash command is not recognised | The installed plugin is older than these docs | Update it (section 1) and start a new session |
 | "No gateCommand" at Build | The gate command is not set | Set `gateCommand` in `.ai-sdlc/config.json` (section 2) |
 | "is not an owner of gate N" | `gateOwners` lists other names | Approve as a listed owner, or change the config |

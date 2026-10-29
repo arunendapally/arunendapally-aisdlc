@@ -18,5 +18,10 @@
     "id": "F4",
     "name": "a review loop that never converges",
     "source": "How the Claude Code team does code review (claude.dev, 2026-10-15): one PR went through more than fifty review and fix rounds overnight"
+  },
+  {
+    "id": "F5",
+    "name": "a person's command lost without a word",
+    "source": "issue #15, 2026-10-26: in a desktop session the intent could not be recorded by any route"
   }
 ]

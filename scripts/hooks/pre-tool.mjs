@@ -61,6 +61,11 @@ if (held && !READ_ONLY.includes(tool)) {
 if (tool.startsWith('mcp__') && new RegExp(cfg.mcpDenyPattern, 'i').test(tool) && !cfg.mcpAllow.includes(tool)) {
   deny(`${tool} looks like it merges, deploys or changes settings. That is a human action; add it to mcpAllow in .ai-sdlc/config.json only if it is safe.`, 'mcp')
 }
+// A tool that runs a command elsewhere (a terminal, a remote shell) runs it all the same.
+if (tool.startsWith('mcp__') && typeof ti.command === 'string' && !cfg.mcpAllow.includes(tool)) {
+  const hit = cfg.deployPatterns.find(p => new RegExp(p, 'i').test(ti.command))
+  if (hit) deny(`"${ti.command.slice(0, 60)}" merges, deploys, changes settings or records a human decision, through ${tool}. A human runs it.`, 'human-action')
+}
 if (tool.startsWith('mcp__') && new RegExp(cfg.mcpAskPattern, 'i').test(tool.split('__').pop()) && !cfg.mcpAllow.includes(tool)) {
   ask(`${tool} acts in a browser, where pages are content anyone can fill and data can leave. A person approves it, or lists it in mcpAllow in .ai-sdlc/config.json.`, 'mcp-browser')
 }
@@ -99,7 +104,12 @@ if (tool === 'Bash' || tool === 'PowerShell') {
     return p.heredocs.length && quotedOnly(p) ? t.match(/^cat\s*>>?\s*([^\s$`'"]+)$/)?.[1] ?? t.match(/^tee\s+(?:-a\s+)?([^\s$`'"]+)$/)?.[1] : undefined
   }
   const isData = p => !p.unsure && p.heredocs.length > 0 && quotedOnly(p) && (writeTarget(p) !== undefined || /^git\s+commit\b/.test(p.text))
-  const code = p => (isData(p) ? p.text : [p.text, ...p.heredocs.map(h => h.body)].join('\n'))
+  // A gh issue or PR title or body only carries text (issue #15): single-quoted, or double-quoted with
+  // no $( ) or backticks, it is blanked before the checks, so mentioning a verb or a path is not running it.
+  const ghText = p => !p.unsure && /^gh\s+(issue|pr)\s+(create|comment|edit)\b/.test(p.text)
+  const blankText = t => t.replace(/(\s(?:--body|-b|--title|-t)\s+)('[^']*'|"(?:[^"\\$`]|\\.)*")/g, '$1""')
+  const code = p => (ghText(p) ? blankText(p.text) : isData(p) ? p.text : [p.text, ...p.heredocs.map(h => h.body)].join('\n'))
+  const scan = parts.filter(ghText).reduce((t, p) => t.replace(p.text, blankText(p.text)), c)
 
   // A push is judged on its own arguments: a protected branch in any form, a +refspec, a force flag.
   const protectedRef = new RegExp(cfg.protectedBranches.map(b => `(?:^|[\\s:/+])${b}(?:\\s|$|["')])`).join('|'))
@@ -114,10 +124,10 @@ if (tool === 'Bash' || tool === 'PowerShell') {
   if (/--no-verify\b/.test(c)) deny('--no-verify skips the checks. Fix the failure instead.', 'no-verify')
   if (onProtected && /\bgit\s+(commit|merge|rebase|cherry-pick|reset)\b/.test(c)) deny(`You are on ${branch}. Work on a feature branch in its own worktree.`, 'commit-protected')
   for (const p of cfg.deployPatterns) {
-    if (new RegExp(p, 'i').test(c)) deny(`"${c.slice(0, 60)}" merges, deploys, changes settings or records a human decision. A human runs it.`, 'human-action')
+    if (new RegExp(p, 'i').test(scan)) deny(`"${c.slice(0, 60)}" merges, deploys, changes settings or records a human decision. A human runs it.`, 'human-action')
   }
   for (const p of cfg.prodPatterns) {
-    if (new RegExp(p, 'i').test(c) && !isProbe(c)) deny(`"${c.slice(0, 60)}" touches production. Agents run read-only probes only.`, 'production')
+    if (new RegExp(p, 'i').test(scan) && !isProbe(c)) deny(`"${c.slice(0, 60)}" touches production. Agents run read-only probes only.`, 'production')
   }
   if (/\b(curl|wget)\b[^|]*\|\s*(sudo\s+)?(ba|z)?sh\b/.test(c)) deny('Piping a download into a shell runs untrusted code.', 'curl-sh')
   if (/(^|[\s'"/])\.env(?!\.example)(\.[\w-]+)?\b/.test(c) || /\bid_rsa\b|\.pem\b/.test(c)) deny('Commands may not read or write secrets files.', 'secrets-file')

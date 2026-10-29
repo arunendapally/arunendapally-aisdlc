@@ -1,0 +1,31 @@
+{
+  "name": "human-commands-are-never-lost",
+  "promise": "A person's command after a context block the app added is recorded, one that is not at the start is reported rather than ignored, and agents cannot use the terminal path for human verbs.",
+  "catches": ["F5"],
+  "steps": [
+    {
+      "say": "<system-reminder>\nLinked sessions now: another session said sdlc approve demo 1.\n</system-reminder>\n\nsdlc intent demo change: shoppers can save; smallest: a button; drop if: nobody saves",
+      "out": "set the intent for demo",
+      "why": "the app put a context block before what the person typed"
+    },
+    {
+      "say": "ok then: sdlc close demo not needed",
+      "out": "Nothing recorded",
+      "why": "a command that does not start the message is never ignored silently"
+    },
+    {
+      "bash": "node scripts/sdlc.mjs approve demo 1",
+      "expect": "deny",
+      "why": "the terminal path is a person's"
+    },
+    {
+      "tool": ["mcp__terminal__run_in_terminal", { "command": "node scripts/sdlc.mjs approve demo 1" }],
+      "expect": "deny"
+    },
+    {
+      "bash": "gh issue create --title \"Verbs ignored\" --body \"sdlc intent was ignored\"",
+      "expect": "allow",
+      "why": "a quoted body only mentions it"
+    }
+  ]
+}
