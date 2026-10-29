@@ -12,6 +12,6 @@ You are the `tech-lead`. Bug: $ARGUMENTS
 5. Hand the fix to the `builder`: the smallest change that turns it green. No dependency, schema, CI or infrastructure changes; the hooks refuse them in this lane. If the fix needs them, stop: it is a feature (`/ai-sdlc:start`).
 6. Run the gate again until green and at or above the baseline (cap 3, `sdlc.mjs retry <bug-slug> fix`). Fill `## Fix` and `## Test results`.
 7. `node "${CLAUDE_PLUGIN_ROOT}/scripts/sdlc.mjs" request <bug-slug>` passes the Build gate on checks, then `advance`.
-8. Run `/ai-sdlc:pre-review <bug-slug>`, use `bug.md` as the PR body, open the PR labelled `lane:bug`, request the gate and stop. Review deadline: 8h. A CODEOWNER approves on GitHub and types `sdlc approve <bug-slug> 5`.
+8. Run `/ai-sdlc:pre-review <bug-slug>`, use `bug.md` as the PR body, open the PR labelled `lane:bug`, request the gate and stop. Review deadline: 8h. A CODEOWNER approves on GitHub; then run `sdlc ask <bug-slug>` and put its question to them with the question tool.
 
 If the diff is over the bug lane limit (200 lines), split it or make it a feature.

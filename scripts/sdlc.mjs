@@ -219,7 +219,7 @@ const commands = {
       const prdText = fs.existsSync(prd) ? fs.readFileSync(prd, 'utf8') : ''
       if (state.intent && prdText) fs.writeFileSync(prd, withIntent(prdText, state.intent))
       else if (granted && !section(prdText, '## Intent')) missing.push('the PRD has no "## Intent" (change, smallest, drop if): with autonomy the agent writes it, and the request still checks it')
-      else if (!granted && !state.intent) missing.push(`no intent from a person yet. Ask them to type, in their own words: sdlc intent ${feature} change: ...; smallest: ...; drop if: ...`)
+      else if (!granted && !state.intent) missing.push(`no intent from a person yet. Run "sdlc ask ${feature}" and ask its three questions with the question tool`)
       if (fs.existsSync(prd)) missing.push(...assumptionProblems(fs.readFileSync(prd, 'utf8')).map(p => `prd.md: ${p}`))
       missing.push(...acceptanceProblems(state))
       // Slice before building, not after: the PR line limit otherwise fires at the end of Build.
@@ -325,7 +325,7 @@ const commands = {
     state.gates[state.stage] = { status: 'waiting', requestedAt: now, fingerprint: gateFingerprint(dir, state, state.stage, cfg) }
     writeState(dir, state)
     const sla = cfg.reviewSlaHours[state.lane] ?? cfg.reviewSlaHours.full
-    console.log(`Gate ${state.stage} (${spec.name}) is waiting on: ${spec.owner}. Review deadline: ${sla}h.\nArtefact: ${cfg.specsDir}/${feature}/${spec.artefact}\nThe owner approves by typing: sdlc approve ${feature} ${state.stage}`)
+    console.log(`Gate ${state.stage} (${spec.name}) is waiting on: ${spec.owner}. Review deadline: ${sla}h.\nArtefact: ${cfg.specsDir}/${feature}/${spec.artefact}\nAsk the owner: run "sdlc ask ${feature}" and put its question to them with the question tool. Never ask them to type a command.`)
     // What the person judges it against, from what the scripts hold, never the agent's account of itself.
     const doc = f => (fs.existsSync(path.join(dir, cfg.specsDir, feature, f)) ? fs.readFileSync(path.join(dir, cfg.specsDir, feature, f), 'utf8') : '')
     if (state.intent) console.log(`\nYour intent:\n${INTENT_PARTS.map(([k, label]) => `- ${label}: ${state.intent[k]}`).join('\n')}`)
@@ -334,6 +334,41 @@ const commands = {
       console.log(`Unconfirmed assumptions: ${unconfirmed.join(', ') || 'none'}`)
     }
     if (state.stage === 5) console.log(`Risk tier: ${state.riskTier}. Files reviewed: ${state.reviewedFiles.length}.\nNot verified: ${section(doc(spec.artefact), '## Not verified') || 'nothing listed'}`)
+  },
+
+  // The question a person answers with a click instead of typing a command (owner feedback, 29 Oct).
+  // Prints the AskUserQuestion input; the agent asks it, and the answers hook records the choice. The
+  // marker binds the question to this feature, gate and fingerprint, so a stale one records nothing.
+  ask() {
+    const state = need()
+    const gate = state.gates[state.stage]
+    if (gate?.status === 'waiting') {
+      const spec = stageSpec(state, state.stage)
+      const intent = state.intent ? ` Your intent: ${state.intent.change}.` : ''
+      return console.log(JSON.stringify({
+        questions: [{
+          header: `Gate ${state.stage}`,
+          question: `Approve ${spec.name} for ${feature}? It covers ${loadConfig(dir).specsDir}/${feature}/${spec.artefact}.${intent} [gate ${feature} ${state.stage} ${(gate.fingerprint ?? '').slice(0, 8)}]`,
+          multiSelect: false,
+          options: [
+            { label: 'Approve', description: 'Record your approval; the feature moves on by itself.' },
+            { label: 'Send back', description: 'Record a rejection. To say why, choose Other and write it.' },
+          ],
+        }],
+      }, null, 2))
+    }
+    if (state.stage === 1 && ['full', 'light'].includes(state.lane) && !state.intent) {
+      const q = (header, question) => ({ header, question: `${question} [intent ${feature}]`, multiSelect: false, options: [] })
+      return console.log(JSON.stringify({
+        instructions: 'Fill each question\'s options with 2 or 3 answers in the person\'s own words from the conversation, plus nothing they did not say. They can always write their own under Other.',
+        questions: [
+          q('Change', 'What should change for the people who use it?'),
+          q('Smallest', 'What is the smallest version that would tell us it works?'),
+          q('Drop if', 'What result would make us drop it?'),
+        ],
+      }, null, 2))
+    }
+    fail(`Nothing to ask the person for ${feature}: no gate is waiting${state.stage === 1 && !state.intent ? '' : ' and the intent is set'}. Run sdlc request ${feature} first.`)
   },
 
   // With autonomy, the merge a person makes on GitHub: push exactly the commit Verify reviewed to main,

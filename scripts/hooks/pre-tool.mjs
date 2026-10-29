@@ -61,6 +61,10 @@ if (held && !READ_ONLY.includes(tool)) {
 if (tool.startsWith('mcp__') && new RegExp(cfg.mcpDenyPattern, 'i').test(tool) && !cfg.mcpAllow.includes(tool)) {
   deny(`${tool} looks like it merges, deploys or changes settings. That is a human action; add it to mcpAllow in .ai-sdlc/config.json only if it is safe.`, 'mcp')
 }
+// A gate or intent question is the person's to answer: one that arrives already answered is the agent's.
+if (tool === 'AskUserQuestion' && ti.answers && Object.keys(ti.answers).length && (ti.questions ?? []).some(q => /\[(gate|intent) [a-z0-9-]+[^\]]*\]$/.test(q.question ?? ''))) {
+  deny('A gate or intent question is answered by the person, never filled in by an agent. Ask it without answers.', 'answer-for-person')
+}
 // A tool that runs a command elsewhere (a terminal, a remote shell) runs it all the same.
 if (tool.startsWith('mcp__') && typeof ti.command === 'string' && !cfg.mcpAllow.includes(tool)) {
   const hit = cfg.deployPatterns.find(p => new RegExp(p, 'i').test(ti.command))
@@ -195,7 +199,7 @@ if (spec) {
 const prd = rel.match(new RegExp(`^${cfg.specsDir}/([^/]+)/prd\\.md$`))
 if (prd) {
   const state = readState(dir, prd[1])
-  if (state && ['full', 'light'].includes(state.lane) && !state.intent && !autonomy(dir)) deny(`prd.md waits for the person's intent. Ask them to type, in their own words: sdlc intent ${prd[1]} change: <what changes for the user>; smallest: <the smallest version that tells us it works>; drop if: <the result that would make us drop it>. Do not suggest the answers.`, 'intent-first')
+  if (state && ['full', 'light'].includes(state.lane) && !state.intent && !autonomy(dir)) deny(`prd.md waits for the person's intent. Run "sdlc ask ${prd[1]}" and ask its three questions with the question tool, offering only answers from what they already said.`, 'intent-first')
 }
 
 // Code on a feature branch waits until the feature reaches Build.
