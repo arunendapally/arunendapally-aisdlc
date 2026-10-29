@@ -97,9 +97,9 @@ export const DEFAULT_CONFIG = {
   deployPatterns: ['vercel\\b.*(--prod|--target[= ]production|\\bpromote\\b|\\balias\\b)', 'terraform\\s+apply', 'netlify\\s+deploy\\b.*--prod', 'fly(ctl)?\\s+deploy\\b',
     'firebase\\s+deploy\\b', 'wrangler\\s+(deploy|publish)\\b', '(npm|pnpm|yarn)\\s+(run\\s+)?deploy\\b', 'kubectl\\s+(apply|delete|rollout)', 'helm\\s+(install|upgrade)', 'npm\\s+publish',
     'gh\\s+pr\\s+merge', 'gh\\s+release\\s+create', 'gh\\s+(ruleset|secret|repo\\s+edit)\\b', 'gh\\s+api\\b.*(-X|--method)\\s*(?!GET\\b)[A-Z]+', 'git\\s+config\\b.*\\balias\\.',
-    '\\bsdlc\\s+(approve|reject|lane|hotfix|intent|trust|distrust|resume|unfreeze|close)\\b',
+    '\\bsdlc\\s+(approve|reject|lane|hotfix|intent|autonomy|trust|distrust|resume|unfreeze|close)\\b',
     // The same verbs through the CLI's terminal path, and the hook fed a prompt by hand, are a person's alone.
-    '\\bsdlc\\.mjs["\']?\\s+(approve|reject|lane|hotfix|intent|distrust|resume|unfreeze|close)\\b', 'hooks[\\\\/]user-prompt\\.mjs'],
+    '\\bsdlc\\.mjs["\']?\\s+(approve|reject|lane|hotfix|intent|autonomy|distrust|resume|unfreeze|close)\\b', 'hooks[\\\\/]user-prompt\\.mjs'],
   // Production is touched only by read-only probes: a command matching these must also be a probe.
   prodPatterns: ['\\b(aws|gcloud|az)\\b.*\\bprod(uction)?\\b', 'kubectl\\b.*--context[= ]\\S*prod'],
   // House-style text bans apply to these files. A repo can widen it, for example to "**".
@@ -361,6 +361,16 @@ export function createFeature(dir, { feature, lane = 'full', stage, branch, extr
   }
   writeState(dir, state)
   return state
+}
+
+// A person may grant a repo autonomy ("sdlc autonomy on <reason>"): every gate then passes on its
+// checks, recorded as granted by them. Only a person grants it or takes it back.
+export function autonomy(dir) {
+  try {
+    return JSON.parse(fs.readFileSync(path.join(dir, '.ai-sdlc', 'AUTONOMY'), 'utf8'))
+  } catch {
+    return null
+  }
 }
 
 export function isFrozen(dir) {

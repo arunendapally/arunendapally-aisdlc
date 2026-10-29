@@ -7,7 +7,7 @@ import { fileURLToPath } from 'node:url'
 import { spawnSync } from 'node:child_process'
 import { STAGES, root, git, loadConfig, readState, writeState, listFeatures, missingHeadings, isFrozen, destructiveMigrations,
   stageSpec, section, matches, changedFiles, changedLines, createFeature, copyTemplate, TEMPLATES, overdueGates, overduePostmortems,
-  KINDS, trustedGates, promotable, readTrust, writeTrust, lessonPaid, lessonProblem, lessonsOwed, audit, withIntent, INTENT_PARTS } from './lib.mjs'
+  KINDS, trustedGates, promotable, readTrust, writeTrust, lessonPaid, lessonProblem, lessonsOwed, audit, withIntent, INTENT_PARTS, autonomy } from './lib.mjs'
 import { check, relevant, writeIndex } from './knowledge.mjs'
 import { collect, analyze, report } from './retro.mjs'
 import { lint, requirementsFrom } from './gherkin.mjs'
@@ -175,7 +175,9 @@ const commands = {
       audit(dir, { event: back === 1 ? 'spec-drift' : 'plan-drift', feature })
       fail(`${what[0].toUpperCase()}${what.slice(1)} has changed since gate ${back} was approved, so ${feature} goes back to stage ${back} (${name}). Request gate ${back} again so a person approves the new version. Tests already written stay.`)
     }
-    const spec = stageSpec(state, state.stage, trustedGates(dir))
+    // With autonomy granted by a person, every gate passes on its checks, recorded as granted by them.
+    const granted = autonomy(dir)
+    const spec = granted ? { ...stageSpec(state, state.stage, trustedGates(dir)), isAuto: true, owner: `autonomy granted by ${granted.by}` } : stageSpec(state, state.stage, trustedGates(dir))
     const missing = missingHeadings(dir, state)
     const warnings = []
     if ([4, 5].includes(state.stage) && !(state.kinds ?? []).includes('data')) {
@@ -200,8 +202,11 @@ const commands = {
     if (state.stage === 1) {
       const prd = path.join(dir, cfg.specsDir, feature, 'prd.md')
       // The PRD carries the person's intent verbatim, whatever an agent wrote in its place.
-      if (!state.intent) missing.push(`no intent from a person yet. Ask them to type, in their own words: sdlc intent ${feature} change: ...; smallest: ...; drop if: ...`)
-      else if (fs.existsSync(prd)) fs.writeFileSync(prd, withIntent(fs.readFileSync(prd, 'utf8'), state.intent))
+      // With autonomy, the agent writes the intent into the PRD itself; it is still required.
+      const prdText = fs.existsSync(prd) ? fs.readFileSync(prd, 'utf8') : ''
+      if (state.intent && prdText) fs.writeFileSync(prd, withIntent(prdText, state.intent))
+      else if (granted && !section(prdText, '## Intent')) missing.push('the PRD has no "## Intent" (change, smallest, drop if): with autonomy the agent writes it, and the request still checks it')
+      else if (!granted && !state.intent) missing.push(`no intent from a person yet. Ask them to type, in their own words: sdlc intent ${feature} change: ...; smallest: ...; drop if: ...`)
       if (fs.existsSync(prd)) missing.push(...assumptionProblems(fs.readFileSync(prd, 'utf8')).map(p => `prd.md: ${p}`))
       missing.push(...acceptanceProblems(state))
       const kinds = state.kinds ?? []
@@ -295,7 +300,8 @@ const commands = {
     }
     if (spec.isAuto) {
       const earned = trustedGates(dir).includes(`${state.lane}:${state.stage}`) ? 'earned trust' : spec.owner
-      state.gates[state.stage] = { status: 'approved', by: `checks: ${earned}`, requestedAt: now, approvedAt: now, auto: true }
+      // The fingerprint lets spec or plan drift send the work back even when no person approved it.
+      state.gates[state.stage] = { status: 'approved', by: `checks: ${earned}`, requestedAt: now, approvedAt: now, auto: true, fingerprint: gateFingerprint(dir, state, state.stage, cfg) }
       return console.log(`Gate ${state.stage} (${spec.name}) passed on checks (${earned}) in the ${state.lane} lane. ${advanceFeature(dir, state)}`)
     }
     // The approval covers what was checked: the gate lapses if that changes before a human approves.
@@ -311,6 +317,22 @@ const commands = {
       console.log(`Unconfirmed assumptions: ${unconfirmed.join(', ') || 'none'}`)
     }
     if (state.stage === 5) console.log(`Risk tier: ${state.riskTier}. Files reviewed: ${state.reviewedFiles.length}.\nNot verified: ${section(doc(spec.artefact), '## Not verified') || 'nothing listed'}`)
+  },
+
+  // With autonomy, the merge a person makes on GitHub: push exactly the commit Verify reviewed to main,
+  // fast-forward only. If main has moved, the branch takes main and goes through Verify again.
+  merge() {
+    const state = need()
+    const granted = autonomy(dir)
+    if (!granted) fail(`Merging ${feature} needs autonomy (a person types "sdlc autonomy on <reason>"). Without it, a person merges the PR.`)
+    if (state.gates[5]?.status !== 'approved' || !state.reviewedSha) fail(`${feature} has not passed Verify (gate 5), so there is no reviewed commit to merge.`)
+    onBranch(state)
+    const head = git('rev-parse HEAD', dir)
+    if (head !== state.reviewedSha) fail(`HEAD ${head.slice(0, 7)} is not the commit Verify reviewed (${state.reviewedSha.slice(0, 7)}). Request gate 5 again, or reset to it.`)
+    const r = spawnSync('git', ['push', '-q', 'origin', `${head}:refs/heads/main`], { cwd: dir, encoding: 'utf8' })
+    if (r.status !== 0) fail(`main has moved, so ${head.slice(0, 7)} is not a fast-forward. Merge origin/main into ${state.branch}, then request gate 5 again.\n${r.stderr.trim()}`)
+    audit(dir, { event: 'merge', feature, sha: head, by: `autonomy granted by ${granted.by}` })
+    console.log(`Merged ${feature} (${head.slice(0, 7)}, the reviewed commit) into main, under autonomy granted by ${granted.by}. Release can now find it on origin/main.`)
   },
 
   // Approvals and gates passed on checks move the feature on by themselves; this is for a feature whose
@@ -385,6 +407,8 @@ const commands = {
   status() {
     const features = feature ? [need()] : listFeatures(dir)
     if (rest.includes('--json') || feature === '--json') return console.log(JSON.stringify(features, null, 2))
+    const granted = autonomy(dir)
+    if (granted) console.log(`AUTONOMY: granted by ${granted.by} on ${granted.at.slice(0, 10)}: "${granted.reason}". Gates pass on their checks.`)
     if (!features.length) return console.log('No features in flight. Start one with /ai-sdlc:start.')
     const overdue = overdueGates(dir)
     const noPostmortem = overduePostmortems(dir).map(s => s.feature)
@@ -634,7 +658,7 @@ const commands = {
 
 // A person's own terminal, for when the chat hook is not there (issue #15). The same hook records the
 // verb with the same checks and the same git user.name; the pre-tool guard refuses these to agents.
-const HUMAN_VERBS = ['intent', 'approve', 'reject', 'lane', 'hotfix', 'distrust', 'pause', 'resume', 'freeze', 'unfreeze', 'close']
+const HUMAN_VERBS = ['intent', 'autonomy', 'approve', 'reject', 'lane', 'hotfix', 'distrust', 'pause', 'resume', 'freeze', 'unfreeze', 'close']
 if (HUMAN_VERBS.includes(cmd)) {
   const prompt = ['sdlc', cmd, feature, ...rest].filter(Boolean).join(' ')
   const hook = path.join(path.dirname(fileURLToPath(import.meta.url)), 'hooks', 'user-prompt.mjs')

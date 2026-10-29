@@ -4,7 +4,7 @@
 // per session by the rule that fired, and past denialCap the session may only read until a human types.
 import fs from 'node:fs'
 import path from 'node:path'
-import { root, git, loadConfig, isPaused, isProbe, readState, listFeatures, matches, relPath, readStdin, audit } from '../lib.mjs'
+import { root, git, loadConfig, isPaused, isProbe, readState, listFeatures, matches, relPath, readStdin, audit, autonomy } from '../lib.mjs'
 import { segments } from '../segments.mjs'
 
 const SECRET = /(AKIA[0-9A-Z]{16}|-----BEGIN [A-Z ]*PRIVATE KEY-----|ghp_[A-Za-z0-9]{36}|github_pat_[A-Za-z0-9_]{40,}|xox[baprs]-[A-Za-z0-9-]{10,}|sk-[A-Za-z0-9_-]{32,})/
@@ -194,7 +194,7 @@ if (spec) {
 const prd = rel.match(new RegExp(`^${cfg.specsDir}/([^/]+)/prd\\.md$`))
 if (prd) {
   const state = readState(dir, prd[1])
-  if (state && ['full', 'light'].includes(state.lane) && !state.intent) deny(`prd.md waits for the person's intent. Ask them to type, in their own words: sdlc intent ${prd[1]} change: <what changes for the user>; smallest: <the smallest version that tells us it works>; drop if: <the result that would make us drop it>. Do not suggest the answers.`, 'intent-first')
+  if (state && ['full', 'light'].includes(state.lane) && !state.intent && !autonomy(dir)) deny(`prd.md waits for the person's intent. Ask them to type, in their own words: sdlc intent ${prd[1]} change: <what changes for the user>; smallest: <the smallest version that tells us it works>; drop if: <the result that would make us drop it>. Do not suggest the answers.`, 'intent-first')
 }
 
 // Code on a feature branch waits until the feature reaches Build.
