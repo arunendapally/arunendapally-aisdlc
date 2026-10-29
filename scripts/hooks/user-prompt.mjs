@@ -202,6 +202,8 @@ if (verb === 'approve') {
     say(`Gate ${stage} not approved: what it checked has changed since the request, so it has lapsed. Ask the agent to run "sdlc request ${feature}" again, then review what changed.`)
   }
   state.gates[stage] = { ...gate, status: 'approved', by: who, approvedAt: now, requestedAt: gate.requestedAt ?? now, note: note || undefined }
+  // Each approval of the spec or the design is a revision: v1, then v2 after a change request.
+  if ([1, 3].includes(stage)) state.revisions = { ...state.revisions, [stage]: (state.revisions?.[stage] ?? 0) + 1 }
   writeState(dir, state)
   // A first-time approval with no rework adds to the gate's clean streak.
   const ledger = readTrust(dir)

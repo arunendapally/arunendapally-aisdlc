@@ -181,6 +181,13 @@ const commands = {
     const spec = granted ? { ...stageSpec(state, state.stage, trustedGates(dir)), isAuto: true, owner: `autonomy granted by ${granted.by}` } : stageSpec(state, state.stage, trustedGates(dir))
     const missing = missingHeadings(dir, state)
     const warnings = []
+    // A spec or design approved before comes back as the next revision, and says what changed and why.
+    const revision = state.revisions?.[state.stage] ?? 0
+    if ([1, 3].includes(state.stage) && revision) {
+      const doc = state.stage === 1 ? 'prd.md' : 'plan.md'
+      const text = fs.existsSync(path.join(dir, cfg.specsDir, feature, doc)) ? fs.readFileSync(path.join(dir, cfg.specsDir, feature, doc), 'utf8') : ''
+      if (!section(text, `## Changes since v${revision}`)) missing.push(`${doc} was approved as v${revision}: add "## Changes since v${revision}" saying what changed and why (the change request), so v${revision + 1} can be approved`)
+    }
     if ([4, 5].includes(state.stage) && !(state.kinds ?? []).includes('data')) {
       const schema = changedFiles(dir, cfg).filter(f => matches(f.file, ['**/migrations/**', '**/*.sql', '**/schema.prisma'])).map(f => f.file)
       if (schema.length) missing.push(`${schema.join(', ')} change the schema: this is data work. Run "sdlc kind ${feature} data" (the DBA reviews the PR)`)
@@ -319,6 +326,7 @@ const commands = {
       const earned = trustedGates(dir).includes(`${state.lane}:${state.stage}`) ? 'earned trust' : spec.owner
       // The fingerprint lets spec or plan drift send the work back even when no person approved it.
       state.gates[state.stage] = { status: 'approved', by: `checks: ${earned}`, requestedAt: now, approvedAt: now, auto: true, fingerprint: gateFingerprint(dir, state, state.stage, cfg) }
+      if ([1, 3].includes(state.stage)) state.revisions = { ...state.revisions, [state.stage]: (state.revisions?.[state.stage] ?? 0) + 1 }
       return console.log(`Gate ${state.stage} (${spec.name}) passed on checks (${earned}) in the ${state.lane} lane. ${advanceFeature(dir, state)}`)
     }
     // The approval covers what was checked: the gate lapses if that changes before a human approves.
@@ -345,10 +353,15 @@ const commands = {
     if (gate?.status === 'waiting') {
       const spec = stageSpec(state, state.stage)
       const intent = state.intent ? ` Your intent: ${state.intent.change}.` : ''
+      // A spec or design approved before is asked as its next revision, with what changed.
+      const revision = state.revisions?.[state.stage] ?? 0
+      const docText = fs.existsSync(path.join(dir, loadConfig(dir).specsDir, feature, spec.artefact)) ? fs.readFileSync(path.join(dir, loadConfig(dir).specsDir, feature, spec.artefact), 'utf8') : ''
+      const changed = revision ? (section(docText, `## Changes since v${revision}`) ?? '').split('\n').find(l => l.trim()) : ''
+      const name = revision ? `${spec.name} v${revision + 1}` : spec.name
       return console.log(JSON.stringify({
         questions: [{
           header: `Gate ${state.stage}`,
-          question: `Approve ${spec.name} for ${feature}? It covers ${loadConfig(dir).specsDir}/${feature}/${spec.artefact}.${intent} [gate ${feature} ${state.stage} ${(gate.fingerprint ?? '').slice(0, 8)}]`,
+          question: `Approve ${name} for ${feature}?${changed ? ` Changed since v${revision}: ${changed.trim()}` : ''} It covers ${loadConfig(dir).specsDir}/${feature}/${spec.artefact}.${intent} [gate ${feature} ${state.stage} ${(gate.fingerprint ?? '').slice(0, 8)}]`,
           multiSelect: false,
           options: [
             { label: 'Approve', description: 'Record your approval; the feature moves on by itself.' },
@@ -479,7 +492,8 @@ const commands = {
       const late = overdue.find(o => o.feature === s.feature)
       const deadline = late ? ` OVERDUE (deadline ${late.limit}h): escalate to a backup reviewer` : ''
       const wait = gate?.status === 'waiting' ? `, waiting on ${stageSpec(s).owner} for ${hours(gate.requestedAt)}h${deadline}` : ''
-      console.log(`${s.feature}: stage ${s.stage} ${STAGES[s.stage].name} (${s.lane} lane)${s.spike ? ', SPIKE' : ''}, gate ${gate?.status ?? 'not requested'}${wait}`)
+      const revisions = Object.entries(s.revisions ?? {}).map(([n, v]) => `${STAGES[n].name} v${v}`).join(', ')
+      console.log(`${s.feature}: stage ${s.stage} ${STAGES[s.stage].name} (${s.lane} lane)${s.spike ? ', SPIKE' : ''}, gate ${gate?.status ?? 'not requested'}${wait}${revisions ? ` [${revisions}]` : ''}`)
     }
     for (const t of readTriggers(dir)) console.log(`RETRO DUE: ${t.reason}. Run: sdlc retro`)
     for (const s of lessonsOwed(dir)) console.log(`LESSON OWED: ${s.feature}: ${lessonProblem(s.feature)}`)

@@ -80,7 +80,8 @@ test('with autonomy, messages say what happens next without a person, and risky 
   assert.match(drift, /goes back to stage 1 \(Plan\)\. Request gate 1 again: it passes on its checks under autonomy/)
   assert.doesNotMatch(drift, /a person approves/)
 
-  r.sdlc('request', 'demo')
+  r.put('specs/demo/prd.md', `## Intent\n\n- Change: a\n- Smallest: b\n- Drop if: c\n\n${READY_PRD.replace('Save an item', 'Save and share an item')}\n## Changes since v1\n\nSharing added.\n`)
+  assert.match(r.sdlc('request', 'demo').out, /passed on checks/)
   r.put('src/auth/login.ts', 'export const x = 1\n')
   const risky = r.sdlc('request', 'demo').out
   assert.match(risky, /high-risk paths, so demo moves to the full lane and goes back to stage 3 \(Design\)/)

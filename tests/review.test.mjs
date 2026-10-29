@@ -76,7 +76,9 @@ test('a spec changed after Plan was approved sends the feature back to Plan', ()
   assert.equal(s.gates['4'], undefined)
   assert.match(fs.readFileSync(`${r.repo}/.ai-sdlc/audit.jsonl`, 'utf8'), /"event":"spec-drift"/)
 
-  // A person approves the new spec, and the feature carries on.
+  // The new spec says what changed since v1; a person approves it as v2, and the feature carries on.
+  assert.match(r.sdlc('request', 'demo').out, /approved as v1: add "## Changes since v1"/)
+  r.put('specs/demo/prd.md', READY_PRD.replace('Save an item', 'Save and share an item') + '\n## Changes since v1\n\nSharing added.\n')
   assert.match(r.sdlc('request', 'demo').out, /waiting on/)
   assert.match(r.say('sdlc approve demo 1'), /approved gate 1/)
   assert.equal(r.state('demo').stage, 4)
@@ -98,6 +100,30 @@ test('a plan changed after Design was approved sends the feature back to Design,
   assert.equal(s.stage, 3)
   assert.equal(s.gates['3'], undefined)
   assert.equal(s.gates['1'].status, 'approved', 'the spec did not change, so its approval stands')
+})
+
+// A late change request after sign-off (owner question, 29 Oct): the design becomes v2, says what
+// changed since v1, and is approved again. Git keeps v1 as it was approved.
+test('a re-approved design is v2, and says what changed since v1', () => {
+  const r = makeRepo()
+  r.sdlc('init', 'demo', '--full')
+  r.setState('demo', { stage: 3, stages: { 3: { enteredAt: hoursAgo(1) } }, gates: { 1: { status: 'approved', by: 'Test Human' } } })
+  const PLAN = ['## Data model', '## Contracts', '## Threat model', '## Test plan', '## Run it']
+  r.fill('specs/demo/plan.md', PLAN, '\n## Decisions\n\nNone, because no ADR.\n')
+  r.sdlc('request', 'demo')
+  r.say('sdlc approve demo 3')
+  assert.equal(r.state('demo').revisions['3'], 1)
+
+  r.fill('specs/demo/plan.md', PLAN, '\n## Decisions\n\nCache the totals, from product\'s change request.\n')
+  r.sdlc('request', 'demo')
+  assert.match(r.sdlc('request', 'demo').out, /plan\.md was approved as v1: add "## Changes since v1"/)
+  r.fill('specs/demo/plan.md', PLAN, '\n## Decisions\n\nCache the totals.\n\n## Changes since v1\n\nCR-12 from product: totals are cached for a minute.\n')
+  assert.match(r.sdlc('request', 'demo').out, /waiting on/)
+  const question = JSON.parse(r.sdlc('ask', 'demo').out).questions[0].question
+  assert.match(question, /Approve Design v2 for demo\? Changed since v1: CR-12 from product: totals are cached for a minute\./)
+  r.say('sdlc approve demo 3')
+  assert.equal(r.state('demo').revisions['3'], 2)
+  assert.match(r.sdlc('status', 'demo').out, /Design v2/)
 })
 
 test('the gate, proof, review and a Build request run only on the feature\'s own branch', () => {
