@@ -131,6 +131,8 @@ export const DEFAULT_CONFIG = {
   scriptPaths: ['**/*.sh', '**/*.ps1', '**/*.bat', '**/*.cmd', '**/makefile', '**/justfile', '**/package.json', '**/taskfile.yml'],
   // Small PRs review faster: changed lines allowed per PR, by lane, excluding specs, docs and lock files.
   maxPrLines: { full: 400, light: 300, bug: 200, task: 200, hotfix: 100 },
+  // More acceptance scenarios than this at Plan warns that the feature is more than one slice.
+  sliceScenarios: 7,
   // What a reviewer does not reason about line by line: docs, lockfiles, snapshots, tests (counting them
   // made test-first PRs "too big"), project and tool boilerplate, and this plugin's own state.
   prLineExcludes: ['specs/**', 'docs/**', '**/*.md', '**/package-lock.json', '**/yarn.lock', '**/pnpm-lock.yaml', '**/*.lock', '**/*.snap',

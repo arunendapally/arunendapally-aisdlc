@@ -160,6 +160,9 @@ const commands = {
     const state = need()
     const cfg = loadConfig(dir)
     if ([4, 5].includes(state.stage)) onBranch(state)
+    // With autonomy granted by a person, every gate passes on its checks, recorded as granted by them.
+    const granted = autonomy(dir)
+    const next = n => (granted ? `Request gate ${n} again: it passes on its checks under autonomy.` : `Request gate ${n} again so a person approves the new version.`)
     // A spec or plan edited after it was approved has not been seen by a person: back to that stage,
     // not on to ship. The approvals after it went with the old version, so they go too.
     const drifted = [[1, 'Plan', 'the spec (prd.md or acceptance.feature)'], [3, 'Design', 'the plan (plan.md)']]
@@ -173,10 +176,8 @@ const commands = {
       state.stages[back] = { enteredAt: now }
       writeState(dir, state)
       audit(dir, { event: back === 1 ? 'spec-drift' : 'plan-drift', feature })
-      fail(`${what[0].toUpperCase()}${what.slice(1)} has changed since gate ${back} was approved, so ${feature} goes back to stage ${back} (${name}). Request gate ${back} again so a person approves the new version. Tests already written stay.`)
+      fail(`${what[0].toUpperCase()}${what.slice(1)} has changed since gate ${back} was approved, so ${feature} goes back to stage ${back} (${name}). ${next(back)} Tests already written stay.`)
     }
-    // With autonomy granted by a person, every gate passes on its checks, recorded as granted by them.
-    const granted = autonomy(dir)
     const spec = granted ? { ...stageSpec(state, state.stage, trustedGates(dir)), isAuto: true, owner: `autonomy granted by ${granted.by}` } : stageSpec(state, state.stage, trustedGates(dir))
     const missing = missingHeadings(dir, state)
     const warnings = []
@@ -190,6 +191,18 @@ const commands = {
       const destructive = destructiveMigrations(dir, cfg)
       // Migrations are judged by what they do (above), not by where they live.
       const risky = changedFiles(dir, cfg).map(f => f.file).filter(f => matches(f, cfg.highRiskPaths) && !matches(f, ['**/migrations/**']))
+      // Under autonomy the move to the full lane is made here: it only adds checks, so it needs no person.
+      if (granted && (destructive.length || risky.length)) {
+        const now = new Date().toISOString()
+        state.stages[state.stage] = { ...state.stages[state.stage], leftAt: now }
+        for (const s of Object.keys(state.gates)) if (Number(s) >= 3) delete state.gates[s]
+        Object.assign(state, { lane: 'full', laneSetBy: `autonomy granted by ${granted.by}`, stage: 3 })
+        state.stages[3] = { enteredAt: now }
+        writeState(dir, state)
+        audit(dir, { event: 'lane', feature, lane: 'full', by: `autonomy granted by ${granted.by}` })
+        const why = destructive.length ? `${destructive.join(', ')} alter or drop existing data` : `${risky.slice(0, 5).join(', ')} are high-risk paths`
+        fail(`${why}, so ${feature} moves to the full lane and goes back to stage 3 (Design): write plan.md, then request gate 3.`)
+      }
       if (destructive.length) missing.push(`${destructive.join(', ')} alter or drop existing data, which needs the full lane: ask a human to type "sdlc lane ${feature} full"`)
       if (risky.length) missing.push(`${risky.slice(0, 5).join(', ')} are high-risk paths, which need the full lane: ask a human to type "sdlc lane ${feature} full"`)
     }
@@ -209,6 +222,10 @@ const commands = {
       else if (!granted && !state.intent) missing.push(`no intent from a person yet. Ask them to type, in their own words: sdlc intent ${feature} change: ...; smallest: ...; drop if: ...`)
       if (fs.existsSync(prd)) missing.push(...assumptionProblems(fs.readFileSync(prd, 'utf8')).map(p => `prd.md: ${p}`))
       missing.push(...acceptanceProblems(state))
+      // Slice before building, not after: the PR line limit otherwise fires at the end of Build.
+      const feat = path.join(dir, cfg.specsDir, feature, 'acceptance.feature')
+      const scenarios = fs.existsSync(feat) ? lint(fs.readFileSync(feat, 'utf8')).scenarios.filter(s => s.ac).length : 0
+      if (scenarios > cfg.sliceScenarios) warnings.push(`${scenarios} scenarios is more than one slice usually holds (${cfg.sliceScenarios}). Consider splitting the feature now: each slice is built and reviewed as one PR of at most ${cfg.maxPrLines[state.lane] ?? cfg.maxPrLines.full} code lines.`)
       const kinds = state.kinds ?? []
       if (kinds.includes('brownfield') || kinds.includes('data') || fs.existsSync(path.join(dir, cfg.specsDir, feature, 'facts.md'))) missing.push(...factsGateProblems(dir, state))
     }

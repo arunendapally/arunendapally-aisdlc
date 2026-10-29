@@ -68,6 +68,26 @@ test('with autonomy, sdlc merge lands exactly the reviewed commit on main, fast-
   assert.match(fs.readFileSync(path.join(r.repo, '.ai-sdlc', 'audit.jsonl'), 'utf8'), /"event":"merge"/)
 })
 
+test('with autonomy, messages say what happens next without a person, and risky work moves to the full lane itself', () => {
+  const r = makeRepo()
+  r.say(GRANT)
+  r.sdlc('init', 'demo')
+  r.put('specs/demo/prd.md', `## Intent\n\n- Change: a\n- Smallest: b\n- Drop if: c\n\n${READY_PRD}`)
+  r.put('specs/demo/acceptance.feature', READY_FEATURE)
+  r.sdlc('request', 'demo')
+  r.put('specs/demo/prd.md', `## Intent\n\n- Change: a\n- Smallest: b\n- Drop if: c\n\n${READY_PRD.replace('Save an item', 'Save and share an item')}`)
+  const drift = r.sdlc('request', 'demo').out
+  assert.match(drift, /goes back to stage 1 \(Plan\)\. Request gate 1 again: it passes on its checks under autonomy/)
+  assert.doesNotMatch(drift, /a person approves/)
+
+  r.sdlc('request', 'demo')
+  r.put('src/auth/login.ts', 'export const x = 1\n')
+  const risky = r.sdlc('request', 'demo').out
+  assert.match(risky, /high-risk paths, so demo moves to the full lane and goes back to stage 3 \(Design\)/)
+  const s = r.state('demo')
+  assert.deepEqual([s.lane, s.stage], ['full', 3])
+})
+
 test('without autonomy nothing changes: a person still approves', () => {
   const r = makeRepo()
   r.sdlc('init', 'demo')

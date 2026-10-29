@@ -349,6 +349,17 @@ test('AC-14 every criterion must have a test; its level is a hint', () => {
   assert.ok(fs.existsSync(path.join(r.repo, 'specs', 'demo', 'test-matrix.md')))
 })
 
+// The calculator run (F-11): a 13-scenario spec was split only after it was built. Warn at Plan.
+test('a spec bigger than one slice is flagged at Plan, before anything is built', () => {
+  const r = makeRepo()
+  r.sdlc('init', 'demo')
+  const scenario = n => `\n  @R1 @AC-${n} @unit\n  Scenario: Case ${n}\n    Given a\n    When b\n    Then c\n`
+  r.put('specs/demo/acceptance.feature', `Feature: Demo\n${[1, 2, 3, 4, 5, 6, 7, 8].map(scenario).join('')}`)
+  assert.match(r.sdlc('request', 'demo').out, /WARNING: 8 scenarios is more than one slice usually holds \(7\)/)
+  r.put('specs/demo/acceptance.feature', `Feature: Demo\n${[1, 2, 3].map(scenario).join('')}`)
+  assert.doesNotMatch(r.sdlc('request', 'demo').out, /more than one slice/)
+})
+
 // The calculator run (docs/feedback/2026-10-29-calculator-run.md, F-6): xUnit tests were not recognised.
 test('.NET and Java test files are recognised, and an unrecognised file that names a criterion is called out', () => {
   const r = makeRepo()
