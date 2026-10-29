@@ -28,4 +28,28 @@
 
 **F-13. Under autonomy, messages still say "a person approves".** The spec-drift check worked (an edited spec went back to Plan and passed again on its checks), but its wording did not match the grant. *Still open.*
 
-**F-5. The repo rules contradict autonomy.** `templates/repo/.claude/rules/ai-sdlc.md` says "Only a human approves a gate" and "Never merge". With autonomy granted both are false. *To fix:* the rules say what changes under autonomy.
+## Verify, run by a separate agent (findings F-15 to F-25, in full at `C:/Code/sci-calc/docs/process-findings.md`)
+
+Verify took about 4 minutes and asked for three artefacts. The pre-review found a real blocker (no input length or nesting limit: one deeply nested request could overflow the stack) and fixed it with tests, and that fix took the PR from 292 to 305 counted lines, over the light lane's 300: the size check refused the review's own fix, and the feature stopped at Verify.
+
+- **F-15. A broken proof command read as failing tests.** *Fixed:* the message says the command itself may be broken and how to check.
+- **F-16. The review packet did not know .NET tests** ("13 code, 0 test"). *Fixed:* it uses the test matrix's patterns.
+- **F-17. A scripts-only `package.json` change was flagged as a dependency.** *Fixed:* only added or changed dependencies count; `.csproj` PackageReference is now read.
+- **F-18. The baseline stayed 0, so it protected nothing.** *Fixed:* it ratchets to the most tests the feature has passed.
+- **F-19. The size check refused the pre-review's own fix, and showed the count only when refusing.** *Fixed:* once a PR's size passed at Build or Verify, review fixes get 20% room; the gate prints the PR size every run.
+- **F-20. A refused request left no trace.** *Fixed:* `status` shows the last refusal and its reasons.
+- **F-21. Under autonomy a refusal had nowhere to go.** *Fixed:* the message says to fix each reason and request again, and to log a wrong check for the retro, never to work around it.
+- **F-22. Adding an acceptance example for a review fix sends the feature back to Plan.** By design (the spec changed); under autonomy it passes again on its checks, now as v2 with "Changes since v1". *Still open:* whether appending a scenario for an existing requirement should count as drift.
+- **F-23. The ledger's Location goes stale once a fix moves the lines.** *Still open.*
+- **F-24. The pr.md and release.md templates said a person approves.** *Fixed* in every template.
+- **F-25. What worked:** the guard refused nothing in that run (after F-12), the proof ran in 7 seconds, the re-review list of changed files was exact, and the merge preconditions were right.
+
+## Asked for during the run
+
+- **Ask, don't make people paste commands** (the owner's top complaint). *Built:* `sdlc ask` and the answers hook; every command asks with the question tool. *Not verified live:* `claude -p` has no question tool, so the hook is tested against the documented answer shapes only. The first real gate question in a desktop session is the live check.
+- **A v2 design after a late change request.** *Built:* revisions and "Changes since vN".
+- **OKF for knowledge.** *Built:* knowledge pages are OKF v0.2, old pages still read.
+
+**F-5. The repo rules contradict autonomy.** `templates/repo/.claude/rules/ai-sdlc.md` says "Only a human approves a gate" and "Never merge". With autonomy granted both are false. *Fixed:* the rules, the skill, verify.md and the request messages say what changes under autonomy (F-13 too).
+
+Status of the earlier findings: F-1 *fixed* (first commit and first push of main to an empty remote); F-4 *fixed* (the guard judges the repo a write or a leading `cd` targets); F-6 *fixed*; F-7 and F-9 *open* (greenfield baseline and proof notes); F-8 *open* (reading state needs the CLI or the Read tool); F-10 *fixed* (every node_modules shared; a missing package is not red); F-11 *fixed* (only code counts; warn at Plan over 7 scenarios); F-12 *fixed*.
