@@ -1,4 +1,4 @@
-<!-- Stage 5 Verify. This file is the PR body. Gate: a CODEOWNER engineer; "sdlc approve <feature> 5". -->
+<!-- Stage 5 Verify. This file is the PR body. Gate: a CODEOWNER engineer, asked with "sdlc ask <feature>"; under autonomy it passes on its checks. -->
 
 ## Summary
 

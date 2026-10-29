@@ -37,6 +37,25 @@ test('proof: the traced tests pass here and fail on the base code, and their fil
   assert.equal(fs.readdirSync(path.join(r.repo, '..')).some(f => f.startsWith('sdlc-proof-') && fs.existsSync(path.join(r.repo, '..', f, '.git'))), false, 'the worktree is removed')
 })
 
+// The calculator run (F-10): a front end in a subfolder ran its base proof without its packages, so the
+// tests failed for a missing package and the proof counted that as red.
+test('proof: packages in a subfolder are shared, and a red run caused by a missing package proves nothing', () => {
+  const r = makeRepo()
+  r.config({ proofCommand: 'node --test {files}' })
+  r.sdlc('init', 'demo')
+  r.put('specs/demo/acceptance.feature', ACCEPT(['AC-1']))
+  r.put('web/node_modules/shout/index.js', 'module.exports = s => s.toUpperCase()\n')
+  r.put('web/node_modules/shout/package.json', '{"name":"shout","main":"index.js"}\n')
+  r.put('web/src/greet.cjs', "module.exports = () => 'hi'\n")
+  r.put('web/tests/demo.test.cjs', "const { test } = require('node:test')\nconst assert = require('node:assert')\nconst shout = require('shout')\ntest('demo AC-1 shouts', () => assert.equal(shout(require('../src/greet.cjs')()), 'HI'))\n")
+  const out = r.sdlc('proof', 'demo')
+  assert.equal(out.status, 0, out.out)
+
+  const verdict = judgeProof(['AC-1'], { status: 1, output: "Error: Cannot find module 'shout'\nRequire stack: ..." })
+  assert.deepEqual(verdict, [{ ac: 'AC-1', red: false, why: 'the base run failed on a missing package (shout), not on the code under test' }])
+  assert.equal(judgeProof(['AC-1'], { status: 1, output: "Error: Cannot find module '../src/greet.cjs'" })[0].red, true, 'missing code under test is the point')
+})
+
 test('proof: a test that passes on the base code proves nothing, per criterion with a JUnit report', () => {
   const r = proofRepo(JUNIT)
   r.put('specs/demo/acceptance.feature', ACCEPT(['AC-1', 'AC-2']))

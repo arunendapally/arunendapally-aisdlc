@@ -1,6 +1,6 @@
 # Plan: <feature>
 
-<!-- Stage 3 Design, full lane only. Gate: architect and product lead; "sdlc approve <feature> 3".
+<!-- Stage 3 Design, full lane only. Gate: architect and product lead, asked with "sdlc ask <feature>"; under autonomy it passes on its checks.
      Write "None, because ..." where a section does not apply. -->
 
 ## Decisions

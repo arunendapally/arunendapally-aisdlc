@@ -34,7 +34,7 @@ if (fs.existsSync(denialsFile)) {
   }
 }
 
-const VERBS = 'approve|reject|lane|hotfix|intent|trust|distrust|pause|resume|freeze|unfreeze|close'
+const VERBS = 'approve|reject|lane|hotfix|intent|autonomy|trust|distrust|pause|resume|freeze|unfreeze|close'
 const m = text.match(new RegExp(`^sdlc\\s+(${VERBS})\\b\\s*(\\S+)?\\s*(\\d)?\\s*(.*)$`, 'is'))
 if (!m) {
   // A command anywhere else in the message is not recorded, and the person is told so, never left
@@ -102,6 +102,23 @@ if (verb === 'intent') {
   writeState(dir, state)
   audit(dir, { event: 'intent', feature, by: who, ...intent })
   say(`${who} set the intent for ${feature}: change: ${intent.change}; smallest: ${intent.smallest}; drop if: ${intent.dropIf}.${created ? ' It starts at stage 1 (Plan) in the light lane.' : ''} Build the PRD to it; do not reword it.`)
+}
+
+// Only a person grants a repo autonomy, with the reason it is safe, and only a person takes it back.
+// With it, every gate passes on its checks; the guards stay.
+if (verb === 'autonomy') {
+  const file = path.join(dir, '.ai-sdlc', 'AUTONOMY')
+  const reason = `${stageText ?? ''}${note}`.trim()
+  if (feature === 'off') {
+    fs.rmSync(file, { force: true })
+    audit(dir, { event: 'autonomy-off', by: who })
+    say(`${who} took autonomy back: every gate waits for its human owner again.`)
+  }
+  if (feature !== 'on' || !reason) say('Autonomy needs a reason: sdlc autonomy on <why this repo can run without a person at its gates>, or sdlc autonomy off. Nothing recorded.')
+  fs.mkdirSync(path.dirname(file), { recursive: true })
+  fs.writeFileSync(file, JSON.stringify({ by: who, at: new Date().toISOString(), reason }, null, 2) + '\n')
+  audit(dir, { event: 'autonomy-on', by: who, reason })
+  say(`${who} granted autonomy: "${reason}". Every gate in this repo now passes on its checks, recorded as granted by ${who}. The guards (secrets, force pushes, deploys, guardrail files) stay. "sdlc autonomy off" takes it back.`)
 }
 
 // Repo-wide flags only a human sets: the kill switch, and the error-budget freeze.
@@ -185,6 +202,8 @@ if (verb === 'approve') {
     say(`Gate ${stage} not approved: what it checked has changed since the request, so it has lapsed. Ask the agent to run "sdlc request ${feature}" again, then review what changed.`)
   }
   state.gates[stage] = { ...gate, status: 'approved', by: who, approvedAt: now, requestedAt: gate.requestedAt ?? now, note: note || undefined }
+  // Each approval of the spec or the design is a revision: v1, then v2 after a change request.
+  if ([1, 3].includes(stage)) state.revisions = { ...state.revisions, [stage]: (state.revisions?.[stage] ?? 0) + 1 }
   writeState(dir, state)
   // A first-time approval with no rework adds to the gate's clean streak.
   const ledger = readTrust(dir)

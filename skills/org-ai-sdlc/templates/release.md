@@ -1,6 +1,6 @@
 # Release: <feature>
 
-<!-- Stage 6 Release. Gate: release owner; "sdlc approve <feature> 6". Humans run merge, apply and deploy.
+<!-- Stage 6 Release. Gate: release owner, asked with "sdlc ask <feature>"; under autonomy it passes on its checks. Humans run apply and deploy; under autonomy "sdlc merge" lands the reviewed commit.
      Order: check production is in the shape the change expects, rehearse data changes on a copy, apply
      data changes before the code that needs them, deploy, probe. -->
 
