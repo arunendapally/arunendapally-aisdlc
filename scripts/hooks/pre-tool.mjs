@@ -12,8 +12,8 @@ const SECRET = /(AKIA[0-9A-Z]{16}|-----BEGIN [A-Z ]*PRIVATE KEY-----|ghp_[A-Za-z
 const ANSWER = 'This is a final answer, not an error: do not retry, rephrase, wrap it in a script or reach for another tool. Give the user the command once if one is needed, then stop.'
 
 const input = readStdin()
-const dir = root(input.cwd)
-const cfg = loadConfig(dir)
+let dir = root(input.cwd)
+let cfg = loadConfig(dir)
 const tool = input.tool_name
 const ti = input.tool_input ?? {}
 const session = input.session_id ?? 'default'
@@ -92,8 +92,38 @@ if (tool === 'Read' && ti.file_path && ti.limit === undefined && ti.offset === u
   if (big) deny(sliceAdvice(relPath(dir, ti.file_path), big), 'read-slices')
 }
 
-const branch = git('rev-parse --abbrev-ref HEAD', dir)
-const onProtected = cfg.protectedBranches.includes(branch)
+// The repo an action targets judges it (F-4 of the calculator run): a write into another repo, or a
+// command that starts by changing into one, uses that repo's branch and rules, not the session's.
+// Git is asked only when the target is outside the session's repo, since this runs on every tool call.
+const WRITES = ['Write', 'Edit', 'MultiEdit', 'NotebookEdit']
+const outside = p => {
+  const r = path.relative(dir, p)
+  return r.startsWith('..') || path.isAbsolute(r)
+}
+const repoAt = p => {
+  while (!fs.existsSync(p) && path.dirname(p) !== p) p = path.dirname(p)
+  return git('rev-parse --show-toplevel', p)
+}
+let at = dir
+const file = WRITES.includes(tool) ? path.resolve(dir, ti.file_path ?? ti.notebook_path ?? '') : ''
+if (file && outside(file)) {
+  const other = repoAt(path.dirname(file))
+  if (!other || !['.ai-sdlc', 'specs'].some(d => fs.existsSync(path.join(other, d)))) process.exit(0)
+  at = dir = other
+  cfg = loadConfig(dir)
+  if (isPaused(dir)) deny(`${dir} is paused by a human (.ai-sdlc/PAUSED). Stop and wait for "sdlc resume".`, 'paused')
+}
+const cd = (tool === 'Bash' || tool === 'PowerShell') && (ti.command ?? '').match(/^\s*(?:cd|Set-Location)\s+(?:-Path\s+)?(?:"([^"]+)"|'([^']+)'|([^\s;&|]+))\s*(?:&&|;)/i)
+if (cd) {
+  // Git Bash on Windows writes C:\Code as /c/Code.
+  let to = cd[1] ?? cd[2] ?? cd[3]
+  if (process.platform === 'win32') to = to.replace(/^\/([a-z])(?=\/|$)/i, '$1:')
+  to = path.resolve(input.cwd ?? dir, to)
+  if (outside(to)) at = repoAt(to) || to
+}
+const atCfg = at === dir ? cfg : loadConfig(at)
+const branch = git('rev-parse --abbrev-ref HEAD', at)
+const onProtected = atCfg.protectedBranches.includes(branch)
 
 if (tool === 'Bash' || tool === 'PowerShell') {
   const c = ti.command ?? ''
@@ -117,14 +147,14 @@ if (tool === 'Bash' || tool === 'PowerShell') {
   const scan = parts.filter(ghText).reduce((t, p) => t.replace(p.text, blankText(p.text)), c)
 
   // A push is judged on its own arguments: a protected branch in any form, a +refspec, a force flag.
-  const protectedRef = new RegExp(cfg.protectedBranches.map(b => `(?:^|[\\s:/+])${b}(?:\\s|$|["')])`).join('|'))
+  const protectedRef = new RegExp(atCfg.protectedBranches.map(b => `(?:^|[\\s:/+])${b}(?:\\s|$|["')])`).join('|'))
   // A new repo (F-1 of the calculator run): a remote with no protected branch yet has nothing to
   // protect, so the first push of main to it is the start of the repo, not a breach.
   const firstPush = args => {
     const remote = args.trim().split(/\s+/).find(a => a && !a.startsWith('-')) ?? 'origin'
-    if (!/^[\w.-]+$/.test(remote) || git(`remote get-url ${remote}`, dir) === '') return false
+    if (!/^[\w.-]+$/.test(remote) || git(`remote get-url ${remote}`, at) === '') return false
     // Only a remote that answered, and answered with no refs at all; an unreachable one is not empty.
-    const r = spawnSync('git', ['ls-remote', remote], { cwd: dir, encoding: 'utf8', timeout: 15000 })
+    const r = spawnSync('git', ['ls-remote', remote], { cwd: at, encoding: 'utf8', timeout: 15000 })
     return r.status === 0 && r.stdout.trim() === ''
   }
   for (const p of parts) {
@@ -132,12 +162,12 @@ if (tool === 'Bash' || tool === 'PowerShell') {
     if (!/\bgit\b[^;&|\n]*\bpush\b/.test(run)) continue
     const args = run.replace(/[\s\S]*?\bpush\b/, '')
     if (/(^|\s)(--force|-f|--force-with-lease|--force-if-includes)\b|(^|\s)\+\S/.test(args)) deny('Force push is not allowed for agents.', 'force-push')
-    if ((protectedRef.test(args) || /(^|\s)--(mirror|all)\b/.test(args) || onProtected) && !firstPush(args)) deny(`Agents never push to ${cfg.protectedBranches.join('/')}. Push the feature branch and open a PR.`, 'push-protected')
+    if ((protectedRef.test(args) || /(^|\s)--(mirror|all)\b/.test(args) || onProtected) && !firstPush(args)) deny(`Agents never push to ${atCfg.protectedBranches.join('/')}. Push the feature branch and open a PR.`, 'push-protected')
   }
   if (SECRET.test(c)) deny('The command contains what looks like a secret. Use the secret store and reference it by name.', 'secret')
   if (/--no-verify\b/.test(c)) deny('--no-verify skips the checks. Fix the failure instead.', 'no-verify')
   // A repo with no commits has no main to protect yet: its first commit starts it.
-  if (onProtected && /\bgit\s+(commit|merge|rebase|cherry-pick|reset)\b/.test(c) && git('rev-parse --verify -q HEAD', dir) !== '') deny(`You are on ${branch}. Work on a feature branch in its own worktree.`, 'commit-protected')
+  if (onProtected && /\bgit\s+(commit|merge|rebase|cherry-pick|reset)\b/.test(c) && git('rev-parse --verify -q HEAD', at) !== '') deny(`You are on ${branch}. Work on a feature branch in its own worktree.`, 'commit-protected')
   for (const p of cfg.deployPatterns) {
     if (new RegExp(p, 'i').test(scan)) deny(`"${c.slice(0, 60)}" merges, deploys, changes settings or records a human decision. A human runs it.`, 'human-action')
   }
@@ -176,16 +206,15 @@ if (tool === 'Bash' || tool === 'PowerShell') {
   }
   // A branch deploy is a preview, never a release (failure F3), and the remote must hold its commits.
   if (cfg.previewPatterns.some(p => new RegExp(p, 'i').test(c))) {
-    const upstream = git('rev-parse --abbrev-ref --symbolic-full-name @{u}', dir)
-    const unpushed = upstream ? git('rev-list @{u}..HEAD', dir) : 'no upstream'
+    const upstream = git('rev-parse --abbrev-ref --symbolic-full-name @{u}', at)
+    const unpushed = upstream ? git('rev-list @{u}..HEAD', at) : 'no upstream'
     if (unpushed) ask(`"${c.slice(0, 60)}" deploys ${branch}, which ${upstream ? 'has commits the remote does not' : 'is not on the remote'}. Push it first: a branch deploy is a preview, never a release, and must not be the only copy.`, 'preview-unpushed')
   }
   process.exit(0)
 }
 
-if (!['Write', 'Edit', 'MultiEdit', 'NotebookEdit'].includes(tool)) process.exit(0)
+if (!WRITES.includes(tool)) process.exit(0)
 
-const file = ti.file_path ?? ti.notebook_path ?? ''
 const rel = relPath(dir, file).toLowerCase()
 const content = [ti.content, ti.new_string, ...(ti.edits ?? []).map(e => e.new_string), ti.new_source].filter(Boolean).join('\n')
 
