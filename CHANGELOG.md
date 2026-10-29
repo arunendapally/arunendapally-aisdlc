@@ -4,6 +4,30 @@ All notable changes to this repository. The format follows [Keep a Changelog](ht
 
 ## [Unreleased]
 
+### A smoother process: questions instead of commands, autonomy, and the calculator run's fixes
+
+The owner ran a scientific calculator (.NET minimal API and React) through the plugin with Claude in every role; the log is [docs/feedback/2026-10-29-calculator-run.md](docs/feedback/2026-10-29-calculator-run.md).
+
+#### Added
+
+- **Ask, don't make people paste commands.** `sdlc ask <feature>` prints the question for a waiting gate (Approve, or Send back with a reason) or a missing intent (change, smallest, drop if). The agent asks it with the question tool, and a new PostToolUse hook (`scripts/hooks/answers.mjs`) records the person's click through the same checks as a typed command. Each question carries a marker bound to the feature, gate and fingerprint, so a stale one records nothing; the guard refuses a marked question the agent answered itself; answers inside a subagent are ignored. Typed commands remain a fallback. Every command now asks instead of telling the agent to have a person type.
+- **Autonomy, granted by a person per repo.** `sdlc autonomy on <reason>` (typed or from the person's terminal): every gate then passes on its checks, recorded as granted by them; risky work moves itself to the full lane; `sdlc merge <feature>` lands exactly the reviewed commit on main, fast-forward only. Only a person grants or revokes it; the guards stay.
+- **Revisions for re-approved specs and designs.** Each approval of gate 1 or 3 is a revision (v1, v2). A spec or design approved before needs `## Changes since vN` with the change request before it is approved again; the question and `status` show the revision. Git keeps v1 as approved.
+- **Warn at Plan when a spec is more than one slice** (over 7 scenarios, `sliceScenarios`), instead of failing the PR size at the end of Build.
+- **A new repo can be started:** the first commit in an empty repo, and the first push of main to a remote that answered with no refs.
+
+#### Changed
+
+- **The PR size counts only code:** tests, project and tool boilerplate (`.sln`, `.csproj`, `tsconfig`, launch and app settings, `.gitignore`) and the plugin's state no longer count, in the gate and the CI script.
+- **.NET and Java tests are recognised** by the test matrix (`*Tests.cs`, `*ApiTests.cs`, `*IntegrationTests.cs`, `*Test.java`, `*IT.java`), and a file that names a criterion but is not a known test file is called out by name.
+- **The proof shares every installed `node_modules`,** not only the root one, and a base run that failed on a missing package no longer counts as red.
+- **A gate passed on its checks records a fingerprint,** so spec or plan drift still sends work back without a person's approval.
+- **The intent parser anchors its labels** ("exchange:" is not "change:") and keeps semicolons and lines inside a part; "drop:" means "drop if:".
+
+#### Fixed
+
+- The guard read .NET's `appsettings.json` as Claude's own settings file.
+
 ### Human commands that are never lost ([#15](https://github.com/arunendapally/arunendapally-aisdlc/issues/15))
 
 From a real feature in another repo on plugin 0.4.0, where `sdlc intent` could not be recorded by any route.
