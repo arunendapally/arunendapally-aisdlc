@@ -97,9 +97,9 @@ export const DEFAULT_CONFIG = {
   deployPatterns: ['vercel\\b.*(--prod|--target[= ]production|\\bpromote\\b|\\balias\\b)', 'terraform\\s+apply', 'netlify\\s+deploy\\b.*--prod', 'fly(ctl)?\\s+deploy\\b',
     'firebase\\s+deploy\\b', 'wrangler\\s+(deploy|publish)\\b', '(npm|pnpm|yarn)\\s+(run\\s+)?deploy\\b', 'kubectl\\s+(apply|delete|rollout)', 'helm\\s+(install|upgrade)', 'npm\\s+publish',
     'gh\\s+pr\\s+merge', 'gh\\s+release\\s+create', 'gh\\s+(ruleset|secret|repo\\s+edit)\\b', 'gh\\s+api\\b.*(-X|--method)\\s*(?!GET\\b)[A-Z]+', 'git\\s+config\\b.*\\balias\\.',
-    '\\bsdlc\\s+(approve|reject|lane|hotfix|intent|trust|distrust|resume|unfreeze|close)\\b',
+    '\\bsdlc\\s+(approve|reject|lane|hotfix|intent|autonomy|trust|distrust|resume|unfreeze|close)\\b',
     // The same verbs through the CLI's terminal path, and the hook fed a prompt by hand, are a person's alone.
-    '\\bsdlc\\.mjs["\']?\\s+(approve|reject|lane|hotfix|intent|distrust|resume|unfreeze|close)\\b', 'hooks[\\\\/]user-prompt\\.mjs'],
+    '\\bsdlc\\.mjs["\']?\\s+(approve|reject|lane|hotfix|intent|autonomy|distrust|resume|unfreeze|close)\\b', 'hooks[\\\\/]user-prompt\\.mjs'],
   // Production is touched only by read-only probes: a command matching these must also be a probe.
   prodPatterns: ['\\b(aws|gcloud|az)\\b.*\\bprod(uction)?\\b', 'kubectl\\b.*--context[= ]\\S*prod'],
   // House-style text bans apply to these files. A repo can widen it, for example to "**".
@@ -131,7 +131,13 @@ export const DEFAULT_CONFIG = {
   scriptPaths: ['**/*.sh', '**/*.ps1', '**/*.bat', '**/*.cmd', '**/makefile', '**/justfile', '**/package.json', '**/taskfile.yml'],
   // Small PRs review faster: changed lines allowed per PR, by lane, excluding specs, docs and lock files.
   maxPrLines: { full: 400, light: 300, bug: 200, task: 200, hotfix: 100 },
-  prLineExcludes: ['specs/**', 'docs/**', '**/*.md', '**/package-lock.json', '**/yarn.lock', '**/pnpm-lock.yaml', '**/*.lock', '**/*.snap'],
+  // More acceptance scenarios than this at Plan warns that the feature is more than one slice.
+  sliceScenarios: 7,
+  // What a reviewer does not reason about line by line: docs, lockfiles, snapshots, tests (counting them
+  // made test-first PRs "too big"), project and tool boilerplate, and this plugin's own state.
+  prLineExcludes: ['specs/**', 'docs/**', '**/*.md', '**/package-lock.json', '**/yarn.lock', '**/pnpm-lock.yaml', '**/*.lock', '**/*.snap',
+    '**/*.test.*', '**/*.spec.*', '**/*_test.go', '**/test_*.py', '**/*Tests.cs', '**/*Test.cs', '**/*Test.java', '**/*Test.kt',
+    '**/*.sln', '**/*.csproj', '**/tsconfig*.json', '**/launchSettings.json', '**/appsettings*.json', '**/.gitignore', '.ai-sdlc/**'],
   // Hours a human gate may wait before it is overdue and escalated, by lane.
   reviewSlaHours: { full: 24, light: 8, bug: 8, task: 8, hotfix: 1 },
   // Earned autonomy is optional (ADR-0003): with trust on, after this many clean human approvals in a
@@ -258,9 +264,17 @@ export function section(text, heading) {
 // The person's intent, typed as "change: ...; smallest: ...; drop if: ..." (one per line works too).
 // Only the parts are checked: a word count or a number rule is passed by filler in seconds.
 export const INTENT_PARTS = [['change', 'Change'], ['smallest', 'Smallest'], ['dropIf', 'Drop if']]
+// A label counts only at the start of the text, of a line, or after ";" ("exchange:" is not "change:"),
+// and a part runs to the next label, keeping its own semicolons and lines. "drop:" means "drop if:".
 export function parseIntent(text) {
-  const part = label => text.match(new RegExp(`${label}\\s*:\\s*([^;\\n]*)`, 'i'))?.[1]?.trim() ?? ''
-  return { change: part('change'), smallest: part('smallest'), dropIf: part('drop\\s+if') }
+  const labels = [...text.matchAll(/(^|\n|;)[ \t]*(change|smallest|drop[ \t]+if|drop)[ \t]*:/gi)]
+  const out = { change: '', smallest: '', dropIf: '' }
+  labels.forEach((m, i) => {
+    const key = { change: 'change', smallest: 'smallest' }[m[2].toLowerCase()] ?? 'dropIf'
+    const end = i + 1 < labels.length ? labels[i + 1].index : text.length
+    out[key] = text.slice(m.index + m[0].length, end).trim()
+  })
+  return out
 }
 
 // The PRD's "## Intent" section, written from what the person typed, replacing whatever was there.
@@ -361,6 +375,16 @@ export function createFeature(dir, { feature, lane = 'full', stage, branch, extr
   }
   writeState(dir, state)
   return state
+}
+
+// A person may grant a repo autonomy ("sdlc autonomy on <reason>"): every gate then passes on its
+// checks, recorded as granted by them. Only a person grants it or takes it back.
+export function autonomy(dir) {
+  try {
+    return JSON.parse(fs.readFileSync(path.join(dir, '.ai-sdlc', 'AUTONOMY'), 'utf8'))
+  } catch {
+    return null
+  }
 }
 
 export function isFrozen(dir) {

@@ -4,6 +4,50 @@ All notable changes to this repository. The format follows [Keep a Changelog](ht
 
 ## [Unreleased]
 
+### A smoother process: questions instead of commands, autonomy, and the calculator run's fixes
+
+The owner ran a scientific calculator (.NET minimal API and React) through the plugin with Claude in every role; the log is [docs/feedback/2026-10-29-calculator-run.md](docs/feedback/2026-10-29-calculator-run.md).
+
+#### Added
+
+- **Ask, don't make people paste commands.** `sdlc ask <feature>` prints the question for a waiting gate (Approve, or Send back with a reason) or a missing intent (change, smallest, drop if). The agent asks it with the question tool, and a new PostToolUse hook (`scripts/hooks/answers.mjs`) records the person's click through the same checks as a typed command. Each question carries a marker bound to the feature, gate and fingerprint, so a stale one records nothing; the guard refuses a marked question the agent answered itself; answers inside a subagent are ignored. Typed commands remain a fallback. Every command now asks instead of telling the agent to have a person type.
+- **Autonomy, granted by a person per repo.** `sdlc autonomy on <reason>` (typed or from the person's terminal): every gate then passes on its checks, recorded as granted by them; risky work moves itself to the full lane; `sdlc merge <feature>` lands exactly the reviewed commit on main, fast-forward only. Only a person grants or revokes it; the guards stay.
+- **Revisions for re-approved specs and designs.** Each approval of gate 1 or 3 is a revision (v1, v2). A spec or design approved before needs `## Changes since vN` with the change request before it is approved again; the question and `status` show the revision. Git keeps v1 as approved.
+- **Warn at Plan when a spec is more than one slice** (over 7 scenarios, `sliceScenarios`), instead of failing the PR size at the end of Build.
+- **A new repo can be started:** the first commit in an empty repo, and the first push of main to a remote that answered with no refs.
+
+#### Changed
+
+- **The PR size counts only code:** tests, project and tool boilerplate (`.sln`, `.csproj`, `tsconfig`, launch and app settings, `.gitignore`) and the plugin's state no longer count, in the gate and the CI script.
+- **.NET and Java tests are recognised** by the test matrix (`*Tests.cs`, `*ApiTests.cs`, `*IntegrationTests.cs`, `*Test.java`, `*IT.java`), and a file that names a criterion but is not a known test file is called out by name.
+- **The review packet knows a test file by the test matrix's patterns,** so .NET and Java tests count as tests in its file counts, "no changed test mentions it" and code lines. A manifest is a dependency change only when a dependency is added or its version changes (a `package.json` "scripts" edit is not), and `.csproj` `PackageReference` additions are named as new dependencies.
+- **The proof shares every installed `node_modules`,** not only the root one, and a base run that failed on a missing package no longer counts as red.
+- **A gate passed on its checks records a fingerprint,** so spec or plan drift still sends work back without a person's approval.
+- **The intent parser anchors its labels** ("exchange:" is not "change:") and keeps semicolons and lines inside a part; "drop:" means "drop if:".
+
+#### Fixed
+
+- The guard read .NET's `appsettings.json` as Claude's own settings file.
+
+### The guard judges the repo an action targets (F-4 of the calculator run)
+
+From [docs/feedback/2026-10-29-calculator-run.md](docs/feedback/2026-10-29-calculator-run.md), where a session sitting in the plugin repo built a calculator in another repo.
+
+- **Fixed: a write into another repo skipped every check.** A Write, Edit, MultiEdit or NotebookEdit outside the session's repo is now judged by the repo that holds the file, when that repo has the plugin set up (`.ai-sdlc` or `specs/`): its guardrail files, artefact order, intent, stage, lane, autonomy, pause flag and branch. A file in a repo without the plugin, or outside any repo, is not judged, as before.
+- **Fixed: a command that starts with `cd <path> &&` or `Set-Location <path>;` was judged by the session's branch.** Committing on a protected branch, pushing to one, the first push of a new repo and the preview check now use the branch and remote of the repo the command changes into. Text rules (deploys, production, secrets) apply as before.
+- Git is asked about another repo only when the target is outside the session's repo. Tests in `tests/hooks.test.mjs`.
+
+### Knowledge pages in the Open Knowledge Format
+
+`knowledge/` is now an [Open Knowledge Format](https://github.com/GoogleCloudPlatform/knowledge-catalog/blob/main/okf/SPEC.md) (OKF 0.2) bundle, so tools that read OKF can read what agents learned.
+
+- **The page format is OKF:** `type`, `title`, `description`, `sources` as `- resource: <path>`, `generated: { by, at }` and `verified: [{ by, at }]`, plus the plugin's own `verified_commit` and `confidence`. The knowledge template and `/ai-sdlc:learn` write this format. Pages in the older format (`name`, `sources: [paths]`, `verified: <commit>`) are still read and checked, and go stale the same way.
+- **Staleness stays git-based:** a page is stale when a source changed since `verified_commit` (or the older `verified`). An OKF `stale_after` in the past also makes it stale; sources that are URLs are not looked for on disk.
+- **The frontmatter reader handles nested YAML:** block and flow lists and mappings, quotes and comments, with no new dependency.
+- **`sdlc knowledge index` writes `knowledge/index.md`** in the OKF shape (`okf_version: "0.2"`, one `* [Title](page.md) - description` line per page) and replaces the older `INDEX.md`. It adds what changed (created, updated, removed pages) to `knowledge/log.md`, newest first. The autopilot mod reads `index.md`, falling back to `INDEX.md`.
+- **`sdlc knowledge check` reports OKF conformance:** every file but `index.md` and `log.md` needs frontmatter with a non-empty `type`. Files that are not OKF are listed as `NOT OKF` and do not fail the check. The repo kit's `knowledge/README.md` now has frontmatter, so a new repo's bundle conforms.
+- `tests/knowledge.test.mjs`.
+
 ### Human commands that are never lost ([#15](https://github.com/arunendapally/arunendapally-aisdlc/issues/15))
 
 From a real feature in another repo on plugin 0.4.0, where `sdlc intent` could not be recorded by any route.

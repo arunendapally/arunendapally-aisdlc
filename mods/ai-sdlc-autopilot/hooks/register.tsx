@@ -91,7 +91,9 @@ async function load($: EngineInterface): Promise<Board> {
   const promotable = !config.trust ? [] : Object.entries(trust)
     .filter(([key, t]: [string, any]) => !t.promoted && t.streak >= threshold && !never.includes(key))
     .map(([key]) => key)
-  const index = (await exists($, 'knowledge/INDEX.md')) ? await $.fs.read('knowledge/INDEX.md') : ''
+  // knowledge/index.md is the OKF index; INDEX.md is what older versions of the plugin wrote.
+  const indexFile = (await exists($, 'knowledge/index.md')) ? 'knowledge/index.md' : 'knowledge/INDEX.md'
+  const index = (await exists($, indexFile)) ? await $.fs.read(indexFile) : ''
   return {
     rows, branch, promotable,
     isPaused: await exists($, '.ai-sdlc/PAUSED'),

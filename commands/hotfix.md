@@ -12,6 +12,6 @@ A hotfix exists only after a human typed `sdlc hotfix <slug> <what is broken>`. 
 3. If a repro test is quick, write it and run `node "${CLAUDE_PLUGIN_ROOT}/scripts/sdlc.mjs" gate <slug>` to see it red. Speed matters more than a repro here; say in `## Test results` if you skipped it.
 4. The `builder` makes the smallest change that stops the harm (limit 100 lines). Dependency, schema, CI or infra edits need the on-call engineer's yes; the hook asks.
 5. Gate green, then `request` (passes Build on checks) and `advance`.
-6. `/ai-sdlc:pre-review <slug>`, use `hotfix.md` as the PR body, open the PR labelled `lane:hotfix`, `request`, and stop. Review deadline: 1h. The on-call engineer approves on GitHub and types `sdlc approve <slug> 5`.
-7. A human deploys. Then run read-only probes, fill `## Probes` and `## Follow-up`, `request`, and stop. The incident commander types `sdlc approve <slug> 6`.
+6. `/ai-sdlc:pre-review <slug>`, use `hotfix.md` as the PR body, open the PR labelled `lane:hotfix`, `request`, and stop. Review deadline: 1h. The on-call engineer approves on GitHub; then run `sdlc ask <slug>` and put its question to them with the question tool.
+7. A human deploys. Then run read-only probes, fill `## Probes` and `## Follow-up`, `request`, and stop. Run `sdlc ask <slug>` and put its question to the incident commander with the question tool.
 8. After `advance`, the postmortem is due within 2 days: `/ai-sdlc:incident <slug>`. Session start and status flag it until it exists.

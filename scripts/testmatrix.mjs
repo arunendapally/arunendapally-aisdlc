@@ -9,9 +9,11 @@ import { lint } from './gherkin.mjs'
 // E2E is recognised by folder or an ".e2e" name only: "*.spec.ts" is a unit test in Jest, Angular and
 // NestJS repos (finding F5), so it stays unit unless it sits in an e2e folder.
 export const DEFAULT_LEVELS = {
-  unit: ['**/*.test.*', '**/*.spec.*', '**/*_test.go', '**/test_*.py', '**/*_test.py', 'test/unit/**', 'tests/unit/**'],
-  subsystem: ['**/*.int.test.*', '**/*.integration.test.*', 'test/integration/**', 'tests/integration/**', 'test/subsystem/**', 'tests/subsystem/**'],
-  api: ['**/*.postman_collection.json', 'test/api/**', 'tests/api/**', '**/*.api.test.*'],
+  unit: ['**/*.test.*', '**/*.spec.*', '**/*_test.go', '**/test_*.py', '**/*_test.py', 'test/unit/**', 'tests/unit/**',
+    '**/*Tests.cs', '**/*Test.cs', '**/*Tests.java', '**/*Test.java', '**/*Test.kt'],
+  subsystem: ['**/*.int.test.*', '**/*.integration.test.*', 'test/integration/**', 'tests/integration/**', 'test/subsystem/**', 'tests/subsystem/**',
+    '**/*IntegrationTests.cs', '**/*IT.java'],
+  api: ['**/*.postman_collection.json', 'test/api/**', 'tests/api/**', '**/*.api.test.*', '**/*ApiTests.cs', '**/*ApiTest.java'],
   e2e: ['e2e/**', 'tests/e2e/**', 'test/e2e/**', 'playwright/**', '**/*.e2e.*', '**/*.e2e-spec.*'],
 }
 
@@ -46,7 +48,14 @@ export function matrix(dir, feature) {
     const found = texts.filter(t => traces(t.text, t.file, feature, id))
     return { ac: id, level: s.level, requirements: s.requirements, name: s.name, tests: found.map(t => `${t.file} (${t.level})`), traced: found.length > 0 }
   })
-  const problems = rows.filter(r => !r.traced).map(r => `${r.ac} has no test: name a test after it ("${r.ac} ${r.name}") in a file that names ${feature}`)
+  // A file that names the criterion but is not a known test file is the likelier cause: say so.
+  const unrecognised = ac => git(`grep --untracked -l -w ${ac} -- .`, dir).split('\n').filter(f => f && !levelOf(f, map) && !f.startsWith(`${cfg.specsDir}/`))
+  const problems = rows.filter(r => !r.traced).map(r => {
+    const near = unrecognised(r.ac)
+    return near.length
+      ? `${r.ac} has no test: ${near.slice(0, 3).join(', ')} names it but is not a recognised test file. Rename it to a test pattern, or a person adds its pattern to "testLevels" in .ai-sdlc/config.json`
+      : `${r.ac} has no test: name a test after it ("${r.ac} ${r.name}") in a file that names ${feature}`
+  })
   return { rows, problems }
 }
 

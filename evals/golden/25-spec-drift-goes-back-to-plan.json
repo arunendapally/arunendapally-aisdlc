@@ -70,6 +70,21 @@
         "request",
         "demo"
       ],
+      "ok": false,
+      "out": "Changes since v1",
+      "why": "a re-approved spec says what changed"
+    },
+    {
+      "put": [
+        "specs/demo/prd.md",
+        "## Problem\n\nFilled.\n\n## Users and jobs\n\nFilled.\n\n## Questions asked\n\nFilled.\n\n## Assumptions\n\nFilled.\n\n## Never\n\nFilled.\n\n## Out of scope\n\nFilled.\n\n## Outcome metric\n\nFilled.\n\n## Open questions\n\nFilled.\n\n## Requirements\n\n- R1. (must) Save and share an item.\n\n## Changes since v1\n\nSharing added.\n"
+      ]
+    },
+    {
+      "sdlc": [
+        "request",
+        "demo"
+      ],
       "ok": true,
       "out": "waiting on"
     },

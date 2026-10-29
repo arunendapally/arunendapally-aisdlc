@@ -72,3 +72,12 @@ test('a new intent while gate 1 waits lapses the request', () => {
   r.say(INTENT.replace('two weeks', 'one month'))
   assert.match(r.say('sdlc approve demo 1'), /has lapsed/)
 })
+
+// docs/decisions/2026-10-27-confirm-the-intent.md, ruling 4.
+test('a label counts only where a part starts; a part keeps its semicolons and lines', async () => {
+  const { parseIntent } = await import('../scripts/lib.mjs')
+  assert.deepEqual(parseIntent('change: save it; or share it\nlater on; smallest: a button; drop: nobody saves'),
+    { change: 'save it; or share it\nlater on', smallest: 'a button', dropIf: 'nobody saves' })
+  assert.deepEqual(parseIntent('exchange: none; change: the real one'), { change: 'the real one', smallest: '', dropIf: '' }, '"exchange:" is not "change:"')
+  assert.equal(parseIntent('drop if: under 5%').dropIf, 'under 5%')
+})

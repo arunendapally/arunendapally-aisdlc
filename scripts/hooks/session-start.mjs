@@ -17,7 +17,7 @@ for (const s of overdueOutcomes(dir)) lines.push(`OUTCOME OVERDUE: ${s.feature} 
 for (const s of lessonsOwed(dir)) lines.push(`LESSON OWED: ${s.feature} (${s.lane}) needs a trap in standards/traps.md with "- **Source:** ${s.feature}" and a guard that is a check.`)
 const kb = check(dir)
 if (kb.count) {
-  lines.push(`Knowledge: ${kb.count} pages in knowledge/ (index: knowledge/INDEX.md), ${kb.stale.length} stale. Before changing an area, run "sdlc.mjs knowledge for <files>" and read what it lists. After learning something durable, write or update a page.`)
+  lines.push(`Knowledge: ${kb.count} pages in knowledge/ (index: knowledge/index.md), ${kb.stale.length} stale. Before changing an area, run "sdlc.mjs knowledge for <files>" and read what it lists. After learning something durable, write or update a page.`)
 } else {
   lines.push('Knowledge: knowledge/ is empty. As you learn this codebase, write pages there (see the knowledge template) so the next session starts knowing it.')
 }
