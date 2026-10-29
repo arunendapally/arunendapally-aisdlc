@@ -3,7 +3,10 @@
 import { pathToFileURL } from 'node:url'
 
 export const LIMITS = { full: 400, light: 300, bug: 200, hotfix: 100 }
-export const EXCLUDES = [/^specs\//, /^docs\//, /\.md$/i, /(^|\/)(package-lock\.json|yarn\.lock|pnpm-lock\.yaml)$/, /\.lock$/, /\.snap$/]
+export const EXCLUDES = [/^specs\//, /^docs\//, /\.md$/i, /(^|\/)(package-lock\.json|yarn\.lock|pnpm-lock\.yaml)$/, /\.lock$/, /\.snap$/,
+  // Tests, project and tool boilerplate, and the plugin's state: the same list as the gate's prLineExcludes.
+  /\.(test|spec)\.[^/]+$/, /_test\.go$/, /(^|\/)test_[^/]+\.py$/, /(Tests?)\.cs$/, /Test\.(java|kt)$/,
+  /\.(sln|csproj)$/, /(^|\/)tsconfig[^/]*\.json$/, /(^|\/)launchSettings\.json$/, /(^|\/)\.gitignore$/, /^\.ai-sdlc\//]
 
 export function countLines(files) {
   return files.filter(f => !EXCLUDES.some(re => re.test(f.filename))).reduce((sum, f) => sum + f.additions + f.deletions, 0)

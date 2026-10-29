@@ -131,7 +131,11 @@ export const DEFAULT_CONFIG = {
   scriptPaths: ['**/*.sh', '**/*.ps1', '**/*.bat', '**/*.cmd', '**/makefile', '**/justfile', '**/package.json', '**/taskfile.yml'],
   // Small PRs review faster: changed lines allowed per PR, by lane, excluding specs, docs and lock files.
   maxPrLines: { full: 400, light: 300, bug: 200, task: 200, hotfix: 100 },
-  prLineExcludes: ['specs/**', 'docs/**', '**/*.md', '**/package-lock.json', '**/yarn.lock', '**/pnpm-lock.yaml', '**/*.lock', '**/*.snap'],
+  // What a reviewer does not reason about line by line: docs, lockfiles, snapshots, tests (counting them
+  // made test-first PRs "too big"), project and tool boilerplate, and this plugin's own state.
+  prLineExcludes: ['specs/**', 'docs/**', '**/*.md', '**/package-lock.json', '**/yarn.lock', '**/pnpm-lock.yaml', '**/*.lock', '**/*.snap',
+    '**/*.test.*', '**/*.spec.*', '**/*_test.go', '**/test_*.py', '**/*Tests.cs', '**/*Test.cs', '**/*Test.java', '**/*Test.kt',
+    '**/*.sln', '**/*.csproj', '**/tsconfig*.json', '**/launchSettings.json', '**/.gitignore', '.ai-sdlc/**'],
   // Hours a human gate may wait before it is overdue and escalated, by lane.
   reviewSlaHours: { full: 24, light: 8, bug: 8, task: 8, hotfix: 1 },
   // Earned autonomy is optional (ADR-0003): with trust on, after this many clean human approvals in a

@@ -136,6 +136,14 @@ test('PR size: the Verify gate refuses an oversized full-lane PR', () => {
   r.sdlc('review', 'demo')
   assert.match(r.sdlc('request', 'demo').out, /over the full lane limit of 400/)
   fs.rmSync(path.join(r.repo, 'src', 'huge.ts'))
+  // Tests, project boilerplate and the plugin's own state are not code a reviewer must reason about
+  // (docs/feedback/2026-10-29-calculator-run.md, F-11).
+  r.put('src/huge.test.ts', 'x\n'.repeat(450))
+  r.put('api/HugeTests.cs', 'x\n'.repeat(450))
+  r.put('Huge.sln', 'x\n'.repeat(450))
+  r.put('api/Huge.csproj', 'x\n'.repeat(450))
+  r.put('web/tsconfig.app.json', 'x\n'.repeat(450))
+  assert.doesNotMatch(r.sdlc('request', 'demo').out, /over the full lane limit/)
   r.git('add', '.')
   r.git('commit', '-m', 'later work')
   const ok = r.sdlc('request', 'demo')

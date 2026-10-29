@@ -349,6 +349,20 @@ test('AC-14 every criterion must have a test; its level is a hint', () => {
   assert.ok(fs.existsSync(path.join(r.repo, 'specs', 'demo', 'test-matrix.md')))
 })
 
+// The calculator run (docs/feedback/2026-10-29-calculator-run.md, F-6): xUnit tests were not recognised.
+test('.NET and Java test files are recognised, and an unrecognised file that names a criterion is called out', () => {
+  const r = makeRepo()
+  r.sdlc('init', 'demo')
+  r.put('specs/demo/acceptance.feature', FEATURE('    Given a\n    When b\n    Then c', '@R1 @AC-1 @unit') + '\n  @R1 @AC-2 @api\n  Scenario: Contract\n    Given a\n    When b\n    Then c\n\n  @R1 @AC-3 @unit\n  Scenario: Other\n    Given a\n    When b\n    Then c\n')
+  r.put('api/Demo.Tests/DemoEngineTests.cs', '// demo\n[Fact(DisplayName = "AC-1 engine")] public void A() {}\n')
+  r.put('api/Demo.Tests/DemoApiTests.cs', '// demo\n[Fact(DisplayName = "AC-2 contract")] public void B() {}\n')
+  r.put('src/demo/DemoChecks.cs', '// demo\n// AC-3 is checked here\n')
+  const out = r.sdlc('tests', 'demo').out
+  assert.match(out, /\| AC-1 \| unit .*DemoEngineTests\.cs \(unit\) \| yes \|/)
+  assert.match(out, /\| AC-2 \| api .*DemoApiTests\.cs \(api\) \| yes \|/)
+  assert.match(out, /AC-3 has no test: src\/demo\/DemoChecks\.cs names it but is not a recognised test file/)
+})
+
 test('AC-17 data work shows an ER diagram that marks the entities it changes', () => {
   const r = makeRepo('feature/loyalty')
   r.sdlc('init', 'loyalty', '--kind', 'data')
