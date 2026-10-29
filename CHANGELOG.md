@@ -4,6 +4,8 @@ All notable changes to this repository. The format follows [Keep a Changelog](ht
 
 ## [Unreleased]
 
+## [0.5.0] - 2026-10-29
+
 ### A smoother process: questions instead of commands, autonomy, and the calculator run's fixes
 
 The owner ran a scientific calculator (.NET minimal API and React) through the plugin with Claude in every role; the log is [docs/feedback/2026-10-29-calculator-run.md](docs/feedback/2026-10-29-calculator-run.md).
@@ -278,6 +280,7 @@ The AI SDLC for organisations, packaged as the `ai-sdlc` Claude Code plugin and 
 - Copy-paste prompts, a worked e-commerce example, and the standards knowledge base (engineering standards, testing standards, code-review checklist, traps).
 - The companion post `docs/first-principles.md`.
 
+[0.5.0]: https://github.com/arunendapally/arunendapally-aisdlc/releases/tag/v0.5.0
 [0.4.0]: https://github.com/arunendapally/arunendapally-aisdlc/releases/tag/v0.4.0
 [0.3.0]: https://github.com/arunendapally/arunendapally-aisdlc/releases/tag/v0.3.0
 [0.2.0]: https://github.com/arunendapally/arunendapally-aisdlc/pull/2
