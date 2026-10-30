@@ -144,7 +144,7 @@ test('AC-7 system facts are pinned to real lines and go stale when the code chan
   facts(`- F1: [governing] Orders are soft-deleted. Source: src/missing.ts:1. Verified: ${sha}.`)
   assert.match(factIssues(), /src\/missing\.ts does not exist/)
   facts('- F1: Orders are soft-deleted, see the repo.')
-  assert.match(factIssues(), /write a fact as/)
+  assert.match(factIssues(), /looks like a fact but is not in the expected shape/)
   facts(`- F1: [governing] Orders are soft-deleted. Source: src/orders.ts:1. Verified: ${sha}.`)
   r.put('specs/demo/prd.md', '## Requirements\n\n- R1. (must) relies on F1 and F4.\n')
   assert.match(factIssues(), /prd\.md cites F4, which facts\.md does not define/)
@@ -169,7 +169,8 @@ test('AC-8 the Plan gate needs acceptance.feature covering the PRD; facts only f
   assert.match(out, /R2 has no scenario/)
   assert.equal(r.write('specs/demo/acceptance.feature', 'x'), 'allow', 'stage 1 may write it')
   r.sdlc('kind', 'demo', 'data')
-  assert.match(r.sdlc('request', 'demo').out, /facts\.md does not exist/, 'data work pins facts first')
+  // Adding the kind copies facts.md in (issue #17), so the gate asks for facts, not for the file.
+  assert.match(r.sdlc('request', 'demo').out, /facts\.md has no facts: write each as "- F<n>: <statement>\. Source: <path:line>\. Verified: <commit>\."/, 'data work pins facts first')
 })
 
 test('AC-9 the review packet shows where the risk is before anyone reads the diff', () => {

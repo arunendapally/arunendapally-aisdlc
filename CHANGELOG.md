@@ -4,6 +4,15 @@ All notable changes to this repository. The format follows [Keep a Changelog](ht
 
 ## [Unreleased]
 
+### The Plan gate says what it expects, the first time ([#17](https://github.com/arunendapally/arunendapally-aisdlc/issues/17))
+
+A brownfield and data feature took three rounds of refusals at Plan, each fixing something the previous message did not explain.
+
+- **Every artefact a kind needs is there before the agent writes:** `sdlc init` and `sdlc kind` copy `facts.md` for brownfield and data work and add each kind's PRD sections (`## Current system`, `## Data impact`) to `prd.md`.
+- **A fact in the wrong shape is named, with the expected shape.** A line that starts like a fact (`- **F1.`, `* F2`) is reported as "looks like a fact but is not in the expected shape" with the format, instead of "facts.md has no facts" plus one "does not define" per cited fact.
+- **An assumption tag may name its evidence:** `[confirmed: src/a.ts:3]` and `[confirmed, code]` are accepted, and the refusal says what a valid tag looks like.
+- Tests in `tests/gate-messages.test.mjs`, including one request listing every problem at once.
+
 ## [0.5.0] - 2026-10-29
 
 ### A smoother process: questions instead of commands, autonomy, and the calculator run's fixes
