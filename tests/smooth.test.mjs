@@ -50,6 +50,21 @@ test('F-19 a review fix may take a PR a little over the limit once its size pass
   assert.match(r.sdlc('request', 'demo').out, /over the bug lane limit of 200\. Split it/)
 })
 
+// F-26: the gate and proof scripts the plugin makes a repo write are harness, not the change under review.
+test('F-26 the scripts the gate and proof commands run do not count toward PR size', async () => {
+  const { changedLines } = await import('../scripts/lib.mjs')
+  const r = makeRepo()
+  r.config({ gateCommand: 'npm run gate', proofCommand: 'node tools/proof.mjs {files}' })
+  r.put('package.json', '{"scripts":{"gate":"node tools/gate.mjs"}}\n')
+  r.put('src/a.js', 'x\n'.repeat(10))
+  const before = changedLines(r.repo)
+  r.put('tools/gate.mjs', 'x\n'.repeat(40))
+  r.put('tools/proof.mjs', 'x\n'.repeat(40))
+  assert.equal(changedLines(r.repo), before, 'the gate script (through npm) and the proof script do not count')
+  r.put('tools/other.mjs', 'x\n'.repeat(5))
+  assert.ok(changedLines(r.repo) >= before + 5, 'other tooling still counts')
+})
+
 test('F-20 and F-21 a refused request leaves a trace in status, and says what to do under autonomy', () => {
   const r = verifyRepo(10)
   r.fill('specs/demo/bug.md', BUG, PRE.replace('Revert: git revert the merge commit\n', ''))

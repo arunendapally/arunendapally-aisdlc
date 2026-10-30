@@ -311,7 +311,26 @@ export function changedFiles(dir, cfg = loadConfig(dir)) {
 }
 
 export function changedLines(dir, cfg = loadConfig(dir)) {
-  return changedFiles(dir, cfg).filter(f => !matches(f.file, cfg.prLineExcludes)).reduce((sum, f) => sum + f.lines, 0)
+  const harness = harnessFiles(dir, cfg)
+  return changedFiles(dir, cfg).filter(f => !matches(f.file, cfg.prLineExcludes) && !harness.has(f.file)).reduce((sum, f) => sum + f.lines, 0)
+}
+
+// The scripts the gate and proof commands run (directly, or through an npm script) are the harness the
+// plugin asks a repo for, not the change under review, so they do not count toward PR size (F-26).
+function harnessFiles(dir, cfg) {
+  const files = new Set()
+  const scan = cmd => {
+    for (const t of (cmd ?? '').split(/\s+/)) if (/^[\w./-]+\.(m?js|cjs|ts|py|sh|ps1)$/.test(t) && fs.existsSync(path.join(dir, t))) files.add(t.replace(/^\.\//, ''))
+    const npm = (cmd ?? '').match(/\bnpm\s+(?:run\s+)?([\w:-]+)/)
+    if (npm) {
+      try {
+        scan(JSON.parse(fs.readFileSync(path.join(dir, 'package.json'), 'utf8')).scripts?.[npm[1]]?.replace(/\bnpm\b/g, ''))
+      } catch {}
+    }
+  }
+  scan(cfg.gateCommand)
+  scan(cfg.proofCommand)
+  return files
 }
 
 // Waiting gates past their lane's review deadline.
