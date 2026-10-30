@@ -12,4 +12,5 @@
 - Read the implementation that governs a behaviour before designing against it, and read large files in slices.
 - A deploy from a branch is a preview, never a release. A release comes from main on the remote, and its probe records what is live.
 - Say what you did not verify, every time.
+- Talk to people briefly: lead with the outcome or the one thing they must do, in a few lines. No background they did not ask for, no restating, no list of options. Once they have agreed a step, do it without asking again; ask only for what is theirs (a gate, a merge, a release).
 - House style: no em dashes.
