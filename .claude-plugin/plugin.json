@@ -1,6 +1,6 @@
 {
   "name": "ai-sdlc",
-  "version": "0.5.1",
+  "version": "0.5.2",
   "description": "Org AI SDLC: a CTO agent and 13 expert agents, a short default path with optional steps, human-only gate approvals, guardrail hooks and repo templates, so humans and agents ship simple, fast, high-quality, secure software.",
   "author": { "name": "Arun Endapally" },
   "license": "MIT",

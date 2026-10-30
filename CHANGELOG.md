@@ -4,6 +4,10 @@ All notable changes to this repository. The format follows [Keep a Changelog](ht
 
 ## [Unreleased]
 
+## [0.5.2] - 2026-10-30
+
+- **The gate and proof scripts no longer count toward PR size.** The scripts `gateCommand` and `proofCommand` run, directly or through an npm script, are the harness the plugin asks a repo for, not the change under review. A first feature with its own gate scripts was refused at 305 of 300 lines for them (finding F-26).
+
 ## [0.5.1] - 2026-10-30
 
 ### Agents talk to people briefly
@@ -295,6 +299,7 @@ The AI SDLC for organisations, packaged as the `ai-sdlc` Claude Code plugin and 
 - Copy-paste prompts, a worked e-commerce example, and the standards knowledge base (engineering standards, testing standards, code-review checklist, traps).
 - The companion post `docs/first-principles.md`.
 
+[0.5.2]: https://github.com/arunendapally/arunendapally-aisdlc/releases/tag/v0.5.2
 [0.5.1]: https://github.com/arunendapally/arunendapally-aisdlc/releases/tag/v0.5.1
 [0.5.0]: https://github.com/arunendapally/arunendapally-aisdlc/releases/tag/v0.5.0
 [0.4.0]: https://github.com/arunendapally/arunendapally-aisdlc/releases/tag/v0.4.0
