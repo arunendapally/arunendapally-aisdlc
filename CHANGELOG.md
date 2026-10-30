@@ -4,6 +4,12 @@ All notable changes to this repository. The format follows [Keep a Changelog](ht
 
 ## [Unreleased]
 
+## [0.5.1] - 2026-10-30
+
+### Agents talk to people briefly
+
+- The repo rules and the skill tell agents to lead with the outcome or the one thing the person must do, in a few lines, and not to ask again for a step the person already agreed (owner feedback, 30 Oct).
+
 ### The Plan gate says what it expects, the first time ([#17](https://github.com/arunendapally/arunendapally-aisdlc/issues/17))
 
 A brownfield and data feature took three rounds of refusals at Plan, each fixing something the previous message did not explain.
@@ -289,6 +295,7 @@ The AI SDLC for organisations, packaged as the `ai-sdlc` Claude Code plugin and 
 - Copy-paste prompts, a worked e-commerce example, and the standards knowledge base (engineering standards, testing standards, code-review checklist, traps).
 - The companion post `docs/first-principles.md`.
 
+[0.5.1]: https://github.com/arunendapally/arunendapally-aisdlc/releases/tag/v0.5.1
 [0.5.0]: https://github.com/arunendapally/arunendapally-aisdlc/releases/tag/v0.5.0
 [0.4.0]: https://github.com/arunendapally/arunendapally-aisdlc/releases/tag/v0.4.0
 [0.3.0]: https://github.com/arunendapally/arunendapally-aisdlc/releases/tag/v0.3.0
