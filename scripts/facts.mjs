@@ -16,9 +16,10 @@ export function parseFacts(text) {
   const facts = []
   const malformed = []
   for (const [i, line] of text.split(/\r?\n/).entries()) {
-    if (!/^\s*[-*]\s*F\d+:/i.test(line)) continue
+    // Anything that starts like a fact ("- F1:", "- **F1.", "* F2 ") is one; say so if its shape is off.
+    if (!/^\s*[-*]\s*(\*\*|__)?F\d+\b/i.test(line)) continue
     const m = line.match(FACT)
-    if (!m) malformed.push(`line ${i + 1}: write a fact as "- F1: <statement>. Source: path:line. Verified: <commit>."`)
+    if (!m) malformed.push(`line ${i + 1} looks like a fact but is not in the expected shape: "- F<n>: <statement>. Source: <path:line>. Verified: <commit>." (see the comment at the top of the facts.md template)`)
     else facts.push({ id: m[1].toUpperCase(), statement: m[2].replace(/\.$/, ''), file: m[3], line: Number(m[4]), end: Number(m[5] ?? m[4]), verified: m[6] })
   }
   return { facts, malformed }
@@ -55,8 +56,9 @@ export function factsGateProblems(dir, state) {
   const text = fs.readFileSync(file, 'utf8').replace(/<!--[\s\S]*?-->/g, '')
   const { facts, malformed } = parseFacts(text)
   const problems = [...malformed.map(m => `facts.md ${m}`), ...factProblems(dir, facts).map(p => `facts.md: ${p}`)]
-  if (!facts.length && !/None, because\s+\S/i.test(text)) problems.push('facts.md has no facts; write "None, because ..." if there is truly no current system')
-  if ((state.kinds ?? []).includes('brownfield') && !facts.length) problems.push('brownfield work needs at least one fact about the current system')
+  // A malformed fact explains a missing one; do not report the same cause three ways.
+  if (!facts.length && !malformed.length && !/None, because\s+\S/i.test(text)) problems.push('facts.md has no facts: write each as "- F<n>: <statement>. Source: <path:line>. Verified: <commit>." under "## Facts", or "None, because ..." if there is truly no current system')
+  if ((state.kinds ?? []).includes('brownfield') && !facts.length && !malformed.length) problems.push('brownfield work needs at least one fact about the current system')
   // Read what governs before designing against it (ADR-0004, failure F2): one fact is the implementation
   // the design must follow, pinned to code rather than to a document, a schema or a spec.
   const changesWhatExists = ['brownfield', 'data'].some(k => (state.kinds ?? []).includes(k))
@@ -67,6 +69,7 @@ export function factsGateProblems(dir, state) {
   for (const name of ['prd.md']) {
     const p = path.join(folder, name)
     if (!fs.existsSync(p)) continue
+    if (malformed.length) continue
     for (const id of citedFacts(fs.readFileSync(p, 'utf8').replace(/<!--[\s\S]*?-->/g, ''))) if (!defined.has(id)) problems.push(`${name} cites ${id}, which facts.md does not define`)
   }
   return problems
@@ -76,12 +79,13 @@ export function factsGateProblems(dir, state) {
 export function assumptionProblems(prdText) {
   const problems = []
   const assumptions = (section(prdText, '## Assumptions') ?? '').split('\n').filter(l => /^\s*[-*]\s*A\d+/i.test(l))
-  for (const a of assumptions) if (!/\[(confirmed|unconfirmed)\]/i.test(a)) problems.push(`assumption "${a.trim().slice(0, 50)}" is not marked [confirmed] or [unconfirmed]`)
+  // The tag may name its evidence: [confirmed], [confirmed: src/a.ts:3], [confirmed, code].
+  for (const a of assumptions) if (!/\[(confirmed|unconfirmed)(\s*[:,][^\]]*)?\]/i.test(a)) problems.push(`assumption "${a.trim().slice(0, 50)}" is not marked: end it with [confirmed] or [unconfirmed], optionally with evidence, for example [confirmed: src/a.ts:3]`)
   const asked = section(prdText, '## Questions asked') ?? ''
   for (const q of asked.split('\n').filter(l => /^\s*[-*]\s*Q\d+/i.test(l))) {
     if (!/\bA:\s*\S/.test(q) && !/unanswered/i.test(q)) problems.push(`question "${q.trim().slice(0, 50)}" has no "A: ..." and is not marked unanswered`)
   }
-  const unconfirmed = assumptions.filter(a => /\[unconfirmed\]/i.test(a)).map(a => a.match(/A\d+/i)[0].toUpperCase())
+  const unconfirmed = assumptions.filter(a => /\[unconfirmed(\s*[:,][^\]]*)?\]/i.test(a)).map(a => a.match(/A\d+/i)[0].toUpperCase())
   const open = section(prdText, '## Open questions') ?? ''
   for (const id of unconfirmed) if (!new RegExp(`\\b${id}\\b`, 'i').test(open)) problems.push(`${id} is unconfirmed, so it must appear in Open questions with who can confirm it`)
   return problems

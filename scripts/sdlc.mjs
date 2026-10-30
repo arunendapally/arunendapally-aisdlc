@@ -105,6 +105,20 @@ const contractProblems = state => {
 const kindNote = () => (kinds().length ? `, ${kinds().join(', ')}` : '')
 const hours = (a, b = new Date().toISOString()) => Math.round((Date.parse(b) - Date.parse(a)) / 36e5 * 10) / 10
 
+// Everything a feature's kinds need at Plan is put in front of the agent before it writes (issue #17):
+// facts.md for brownfield and data work, and each kind's PRD sections in prd.md.
+const scaffoldKinds = state => {
+  if (!['full', 'light'].includes(state.lane)) return
+  if ((state.kinds ?? []).some(k => ['brownfield', 'data'].includes(k))) copyTemplate(dir, feature, 'facts.md')
+  const prd = path.join(dir, loadConfig(dir).specsDir, feature, 'prd.md')
+  if (!fs.existsSync(prd)) return
+  let text = fs.readFileSync(prd, 'utf8')
+  for (const k of state.kinds ?? []) {
+    for (const h of KINDS[k]?.headings?.[1] ?? []) if (!text.split(/\r?\n/).some(l => l.trim() === h)) text += `\n${h}\n\n<!-- Required for ${k} work. -->\n`
+  }
+  fs.writeFileSync(prd, text)
+}
+
 const commands = {
   // Create a feature at stage 1, in the light lane unless --full. Starting full is always allowed
   // (it only adds the Design gate); only a human moves a feature from full to light ("sdlc lane").
@@ -113,9 +127,10 @@ const commands = {
     if (readState(dir, feature)) fail(`Feature "${feature}" already exists.`)
     if (isFrozen(dir)) fail('The error budget is spent, so new features wait until a human unfreezes it. Bug, hotfix and reliability tasks stay open (sdlc bug, sdlc task).')
     const lane = rest.includes('--full') ? 'full' : 'light'
-    createFeature(dir, { feature, lane, branch: flag('branch'), extra: { kinds: kinds() } })
+    const state = createFeature(dir, { feature, lane, branch: flag('branch'), extra: { kinds: kinds() } })
     const prd = copyTemplate(dir, feature, 'prd.md')
     const feat = copyTemplate(dir, feature, 'acceptance.feature')
+    scaffoldKinds(state)
     console.log(`Created ${feature} at stage 1 (Plan), ${lane} lane${kindNote()}. Write ${prd} and ${feat}; one approval covers both.`)
   },
 
@@ -138,6 +153,7 @@ const commands = {
     if (add === 'data' && !['full', 'light'].includes(state.lane)) fail('Data work is a feature, so the DBA reviews it. Start it with: sdlc init <slug> --kind data')
     state.kinds = [...new Set([...(state.kinds ?? []), add])]
     writeState(dir, state)
+    scaffoldKinds(state)
     console.log(`${feature} is now: ${state.kinds.join(', ')}.`)
   },
 
