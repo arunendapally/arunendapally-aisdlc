@@ -29,6 +29,15 @@ erDiagram
 
 <!-- What an attacker or a mistake could do through this change, and what stops it. -->
 
+## Error handling
+
+<!-- The status codes or errors callers get, what is retried (and how often), and what users see when it fails. -->
+
+## Data and tenancy
+
+<!-- Whose data this reads and writes, how each query is scoped to its owner or tenant, and what keeps one tenant's
+     data from another's. -->
+
 ## Test plan
 
 <!-- Levels, test data (where it comes from, how it is isolated and torn down; synthetic only), and

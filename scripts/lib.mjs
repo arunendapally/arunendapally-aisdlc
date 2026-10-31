@@ -10,7 +10,7 @@ export const STAGES = {
   1: { name: 'Plan', artefact: 'prd.md', owner: 'product lead',
     headings: ['## Problem', '## Users and jobs', '## Questions asked', '## Assumptions', '## Requirements', '## Never', '## Out of scope', '## Outcome metric', '## Open questions'] },
   3: { name: 'Design', artefact: 'plan.md', owner: 'architect + product lead',
-    headings: ['## Decisions', '## Data model', '## Contracts', '## Threat model', '## Test plan', '## Run it'] },
+    headings: ['## Decisions', '## Data model', '## Contracts', '## Threat model', '## Error handling', '## Data and tenancy', '## Test plan', '## Run it'] },
   4: { name: 'Build', artefact: 'tasks.md', owner: 'checks (gate green, small diff)',
     headings: ['## Tasks'] },
   5: { name: 'Verify', artefact: 'pr.md', owner: 'CODEOWNER engineer',
@@ -237,6 +237,12 @@ export function listFeatures(dir) {
     .map(name => readState(dir, name))
 }
 
+// What a section expects, so its first refusal says so (issue #17).
+const HINTS = {
+  '## Error handling': 'the status codes or errors callers get, what is retried, and what users see, or "None, because ..."',
+  '## Data and tenancy': 'how data is scoped to its owner or tenant and kept apart from others, or "None, because ..."',
+}
+
 // Sections the stage's artefact must hold, each with real content (template comments do
 // not count; write "None, because ..." when a section does not apply).
 export function missingHeadings(dir, state, stage = state.stage) {
@@ -246,8 +252,9 @@ export function missingHeadings(dir, state, stage = state.stage) {
   const problems = []
   for (const h of headings) {
     const body = section(fs.readFileSync(file, 'utf8'), h)
-    if (body === null) problems.push(`${artefact} has no "${h}" section`)
-    else if (!body) problems.push(`${artefact} section "${h}" is empty`)
+    const hint = HINTS[h] ? `: ${HINTS[h]}` : ''
+    if (body === null) problems.push(`${artefact} has no "${h}" section${hint}`)
+    else if (!body) problems.push(`${artefact} section "${h}" is empty${hint}`)
   }
   return problems
 }

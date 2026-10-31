@@ -4,6 +4,14 @@ All notable changes to this repository. The format follows [Keep a Changelog](ht
 
 ## [Unreleased]
 
+### Task order as data, two plan sections, and a contract field check ([#26](https://github.com/arunendapally/arunendapally-aisdlc/issues/26))
+
+- **Every task says what it waits for.** A task in `tasks.md` ends with `depends-on: [T1, T2]`, or `depends-on: []` when it waits for none. The Build gate refuses a missing list, a dependency on a task that does not exist, and a loop (it names the loop, for example `T1 > T3 > T2 > T1`). The tech lead releases batches in that order and can run tasks with nothing unfinished before them in parallel.
+- **`plan.md` has `## Error handling`** (the errors callers get, what is retried, what users see) **and `## Data and tenancy`** (how data is scoped to its owner or tenant). The Design gate checks both like the other sections, and its first refusal says what each expects. Security, observability, performance and rollback were already covered by the Threat model, Run it, Test plan and `release.md`, so there is no new checklist.
+- **Field names the contract does not define are a warning.** At Design and Build, when the feature has `openapi.yaml`, names in `acceptance.feature` and `tasks.md` that look like fields (snake_case or camelCase, in backticks or quotes) and that the contract never defines are listed. It never refuses; it becomes blocking only if it proves reliable.
+- Not in this change: work packets per repo, which wait for a design decision.
+- Tests in `tests/tasks.test.mjs`.
+
 ## [0.5.2] - 2026-10-30
 
 - **The gate and proof scripts no longer count toward PR size.** The scripts `gateCommand` and `proofCommand` run, directly or through an npm script, are the harness the plugin asks a repo for, not the change under review. A first feature with its own gate scripts was refused at 305 of 300 lines for them (finding F-26).

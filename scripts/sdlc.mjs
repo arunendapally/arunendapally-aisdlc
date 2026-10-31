@@ -15,7 +15,7 @@ import { packet, packetText, parseLedger, ledgerProblems } from './review.mjs'
 import { boardProblems } from './design-review.mjs'
 import { matrix, matrixText } from './testmatrix.mjs'
 import { factsGateProblems, assumptionProblems } from './facts.mjs'
-import { erProblems, openapiProblems, breakingChanges } from './contracts.mjs'
+import { erProblems, openapiProblems, breakingChanges, undefinedFields } from './contracts.mjs'
 import { runProof, proofProblems, releaseProblems, advanceFeature, overdueOutcomes, riskTier, gateFingerprint, unreviewedChanges, contentHashes, readTriggers, addTrigger, clearTriggers, repeatedFindings } from './loop.mjs'
 
 const dir = root()
@@ -60,6 +60,43 @@ const chargeEscape = (causedBy, bug) => {
   }
   writeTrust(dir, ledger)
   return `Charged to ${causedBy}: gates ${passed.join(', ') || 'none'} lose their streak${passed.some(k => readTrust(dir)[k]?.demotedBy === `escape: bug ${bug}`) ? ' and promotion' : ''}.`
+}
+// Issue #26: task order is data. Every task in tasks.md names what it waits for ("depends-on: []" for
+// nothing), only tasks that exist, and never in a loop, so batches can be released in order.
+const taskProblems = text => {
+  const tasks = new Map([...(section(text, '## Tasks') ?? '').matchAll(/^\s*[-*]\s*\[[ xX]\]\s*(T\d+)\b(.*)$/gm)].map(m => [m[1], m[2]]))
+  const problems = []
+  const deps = new Map()
+  for (const [id, rest] of tasks) {
+    const list = rest.match(/depends-on:\s*\[([^\]]*)\]/)
+    if (!list) problems.push(`tasks.md: ${id} has no "depends-on: []". Every task ends with the tasks it waits for, for example "depends-on: [T1]", or "depends-on: []" when it waits for none`)
+    deps.set(id, (list?.[1] ?? '').split(',').map(d => d.trim()).filter(Boolean))
+    for (const d of deps.get(id)) if (!tasks.has(d)) problems.push(`tasks.md: ${id} depends on ${d}, which is not a task here`)
+  }
+  const done = new Set()
+  const visit = (id, trail) => {
+    if (trail.includes(id)) return [...trail.slice(trail.indexOf(id)), id]
+    if (done.has(id) || !tasks.has(id)) return null
+    for (const d of deps.get(id)) {
+      const loop = visit(d, [...trail, id])
+      if (loop) return loop
+    }
+    done.add(id)
+    return null
+  }
+  for (const id of tasks.keys()) {
+    const loop = visit(id, [])
+    if (loop) return [...problems, `tasks.md: the tasks wait for each other in a loop (${loop.join(' > ')}), so none can start`]
+  }
+  return problems
+}
+// Field names the feature's contract does not define: a warning at Design and Build, never a refusal.
+const fieldWarnings = state => {
+  const folder = path.join(dir, loadConfig(dir).specsDir, state.feature)
+  if (!fs.existsSync(openapiFile(state))) return []
+  const docs = Object.fromEntries(['acceptance.feature', 'tasks.md'].filter(f => fs.existsSync(path.join(folder, f))).map(f => [f, fs.readFileSync(path.join(folder, f), 'utf8')]))
+  const missing = undefinedFields(fs.readFileSync(openapiFile(state), 'utf8'), docs)
+  return missing.length ? [`field names not defined in openapi.yaml: ${missing.map(m => `${m.name} (${m.where})`).join(', ')}. Use the contract's names, or add them to it`] : []
 }
 // The Analyze gate needs acceptance.feature: valid Gherkin that covers every PRD requirement.
 const acceptanceProblems = state => {
@@ -256,7 +293,12 @@ const commands = {
       missing.push(...boardProblems(dir, feature))
       const contracts = contractProblems(state)
       missing.push(...contracts.problems)
-      warnings.push(...contracts.warnings)
+      warnings.push(...contracts.warnings, ...fieldWarnings(state))
+    }
+    if (state.stage === 4 && ['full', 'light'].includes(state.lane)) {
+      const tasks = path.join(dir, cfg.specsDir, feature, 'tasks.md')
+      if (fs.existsSync(tasks)) missing.push(...taskProblems(fs.readFileSync(tasks, 'utf8')))
+      warnings.push(...fieldWarnings(state))
     }
     if (state.lane === 'bug' && state.stage === 4) {
       // With a proofCommand, the repro test itself must fail on the base code; otherwise any red gate run counts.
