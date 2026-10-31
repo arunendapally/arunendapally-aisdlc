@@ -123,13 +123,19 @@ const commands = {
   // Create a feature at stage 1, in the light lane unless --full. Starting full is always allowed
   // (it only adds the Design gate); only a human moves a feature from full to light ("sdlc lane").
   init() {
-    if (!feature || !/^[a-z0-9][a-z0-9-]*$/.test(feature)) fail('Usage: sdlc init <feature-slug> [--full] [--kind a,b] [--branch <name>]')
+    if (!feature || !/^[a-z0-9][a-z0-9-]*$/.test(feature)) fail('Usage: sdlc init <feature-slug> [--full] [--kind a,b] [--branch <name>] [--capability <capability>]')
     if (readState(dir, feature)) fail(`Feature "${feature}" already exists.`)
     if (isFrozen(dir)) fail('The error budget is spent, so new features wait until a human unfreezes it. Bug, hotfix and reliability tasks stay open (sdlc bug, sdlc task).')
+    // A slice of a big capability (issue #28) names it, so status can show the capability's slices.
+    const capability = flag('capability')
+    const slices = capability && `${loadConfig(dir).specsDir}/${capability}/slices.md`
+    if (capability && !fs.existsSync(path.join(dir, slices))) fail(`No ${slices}: write the capability's outcome and slices there first (template: slices.md).`)
     const lane = rest.includes('--full') ? 'full' : 'light'
-    const state = createFeature(dir, { feature, lane, branch: flag('branch'), extra: { kinds: kinds() } })
+    const state = createFeature(dir, { feature, lane, branch: flag('branch'), extra: { kinds: kinds(), ...(capability ? { capability } : {}) } })
     const prd = copyTemplate(dir, feature, 'prd.md')
     const feat = copyTemplate(dir, feature, 'acceptance.feature')
+    // The script writes the line: the PRD itself waits for the person's intent.
+    if (capability) fs.writeFileSync(path.join(dir, prd), fs.readFileSync(path.join(dir, prd), 'utf8').replace(/^(# PRD: .*\n)/, `$1\nCapability: ${capability} (${slices})\n`))
     scaffoldKinds(state)
     console.log(`Created ${feature} at stage 1 (Plan), ${lane} lane${kindNote()}. Write ${prd} and ${feat}; one approval covers both.`)
   },
@@ -507,6 +513,20 @@ const commands = {
     if (rest.includes('--json') || feature === '--json') return console.log(JSON.stringify(features, null, 2))
     const granted = autonomy(dir)
     if (granted) console.log(`AUTONOMY: granted by ${granted.by} on ${granted.at.slice(0, 10)}: "${granted.reason}". Gates pass on their checks.`)
+    // Each capability with its slices (issue #28): a slice that is a feature shows its stage, one not
+    // started shows the status written in slices.md.
+    const specs = path.join(dir, loadConfig(dir).specsDir)
+    for (const cap of feature || !fs.existsSync(specs) ? [] : fs.readdirSync(specs).filter(c => fs.existsSync(path.join(specs, c, 'slices.md')))) {
+      const text = fs.readFileSync(path.join(specs, cap, 'slices.md'), 'utf8')
+      console.log(`Capability ${cap}: ${(section(text, '## Outcome') ?? '').split('\n')[0] || 'no outcome written'}`)
+      for (const [, slug, line] of (section(text, '## Slices') ?? '').matchAll(/^\s*[-*]\s*([a-z0-9][a-z0-9-]*):\s*(.*)$/gm)) {
+        const s = readState(dir, slug)
+        const after = line.match(/Depends on:\s*([^.]+)/i)?.[1].trim()
+        const waits = after && !/^none$/i.test(after) ? `, depends on ${after}` : ''
+        const where = s ? (s.closedAt ? `complete (${s.lane} lane)` : `stage ${s.stage} ${STAGES[s.stage].name} (${s.lane} lane)`) : `not started (${line.match(/Status:\s*([^.\n]+)/i)?.[1].trim() ?? 'no status'})`
+        console.log(`  ${slug}: ${where}${waits}`)
+      }
+    }
     if (!features.length) return console.log('No features in flight. Start one with /ai-sdlc:start.')
     const overdue = overdueGates(dir)
     const noPostmortem = overduePostmortems(dir).map(s => s.feature)

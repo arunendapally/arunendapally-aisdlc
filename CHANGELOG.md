@@ -4,6 +4,15 @@ All notable changes to this repository. The format follows [Keep a Changelog](ht
 
 ## [Unreleased]
 
+### A record of how a big capability was sliced ([#28](https://github.com/arunendapally/arunendapally-aisdlc/issues/28))
+
+`start` slices a big capability into features, but nothing recorded the slices, their order or which had shipped.
+
+- **`specs/<capability>/slices.md`**, from the new `slices.md` template: the capability's outcome, then one line per slice with its slug, what it delivers, what it depends on and its status. `start` writes it when it slices work. It is a record, not a stage: no gate, and no PRD or plan for the capability.
+- **`sdlc init <slug> --capability <capability>`** names the capability in the slice's `prd.md` and its state, and refuses a capability with no `slices.md`.
+- **`sdlc status`** shows each capability with its slices: the stage of each slice that is a feature, and the written status of each one not started, with what it depends on.
+- Tests in `tests/slices.test.mjs`.
+
 ## [0.5.2] - 2026-10-30
 
 - **The gate and proof scripts no longer count toward PR size.** The scripts `gateCommand` and `proofCommand` run, directly or through an npm script, are the harness the plugin asks a repo for, not the change under review. A first feature with its own gate scripts was refused at 305 of 300 lines for them (finding F-26).
