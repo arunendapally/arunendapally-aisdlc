@@ -214,8 +214,13 @@ const commands = {
       const destructive = destructiveMigrations(dir, cfg)
       // Migrations are judged by what they do (above), not by where they live.
       const risky = changedFiles(dir, cfg).map(f => f.file).filter(f => matches(f, cfg.highRiskPaths) && !matches(f, ['**/migrations/**']))
+      // A task that names another repo ("repos: [web]") makes this work span repos (issue #27).
+      const tasksFile = path.join(dir, cfg.specsDir, feature, 'tasks.md')
+      const others = [...(fs.existsSync(tasksFile) ? fs.readFileSync(tasksFile, 'utf8') : '').matchAll(/^\s*[-*]\s*\[[ xX]\]\s*(T\d+)\b.*?repos:\s*\[([^\]]*)\]/gm)]
+        .map(([, id, list]) => [id, list.split(',').map(s => s.trim()).filter(s => s && s !== path.basename(dir))]).find(([, repos]) => repos.length)
+      const spans = others && `${others[0]} changes a second repo (${others[1].join(', ')})`
       // Under autonomy the move to the full lane is made here: it only adds checks, so it needs no person.
-      if (granted && (destructive.length || risky.length)) {
+      if (granted && (destructive.length || risky.length || spans)) {
         const now = new Date().toISOString()
         state.stages[state.stage] = { ...state.stages[state.stage], leftAt: now }
         for (const s of Object.keys(state.gates)) if (Number(s) >= 3) delete state.gates[s]
@@ -223,11 +228,12 @@ const commands = {
         state.stages[3] = { enteredAt: now }
         writeState(dir, state)
         audit(dir, { event: 'lane', feature, lane: 'full', by: `autonomy granted by ${granted.by}` })
-        const why = destructive.length ? `${destructive.join(', ')} alter or drop existing data` : `${risky.slice(0, 5).join(', ')} are high-risk paths`
+        const why = destructive.length ? `${destructive.join(', ')} alter or drop existing data` : risky.length ? `${risky.slice(0, 5).join(', ')} are high-risk paths` : spans
         fail(`${why}, so ${feature} moves to the full lane and goes back to stage 3 (Design): write plan.md, then request gate 3.`)
       }
       if (destructive.length) missing.push(`${destructive.join(', ')} alter or drop existing data, which needs the full lane: ask a human to type "sdlc lane ${feature} full"`)
       if (risky.length) missing.push(`${risky.slice(0, 5).join(', ')} are high-risk paths, which need the full lane: ask a human to type "sdlc lane ${feature} full"`)
+      if (spans) missing.push(`${spans}, which needs the full lane: ask a human to type "sdlc lane ${feature} full"`)
     }
     if ([4, 5].includes(state.stage)) {
       const run = state.gateRuns?.[state.stage]

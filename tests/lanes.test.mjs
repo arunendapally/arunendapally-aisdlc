@@ -95,6 +95,21 @@ test('a change to the schema must be marked as data work; an additive one stays 
   assert.match(stageSpec(r.state('demo'), 5).owner, /DBA/, 'the DBA reviews the PR')
 })
 
+test('issue #27: a task in a second repo moves light-lane work up to the full lane', () => {
+  const r = makeRepo()
+  const here = path.basename(r.repo)
+  r.sdlc('init', 'demo')
+  r.setState('demo', { stage: 4, stages: { 4: { enteredAt: hoursAgo(1) } } })
+  r.put('specs/demo/tasks.md', `# Tasks: demo\n\n## Tasks\n\n- [ ] T1 [R1] repos: [${here}] files: src/a.ts\n`)
+  assert.doesNotMatch(r.sdlc('request', 'demo').out, /second repo/, 'naming this repo is not a second one')
+  r.put('specs/demo/tasks.md', `# Tasks: demo\n\n## Tasks\n\n- [ ] T1 [R1] repos: [${here}] files: src/a.ts\n- [ ] T2 [R1] repos: [web-app] files: src/b.ts\n`)
+  assert.match(r.sdlc('request', 'demo').out, /T2 changes a second repo \(web-app\), which needs the full lane: ask a human to type "sdlc lane demo full"/)
+
+  r.say('sdlc autonomy on a demo with no users and no data')
+  assert.match(r.sdlc('request', 'demo').out, /T2 changes a second repo \(web-app\), so demo moves to the full lane and goes back to stage 3 \(Design\)/)
+  assert.equal(r.state('demo').lane, 'full')
+})
+
 test('the light lane refuses destructive migrations and high-risk paths: those need the full lane', () => {
   const r = makeRepo()
   const gate = switchableGate(r)
