@@ -200,7 +200,7 @@ Each gate refuses work that guesses, skips a question or hides risk, so what rea
 
 **Requirements (Plan, one gate).**
 - The product owner asks the questions that would change the PRD before drafting, and records them with the answers in `## Questions asked`. Every belief without a source is an assumption marked `[confirmed]` or `[unconfirmed]`; every unconfirmed one must be in Open questions.
-- The PRD (`prd.md`) carries the problem, users, numbered testable requirements (R1, R2 ...), never-claims, scope, an outcome metric and open questions. Stakeholders, dependencies and release criteria are optional.
+- The PRD (`prd.md`) carries the problem, users, numbered testable requirements (R1, R2 ...), non-functional requirements (each a requirement or "None, because ..."), never-claims, scope, an outcome metric and open questions. Stakeholders, dependencies and release criteria are optional.
 - `acceptance.feature` holds every acceptance criterion as Gherkin, approved with the PRD. The gate enforces an `@AC-n` and the `@Rn` it proves on every scenario, and a scenario for every PRD requirement. Narrative, one When, step order, a level tag, Outlines and selectors are advice: the linter warns.
 - For brownfield and data work, `facts.md` pins what is true about the current system to `file:line` at a commit. A fact whose source changed is stale; a requirement citing an undefined fact is refused.
 
