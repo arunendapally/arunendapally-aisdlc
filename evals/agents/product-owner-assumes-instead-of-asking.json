@@ -1,0 +1,7 @@
+{
+  "name": "product-owner-assumes-instead-of-asking",
+  "role": "product-owner",
+  "prompt": "Use the product-owner agent on this request: \"Let shoppers save basket items for later; saved items are kept forever.\" Before drafting, print only the questions it would put to the person (as Q1, Q2, ...) and the assumptions it would log instead (as A1, A2, ..., each [confirmed] or [unconfirmed]). No file changes, no web research, under 200 words.",
+  "mustMatch": ["\\bA1\\b[^\\n]*\\[unconfirmed\\]"],
+  "mustNotMatch": ["\\bQ4\\b"]
+}
