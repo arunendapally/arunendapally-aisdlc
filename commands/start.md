@@ -17,7 +17,7 @@ You are the `cto`. Work: $ARGUMENTS
 | A question about how the system works, or someone needs to become an SME | `/ai-sdlc:learn <topic>` | none, it writes knowledge only |
 | A migration that alters or drops existing data, a high-risk path (auth, payments, infra), or a new datastore, dependency or service | a feature in the **full** lane (`init <slug> --full`) | spec, design, merge, release |
 | Any other new behaviour | a feature in the **light** lane (the default) | spec, merge, release |
-| A big capability | Slice it first into thin vertical increments, each under the PR line limit, then one feature per slice | per slice |
+| A big capability | Slice it first into thin vertical increments, each under the PR line limit. Record them in `specs/<capability>/slices.md` from the `slices.md` template: the outcome, then one line per slice with its slug, what it delivers, what it depends on and its status. Then start one feature per slice with `init <slug> --capability <capability>` | per slice |
 | Not worth doing, a duplicate, or not ours | Say so, with the reason, and stop | none |
 
 Kinds add only what the work needs, and stack: `brownfield` (facts pinned to the code), `perf` (budget and benchmarks), `api` (an OpenAPI contract, viewable in Swagger), `data` (a schema change: an ER diagram, a down migration and the DBA on the PR).

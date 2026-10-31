@@ -3,7 +3,8 @@
 <!-- Stage 1 Plan. Owner: product-owner agent. Gate: the product lead, asked with "sdlc ask <feature>"; under autonomy it passes on its checks.
      One approval covers this PRD and acceptance.feature, where every requirement becomes a Gherkin
      scenario tagged with the requirement it proves (@R1). Write "None, because ..." for a section that
-     does not apply. -->
+     does not apply. A slice of a big capability starts with "sdlc init <feature> --capability <capability>",
+     which names the capability on the line under the title. -->
 
 ## Problem
 
