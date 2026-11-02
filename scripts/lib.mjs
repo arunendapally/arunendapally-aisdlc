@@ -10,7 +10,7 @@ export const STAGES = {
   1: { name: 'Plan', artefact: 'prd.md', owner: 'product lead',
     headings: ['## Problem', '## Users and jobs', '## Questions asked', '## Assumptions', '## Requirements', '## Non-functional requirements', '## Never', '## Out of scope', '## Outcome metric', '## Open questions'] },
   3: { name: 'Design', artefact: 'plan.md', owner: 'architect + product lead',
-    headings: ['## Decisions', '## Data model', '## Contracts', '## Threat model', '## Test plan', '## Run it'] },
+    headings: ['## Decisions', '## Data model', '## Contracts', '## Threat model', '## Error handling', '## Data and tenancy', '## Test plan', '## Run it'] },
   4: { name: 'Build', artefact: 'tasks.md', owner: 'checks (gate green, small diff)',
     headings: ['## Tasks'] },
   5: { name: 'Verify', artefact: 'pr.md', owner: 'CODEOWNER engineer',
@@ -240,6 +240,8 @@ export function listFeatures(dir) {
 // What a section expects, so its first refusal says so (issue #17).
 const HINTS = {
   '## Non-functional requirements': 'one line each for Performance, Security and privacy, Accessibility, and Limits and quotas, each a requirement (R3) or "None, because ..."',
+  '## Error handling': 'the status codes or errors callers get, what is retried, and what users see, or "None, because ..."',
+  '## Data and tenancy': 'how data is scoped to its owner or tenant and kept apart from others, or "None, because ..."',
 }
 
 // Sections the stage's artefact must hold, each with real content (template comments do

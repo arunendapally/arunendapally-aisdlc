@@ -73,6 +73,17 @@ export function readOpenapi(text) {
   }
 }
 
+// Field-shaped names (snake_case or camelCase, in backticks or quotes) that the contract never defines,
+// as { name, where }. Advice only (issue #26): it becomes blocking only if it proves reliable.
+export function undefinedFields(openapiText, docs) {
+  const defined = new Set([...openapiText.matchAll(/^\s*(?:-\s*name:\s*)?([A-Za-z_][\w-]*)\s*:/gm), ...openapiText.matchAll(/^\s*-?\s*name:\s*([A-Za-z_][\w-]*)/gm)].map(m => m[1]))
+  const found = new Map()
+  for (const [where, text] of Object.entries(docs)) {
+    for (const m of text.matchAll(/[`"]([a-z][a-z0-9]*(?:_[a-z0-9]+)+|[a-z][a-z0-9]*(?:[A-Z][a-z0-9]*)+)[`"]/g)) if (!defined.has(m[1]) && !found.has(m[1])) found.set(m[1], where)
+  }
+  return [...found].map(([name, where]) => ({ name, where }))
+}
+
 export function openapiProblems(text) {
   const o = readOpenapi(text)
   const problems = []
