@@ -4,6 +4,14 @@ All notable changes to this repository. The format follows [Keep a Changelog](ht
 
 ## [Unreleased]
 
+### The outcome follow-up in the light lane, and an Objective line (agile change 2)
+
+From [docs/decisions/2026-10-25-agile-with-agents.md](docs/decisions/2026-10-25-agile-with-agents.md): most features run in the light lane, where nobody was asked whether the change worked.
+
+- **The light lane opens an outcome follow-up at release,** read after 7 days (the full lane keeps 14). Release in the light lane now needs `Metric:` and `Owner:` under `## Outcome metric`, or `Metric: None, because ...`, which opens none. An overdue outcome is a reminder in `status` and at session start, never a block on the next feature. A repo turns it off with `"outcomeWindowDays": { "light": 0 }`.
+- **`prd.md` asks for an `Objective:` line** beside the outcome metric: the objective or OKR key result the feature moves, so features roll up to one.
+- Tests in `tests/loop.test.mjs`.
+
 ## [0.5.2] - 2026-10-30
 
 - **The gate and proof scripts no longer count toward PR size.** The scripts `gateCommand` and `proofCommand` run, directly or through an npm script, are the harness the plugin asks a repo for, not the change under review. A first feature with its own gate scripts was refused at 305 of 300 lines for them (finding F-26).

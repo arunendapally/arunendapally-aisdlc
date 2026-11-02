@@ -38,7 +38,11 @@
 
 ## Outcome metric
 
-<!-- One measurable outcome, its target and its baseline today, or "None, because ...". -->
+<!-- One measurable outcome, its target and its baseline today, or "None, because ...". After release its
+     owner reads it (14 days in the full lane, 7 in the light lane). Then the objective it serves, so
+     features roll up to an OKR:
+Objective: <the objective or OKR key result this moves, or None> -->
+
 
 ## Open questions
 
