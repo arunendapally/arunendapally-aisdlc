@@ -33,6 +33,10 @@ In the light lane, the default for new behaviour, a feature could ship without a
 - **The product owner asks only what is essential:** a decision that cannot be undone, a conflict with the existing docs, or a fork where a wrong guess means redoing most of the work. Everything else goes into the PRD's existing `## Assumptions` as `[unconfirmed]` and into `## Open questions`, which the Plan gate already checks. No new mechanism.
 - **A task in a second repo moves light-lane work up to the full lane.** A task in `tasks.md` with `repos: [web]` naming a repo other than this one is refused in the light lane with "ask a human to type `sdlc lane <feature> full`", and under autonomy moves the feature to Design itself, as a destructive migration or a high-risk path already did. A schema change already needed the data kind, so it is unchanged.
 - Agent evals `cto-intake-names-what-it-found`, `cto-intake-empty-folder-asks-nothing` and `product-owner-assumes-instead-of-asking`, and a test in `tests/lanes.test.mjs`.
+### Agent evals run apart from the person's own setup
+
+- **Fixed: an agent eval could act on the person's accounts.** `claude -p` loaded the person's MCP servers, hooks and plugins, and one run added a task to their Todoist. The runner now passes `--strict-mcp-config` (no MCP servers) and `--setting-sources project,local` (no user settings).
+- **The product owner no longer grades evidence** (Established, Moderate, Preliminary). ADR-0003 removed `## Evidence` from `prd.md`, and an unproven claim already goes in `## Assumptions` as `[unconfirmed]`. Its eval, which failed on every run for that line, is now `product-owner-writes-the-brief`.
 
 ## [0.5.2] - 2026-10-30
 
