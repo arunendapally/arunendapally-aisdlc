@@ -9,7 +9,7 @@ The full process is `docs/org-ai-sdlc-process.md` in the plugin repo. This is th
 
 ## Start anything with `/ai-sdlc:start`
 
-The CTO triages (what, who, how urgent, how big, how risky) after reading the code and `knowledge/`, then routes:
+The CTO first looks for drafts, requirements, architecture notes and code, and if it finds any asks one question naming them: build on it, or start fresh? Then it triages (what, who, how urgent, how big, how risky) after reading the code and `knowledge/`, and routes:
 
 | Work | Command | Lane |
 |---|---|---|
@@ -19,7 +19,7 @@ The CTO triages (what, who, how urgent, how big, how risky) after reading the co
 | Learn an area, become an SME | `/ai-sdlc:learn` | none, knowledge only |
 | New behaviour | a feature: `init <slug>` | light (the default) |
 | A migration that alters or drops data, a high-risk path, a new datastore, dependency or service | a feature: `init <slug> --full` | full |
-| Big capability | slice it, then one feature per slice | per slice |
+| Big capability | slice it into `specs/<capability>/slices.md` (a record, not a gate), then `init <slug> --capability <capability>` per slice | per slice |
 
 Kinds stack and only add what the work needs: `brownfield` (facts), `perf` (budget and benchmarks), `api` (OpenAPI), `data` (down migration, the DBA on the PR).
 
@@ -53,11 +53,12 @@ Build passes on checks in every lane. Templates are in `templates/`; write "None
 
 ## What each gate checks
 
-- **Plan (one approval):** the questions asked before drafting; every assumption `[confirmed]` or `[unconfirmed]`; numbered requirements R1, R2 ...; `acceptance.feature` with a scenario per requirement, each tagged `@AC-n @Rn` (a level tag is a hint; style issues only warn; `sdlc.mjs gherkin <slug>`). Brownfield and data work also pin `facts.md` to `file:line` at a commit.
-- **Design (full lane):** each ADR the plan names weighs two options and records its review in `## Review`; a breaking API change is declared in `## Contracts`. ER diagrams and OpenAPI style only warn.
-- **Build:** the gate green at or above the baseline, the diff under the limit; in the light lane, no destructive migration and no high-risk path.
+- **Plan (one approval):** the questions asked before drafting (no recommended answer on intent, taste or risk; an answer the person accepted wholesale, "go with your recommendations", is written `A: <answer> (recommended, accepted)` and its assumption stays `[unconfirmed]`); every assumption `[confirmed]` or `[unconfirmed]`; numbered requirements R1, R2 ...; `## Non-functional requirements` with one line each for performance, security and privacy, accessibility, and limits and quotas, each a requirement or "None, because ..." (in the light lane, one that touches auth, payments or personal data needs the full lane); `acceptance.feature` with a scenario per requirement, each tagged `@AC-n @Rn` (a level tag is a hint; style issues only warn; `sdlc.mjs gherkin <slug>`). Brownfield and data work also pin `facts.md` to `file:line` at a commit.
+- **Design (full lane):** each ADR the plan names weighs two options and records its review in `## Review`; a breaking API change is declared in `## Contracts`; `## Error handling` and `## Data and tenancy` are answered or "None, because ...". Field names in `acceptance.feature` and `tasks.md` that `openapi.yaml` does not define only warn, at Design and Build. ER diagrams and OpenAPI style only warn.
+- **Work across repos:** the architect writes `architecture-overview.md` with its `## Systems under change` table before the tasks; Build checks it both ways (every repo a task names is in it, every new or modified system has a task), and `sdlc.mjs packets <slug>` prints each repo's tasks, scenarios and cross-repo waits in deploy order.
+- **Build:** the gate green at or above the baseline, the diff under the limit, every task in `tasks.md` with `depends-on: [..]` naming only real tasks and no loop; in the light lane, no destructive migration, no high-risk path and no task in a second repo (`repos: [..]` in `tasks.md`): each moves the work up to the full lane.
 - **Verify:** every criterion has a test (`sdlc.mjs tests <slug>`); the test proof (`sdlc.mjs proof <slug>`: green here, red on the base code, test files locked); the review packet (rebuilt for you at HEAD) and `review.md` with nothing serious open; `## Pre-review` with `Risk:`, `Open findings: 0`, `Look here first:` and `Lenses run:`. No `proofCommand`: say under `## Not verified` that the proof did not run.
-- **Release:** the reviewed change on `origin/main` (a branch deploy is a preview, never a release); `Live: <sha>` under `## Probes`, read from the running system, containing this release and the previous one; a rollback with `Tested: <date>, <how>`; a result for every probe; and in the full lane an outcome owner (or `Metric: None, because ...`). Stale knowledge or facts about the changed files, unmarked superseded ADRs and unlinked postmortem actions are warnings: fix what it lists.
+- **Release:** the reviewed change on `origin/main` (a branch deploy is a preview, never a release); `Live: <sha>` under `## Probes`, read from the running system, containing this release and the previous one; a rollback with `Tested: <date>, <how>`; a result for every probe; and an outcome owner (or `Metric: None, because ...`): the feature then opens an outcome follow-up, read after 14 days in the full lane and 7 in the light lane. An overdue one is a reminder, never a block on the next feature. Stale knowledge or facts about the changed files, unmarked superseded ADRs and unlinked postmortem actions are warnings: fix what it lists.
 - **Review converges (ADR-0005):** after three refused Verify rounds the gate stops and asks for a rethink; only a human resets it with `sdlc reject <slug> 5 rethink: ...`. Re-review only what changed since the last packet, never repost a closed finding, and name the class of bug once. The change sets its risk tier; `Risk:` may raise it, never lower it. Every pre-review has a `Revert:` line.
 - **An approval covers what was checked:** if the change's files change after `sdlc request`, the approval lapses and the gate is requested again. Release refuses code that changed after Verify reviewed it.
 - **Bugs:** a repro test that fails first. With a `proofCommand`, prove it: `sdlc.mjs proof <slug> --files <repro test>`.
@@ -69,7 +70,7 @@ Climb the ladder before writing code: needed now, standard library, platform, ex
 
 ## Optional, off until the risk calls for it
 
-The QA verdict and security results (when the pre-review says `Risk: high`), C4 changes (a new container), screens and accessibility (UI changes), `gateRepeats` and `dataCheckCommand`, extra review lenses, the outcome follow-up in the light lane, earned trust (`"trust": true`), metrics and the retro.
+The QA verdict and security results (when the pre-review says `Risk: high`), C4 changes (a new container), screens and accessibility (UI changes), `gateRepeats` and `dataCheckCommand`, extra review lenses, earned trust (`"trust": true`), metrics and the retro.
 
 For a decision that changes a guard, a gate or anything security-sensitive, run the council workflow, `/ai-sdlc:council` (`workflows/council.js`): the experts review in parallel, a sceptic checks each review's cited code, and the CTO writes a proposal record. It advises only; a human accepts the proposal.
 

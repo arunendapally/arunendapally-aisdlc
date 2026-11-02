@@ -88,7 +88,7 @@ test('a plan changed after Design was approved sends the feature back to Design,
   const r = makeRepo()
   r.sdlc('init', 'demo', '--full')
   r.setState('demo', { stage: 3, stages: { 3: { enteredAt: hoursAgo(1) } }, gates: { 1: { status: 'approved', by: 'Test Human' } } })
-  const PLAN = ['## Data model', '## Contracts', '## Threat model', '## Test plan', '## Run it']
+  const PLAN = ['## Data model', '## Contracts', '## Threat model', '## Error handling', '## Data and tenancy', '## Test plan', '## Run it']
   r.fill('specs/demo/plan.md', PLAN, '\n## Decisions\n\nNone, because no ADR.\n')
   assert.match(r.sdlc('request', 'demo').out, /waiting on/)
   assert.match(r.say('sdlc approve demo 3'), /approved gate 3/)
@@ -108,7 +108,7 @@ test('a re-approved design is v2, and says what changed since v1', () => {
   const r = makeRepo()
   r.sdlc('init', 'demo', '--full')
   r.setState('demo', { stage: 3, stages: { 3: { enteredAt: hoursAgo(1) } }, gates: { 1: { status: 'approved', by: 'Test Human' } } })
-  const PLAN = ['## Data model', '## Contracts', '## Threat model', '## Test plan', '## Run it']
+  const PLAN = ['## Data model', '## Contracts', '## Threat model', '## Error handling', '## Data and tenancy', '## Test plan', '## Run it']
   r.fill('specs/demo/plan.md', PLAN, '\n## Decisions\n\nNone, because no ADR.\n')
   r.sdlc('request', 'demo')
   r.say('sdlc approve demo 3')

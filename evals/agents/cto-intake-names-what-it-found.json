@@ -1,0 +1,11 @@
+{
+  "name": "cto-intake-names-what-it-found",
+  "role": "cto",
+  "prompt": "/ai-sdlc:start Let shoppers save basket items for later. Only do the intake and triage; do not run any command or change any file. Answer in under 150 words.",
+  "files": {
+    "docs/saved-for-later-draft.md": "# Saved for later (draft)\n\nShoppers move a basket item to a saved list and back. Saved items show when they sell out.\n",
+    "src/basket.js": "export const basket = []\nexport const add = item => basket.push(item)\n"
+  },
+  "mustMatch": ["saved-for-later-draft\\.md", "build on|start (again |over )?(from scratch|fresh)"],
+  "mustNotMatch": ["sdlc approve"]
+}

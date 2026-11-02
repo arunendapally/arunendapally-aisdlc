@@ -4,6 +4,81 @@ All notable changes to this repository. The format follows [Keep a Changelog](ht
 
 ## [Unreleased]
 
+## [0.6.0] - 2026-11-02
+
+Issues [#26](https://github.com/arunendapally/arunendapally-aisdlc/issues/26) to [#29](https://github.com/arunendapally/arunendapally-aisdlc/issues/29), the calculator run's open findings, agile change 2, the rest of the human-asks record, and agent evals that cannot touch the person's accounts.
+
+### Systems under change and work packets ([#27](https://github.com/arunendapally/arunendapally-aisdlc/issues/27) d, [#26](https://github.com/arunendapally/arunendapally-aisdlc/issues/26))
+
+- **A feature-level `architecture-overview.md`** (new template) holds `## Systems under change`: system or repo, change type (new, modified, config-only, consumer-only (verify)), owner, contract impact, data impact and deploy order, written before the tasks. One repo needs none of it.
+- **Build checks it both ways:** tasks that name more than one repo need the overview; every repo a task names must be in the table, and every new or modified system needs a task. Design checks the change types when the overview exists.
+- **`sdlc packets <feature>`** prints one packet per repo, in deploy order: its tasks, the scenarios they prove, and the tasks it waits on in another repo. Printed, never written, so the specs stay the one source.
+- Tests in `tests/systems.test.mjs`.
+
+### Fixed before release, from the pre-review of v0.6.0
+
+- **"This repo" is named by its `origin` remote,** falling back to its folder, so a worktree or a renamed clone is no longer read as a second repo.
+- **An aligned table separator** (`|:---|`) is not read as a system.
+- **Task lines in other common shapes** (`- T1`, `1. [ ] T1`, `- [ ] **T1**`) are checked like `- [ ] T1`; before, they passed every task check unseen.
+- **More auth and personal-data wording routes to the full lane:** OAuth, SSO, login, sign-in, credentials, access tokens, email and home addresses, phone numbers, GDPR.
+- **A failed or empty file listing of the base is never called greenfield.**
+- Tests in `tests/prereview-060.test.mjs`.
+
+### Non-functional requirements in every PRD ([#29](https://github.com/arunendapally/arunendapally-aisdlc/issues/29))
+
+In the light lane, the default for new behaviour, a feature could ship without anyone saying what "fast enough" or "safe enough" means.
+
+- **`prd.md` has `## Non-functional requirements`:** one line each for performance, security and privacy, accessibility, and limits and quotas. Each names the requirement that states it (`R3`), so `acceptance.feature` must test it, or says "None, because ...".
+- **The Plan gate checks it** like the other sections. A missing line, a line that is neither a requirement nor "None, because ...", or a requirement that does not exist is refused, and the first refusal says what each line expects.
+- **A security and privacy need that touches auth, payments or personal data needs the full lane,** the same route as a high-risk path at Build: in the light lane the request asks a human for `sdlc lane <feature> full`, and under autonomy the feature moves itself.
+- Tests in `tests/nonfunctional.test.mjs`. The shared test PRD and five golden PRD fixtures gain the section.
+### Task order as data, two plan sections, and a contract field check ([#26](https://github.com/arunendapally/arunendapally-aisdlc/issues/26))
+
+- **Every task says what it waits for.** A task in `tasks.md` ends with `depends-on: [T1, T2]`, or `depends-on: []` when it waits for none. The Build gate refuses a missing list, a dependency on a task that does not exist, and a loop (it names the loop, for example `T1 > T3 > T2 > T1`). The tech lead releases batches in that order and can run tasks with nothing unfinished before them in parallel.
+- **`plan.md` has `## Error handling`** (the errors callers get, what is retried, what users see) **and `## Data and tenancy`** (how data is scoped to its owner or tenant). The Design gate checks both like the other sections, and its first refusal says what each expects. Security, observability, performance and rollback were already covered by the Threat model, Run it, Test plan and `release.md`, so there is no new checklist.
+- **Field names the contract does not define are a warning.** At Design and Build, when the feature has `openapi.yaml`, names in `acceptance.feature` and `tasks.md` that look like fields (snake_case or camelCase, in backticks or quotes) and that the contract never defines are listed. It never refuses; it becomes blocking only if it proves reliable.
+- Not in this change: work packets per repo, which wait for a design decision.
+- Tests in `tests/tasks.test.mjs`.
+### A record of how a big capability was sliced ([#28](https://github.com/arunendapally/arunendapally-aisdlc/issues/28))
+
+`start` slices a big capability into features, but nothing recorded the slices, their order or which had shipped.
+
+- **`specs/<capability>/slices.md`**, from the new `slices.md` template: the capability's outcome, then one line per slice with its slug, what it delivers, what it depends on and its status. `start` writes it when it slices work. It is a record, not a stage: no gate, and no PRD or plan for the capability.
+- **`sdlc init <slug> --capability <capability>`** names the capability in the slice's `prd.md` and its state, and refuses a capability with no `slices.md`.
+- **`sdlc status`** shows each capability with its slices: the stage of each slice that is a feature, and the written status of each one not started, with what it depends on.
+- Tests in `tests/slices.test.mjs`.
+### `start` builds on what is there, assumptions instead of questions, and a second repo moves up a lane ([#27](https://github.com/arunendapally/arunendapally-aisdlc/issues/27))
+
+- **`start` looks before it triages.** It looks in the folder for drafts, requirements, architecture notes and code. If it finds any, it asks one question that names them: build on it, or start fresh? In an empty folder it asks nothing.
+- **The product owner asks only what is essential:** a decision that cannot be undone, a conflict with the existing docs, or a fork where a wrong guess means redoing most of the work. Everything else goes into the PRD's existing `## Assumptions` as `[unconfirmed]` and into `## Open questions`, which the Plan gate already checks. No new mechanism.
+- **A task in a second repo moves light-lane work up to the full lane.** A task in `tasks.md` with `repos: [web]` naming a repo other than this one is refused in the light lane with "ask a human to type `sdlc lane <feature> full`", and under autonomy moves the feature to Design itself, as a destructive migration or a high-risk path already did. A schema change already needed the data kind, so it is unchanged.
+- Agent evals `cto-intake-names-what-it-found`, `cto-intake-empty-folder-asks-nothing` and `product-owner-assumes-instead-of-asking`, and a test in `tests/lanes.test.mjs`.
+### Agent evals run apart from the person's own setup
+
+- **Fixed: an agent eval could act on the person's accounts.** `claude -p` loaded the person's MCP servers, hooks and plugins, and one run added a task to their Todoist. The runner now passes `--strict-mcp-config` (no MCP servers) and `--setting-sources project,local` (no user settings).
+- **The product owner no longer grades evidence** (Established, Moderate, Preliminary). ADR-0003 removed `## Evidence` from `prd.md`, and an unproven claim already goes in `## Assumptions` as `[unconfirmed]`. Its eval, which failed on every run for that line, is now `product-owner-writes-the-brief`.
+### The calculator run's open findings ([log](docs/feedback/2026-10-29-calculator-run.md))
+
+- **F-7, a new repo's first gate:** the first Build run with nothing passing says the baseline is 0, which is expected, and to write the first test and see it fail before the code. `build.md` says the same.
+- **F-9, a new repo's proof:** when the base commit holds no code, the proof passes with a "Greenfield" note: the tests failed there because the code is missing, not because they check its behaviour.
+- **F-8, reading state:** the guard still refuses an interpreter (`node -e`) on feature state, since it could write, and the refusal now says to run `sdlc status <feature> --json` or use the Read tool.
+- **F-23, stale ledger locations:** an open or wontfix finding whose line is past the end of its file is refused until it points at the code as it is now.
+- **F-22 is closed by design:** a new scenario for an existing requirement still sends the spec back for approval, since it changes what "done" means.
+- Tests in `tests/calculator-run.test.mjs`.
+### The outcome follow-up in the light lane, and an Objective line (agile change 2)
+
+From [docs/decisions/2026-10-25-agile-with-agents.md](docs/decisions/2026-10-25-agile-with-agents.md): most features run in the light lane, where nobody was asked whether the change worked.
+
+- **The light lane opens an outcome follow-up at release,** read after 7 days (the full lane keeps 14). Release in the light lane now needs `Metric:` and `Owner:` under `## Outcome metric`, or `Metric: None, because ...`, which opens none. An overdue outcome is a reminder in `status` and at session start, never a block on the next feature. A repo turns it off with `"outcomeWindowDays": { "light": 0 }`.
+- **`prd.md` asks for an `Objective:` line** beside the outcome metric: the objective or OKR key result the feature moves, so features roll up to one.
+- Tests in `tests/loop.test.mjs`.
+### The rest of the human-asks record ([decision](docs/decisions/2026-10-25-fewer-better-human-asks.md))
+
+- **`sdlc outcome` shows the person their own drop-if line** from their intent, when the outcome is read. It is shown, never required as a note (ruling 6).
+- **Rubber-stamp signals, per gate and never per person** (ruling 5): `sdlc metrics` and the retro report list, for each gate a person approved (lane:stage), the number of approvals, the fastest, median and slowest time to approve, and the longest run with no rejection and no human finding (an H row at review). Gates passed on checks are left out. There are no thresholds until a human picks them from real data.
+- **The product owner recommends no answer on intent, taste or risk,** and a wholesale "go with your recommendations" is recorded as `(recommended, accepted)` with its assumption kept `[unconfirmed]`. It is a rule the agent follows, not a hook, as the decision says.
+- Tests in `tests/human-asks.test.mjs`, and agent eval `product-owner-records-accepted-recommendations`.
+
 ## [0.5.2] - 2026-10-30
 
 - **The gate and proof scripts no longer count toward PR size.** The scripts `gateCommand` and `proofCommand` run, directly or through an npm script, are the harness the plugin asks a repo for, not the change under review. A first feature with its own gate scripts was refused at 305 of 300 lines for them (finding F-26).

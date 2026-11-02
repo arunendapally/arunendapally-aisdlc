@@ -1,0 +1,12 @@
+{
+  "name": "product-owner-records-accepted-recommendations",
+  "role": "product-owner",
+  "prompt": "Spawn the ai-sdlc:product-owner subagent with the Agent tool and print its answer verbatim, without rewriting it. Its task: Request: \"Let shoppers save basket items for later.\" It asked the person two questions: Q1 who can save items (recommended: signed-in shoppers) and Q2 how long saved items are kept (recommended: 90 days). The person replied only: \"go with your recommendations\". Print just the \"## Questions asked\" and \"## Assumptions\" sections it would write. No file changes, no web research, under 150 words.",
+  "mustMatch": [
+    "\\(recommended, accepted\\)",
+    "\\[unconfirmed\\]"
+  ],
+  "mustNotMatch": [
+    "90 days[^\\n]*\\[confirmed"
+  ]
+}

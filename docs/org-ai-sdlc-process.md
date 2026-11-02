@@ -86,6 +86,24 @@ The templates are in `skills/org-ai-sdlc/templates/`; each lists its optional se
 
 ---
 
+## 3a. Each stage: input, work, owners, output
+
+What each stage expects, what happens in it, who leads and who decides, and what it hands to the next stage. Agents lead the work; a named human decides at the gates (`gateOwners` in `.ai-sdlc/config.json`, or CODEOWNERS on GitHub). Under earned autonomy a gate may pass on its checks instead (section 5).
+
+| Stage | Input | What happens | Leads (agents) | Decides (human) | Output |
+|---|---|---|---|---|---|
+| **Start** | A request in plain words, or an issue or ticket link | Reads the code and the knowledge base, triages in five lines (what, who, how urgent, how big, how risky), picks the lane and kinds | `cto` | Nobody, except that only a human declares a hotfix | A lane and kinds, the `feature/<slug>` branch and worktree, and `specs/<slug>/` with `state.json` |
+| **1 Plan** | The request and triage, the answers to the questions asked, and for brownfield or data work the facts pinned to the code | Asks the questions that would change the spec, records assumptions, writes numbered requirements, and turns every requirement into a Gherkin scenario. The gate checks that each requirement has one | `product-owner`, `qa-engineer` (`architect` for facts) | Product lead approves the spec | `prd.md`, `acceptance.feature` and, when needed, `facts.md`, approved together |
+| **3 Design** (full lane) | The approved PRD and scenarios, and the facts | Records each decision as an ADR with two options, cross-questioned by a reviewer from another discipline; covers the data model, contracts (breaking changes declared), threat model, test plan and how it runs | `architect`, `design-reviewer` (`dba`, `sre`, `safe-ai-sdlc-expert` where they apply) | Architect and product lead approve the design | `plan.md`, ADRs in `docs/adr/` and, for api work, `openapi.yaml` with `swagger.html` |
+| **4 Build** | The approved spec (and the plan in the full lane), the standards and traps | Breaks the work into tasks; each slice runs test, implement, gate, retry, with the retries capped and the gate never below its baseline | `tech-lead`, `builder` | Nobody: it passes on its checks | `tasks.md` ticked off, code and tests, the gate green, the diff under the lane's limit |
+| **5 Verify** | The branch, its tests and the spec | Proves the new tests fail on the base code and pass on the branch, then the pre-reviewer reviews the PR through expert lenses and scores the risk | `pre-reviewer`, `qa-engineer` | A CODEOWNER engineer approves and merges | The PR (summary, test results, pre-review, not verified), the review packet and test matrix, merged to `main` |
+| **6 Release** | The merged change on `main` | Checks the change is live (`Live: <sha>`), the rollback was tested and every probe has a result | `sre` | The release owner approves the release | `release.md` (rollout, tested rollback, probes, outcome metric), and the feature closed |
+| **Observe** | The outcome metric and its watch window (14 days in the full lane) | Reads the metric against its target | The metric's owner | The owner records it; a breach goes to the incident commander | The outcome recorded as met, missed or breach |
+| **Remember** | What the change touched | Flags stale knowledge pages, facts and superseded ADRs at Release; a bug or hotfix owes a trap guarded by a check | The agent on the feature | Reviewed with the release | Updated knowledge, facts and ADR status, and new traps |
+| **Improve** | Rejections, escalations and escapes across features | Ranks proposals, changes at most three plugin files, and adds an eval for each that fails before and passes after; never loosens a gate | `cto` | A platform owner merges the retro PR | A `retro/<date>` PR that tightens the plugin |
+
+---
+
 ## 4. Review wait: the bottleneck we design against
 
 Agents write code faster than people can review it, so the process spends human attention only where it changes the outcome.
@@ -133,7 +151,7 @@ Decided in [ADR-0002](adr/0002-loop-spine.md), and made lighter by [ADR-0003](ad
   - A hotfix proves its repro after the merge (`sdlc proof <hotfix> --files <tests>`), against the code before the fix. Until it passes, its postmortem counts as not done.
   - `sdlc spike <feature>` marks a slice as a spike: it may skip the red-first habit, never the proof, and it cannot pass Verify until a non-spike slice replaces it.
 - **Verify, then review.** The machine gate runs before the packet, the lenses and the human, at every scale.
-- **Release and observe.** In the full and light lanes, Release refuses without a rollback line `Tested: <date>, <how>` and a result for each probe. In the full lane it also needs `## Outcome metric` naming `Metric:` and `Owner:`, or `Metric: None, because ...`. The feature closes at release and opens an outcome follow-up, due after the watch window (`outcomeWindowDays`, 14 days in the full lane; add `light` to turn it on there) or on its `Read on:` date. Status and session start show OUTCOME DUE and OVERDUE; `sdlc metrics` reports its age. `sdlc outcome <feature> breach` alerts the incident commander; only a human declares a hotfix.
+- **Release and observe.** In the full and light lanes, Release refuses without a rollback line `Tested: <date>, <how>` and a result for each probe. It also needs `## Outcome metric` naming `Metric:` and `Owner:`, or `Metric: None, because ...`. The feature closes at release and opens an outcome follow-up, due after the watch window (`outcomeWindowDays`: 14 days in the full lane, 7 in the light lane; 0 turns a lane off) or on its `Read on:` date. Status and session start show OUTCOME DUE and OVERDUE; `sdlc metrics` reports its age. `sdlc outcome <feature> breach` alerts the incident commander; only a human declares a hotfix.
 - **Remember, on staleness, as warnings.** Release warns about each of these, and an agent fixes what it lists before the human review:
   - a knowledge page whose sources the change touched is stale (C4 files count as sources)
   - a fact in `facts.md` about a file the change touched is stale
@@ -200,7 +218,7 @@ Each gate refuses work that guesses, skips a question or hides risk, so what rea
 
 **Requirements (Plan, one gate).**
 - The product owner asks the questions that would change the PRD before drafting, and records them with the answers in `## Questions asked`. Every belief without a source is an assumption marked `[confirmed]` or `[unconfirmed]`; every unconfirmed one must be in Open questions.
-- The PRD (`prd.md`) carries the problem, users, numbered testable requirements (R1, R2 ...), never-claims, scope, an outcome metric and open questions. Stakeholders, dependencies and release criteria are optional.
+- The PRD (`prd.md`) carries the problem, users, numbered testable requirements (R1, R2 ...), non-functional requirements (each a requirement or "None, because ..."), never-claims, scope, an outcome metric and open questions. Stakeholders, dependencies and release criteria are optional.
 - `acceptance.feature` holds every acceptance criterion as Gherkin, approved with the PRD. The gate enforces an `@AC-n` and the `@Rn` it proves on every scenario, and a scenario for every PRD requirement. Narrative, one When, step order, a level tag, Outlines and selectors are advice: the linter warns.
 - For brownfield and data work, `facts.md` pins what is true about the current system to `file:line` at a commit. A fact whose source changed is stale; a requirement citing an undefined fact is refused.
 

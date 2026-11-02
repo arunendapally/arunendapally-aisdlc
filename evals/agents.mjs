@@ -36,7 +36,8 @@ export function claudeRunner(task) {
     fs.writeFileSync(path.join(dir, file), text)
   }
   spawnSync('git', ['init', '-q'], { cwd: dir })
-  const r = spawnSync('claude', ['-p', '--plugin-dir', plugin, '--max-turns', String(task.maxTurns ?? 8), task.prompt], {
+  // No MCP servers and no user settings (hooks, other plugins): an eval must never act on the person's accounts.
+  const r = spawnSync('claude', ['-p', '--strict-mcp-config', '--setting-sources', 'project,local', '--plugin-dir', plugin, '--max-turns', String(task.maxTurns ?? 8), task.prompt], {
     cwd: dir, encoding: 'utf8', timeout: (task.timeoutSeconds ?? 300) * 1000,
   })
   if (!r.stdout?.trim()) {

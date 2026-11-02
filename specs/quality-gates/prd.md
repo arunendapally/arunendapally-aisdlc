@@ -59,6 +59,13 @@ Teams using an AI SDLC lose the most time and quality in four places. Agents ass
 - Never let an agent resolve a question on the board on the asker's behalf.
 - Never use production data in a test, or leave test data behind.
 
+## Non-functional requirements
+
+- Performance: None, because the checks run locally on one feature folder in seconds
+- Security and privacy: None, because it adds checks only and stores no new data
+- Accessibility: None, because there is no new screen
+- Limits and quotas: None, because nothing new is rate-limited or metered
+
 ## Out of scope
 
 Language-specific test generators beyond the TypeScript scaffolds; a UI for the ledger.

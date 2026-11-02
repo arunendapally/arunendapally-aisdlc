@@ -14,11 +14,11 @@
 
 **F-6. .NET (and Java) tests were invisible to the test matrix,** and the message blamed the file name, not the file type. *Fixed:* `*Tests.cs`, `*ApiTests.cs`, `*IntegrationTests.cs`, Java and Kotlin names recognised; a file that names a criterion but is not a known test file is called out.
 
-**F-7. "Run the gate before any change" has nothing to run in a new repo.** The baseline is 0 and the first run is red by construction. *Still open:* say so in `build.md` for greenfield.
+**F-7. "Run the gate before any change" has nothing to run in a new repo.** The baseline is 0 and the first run is red by construction. *Fixed:* the first Build run with nothing passing says the baseline is 0 and what to do next, and `build.md` says so for a new repo.
 
-**F-8. Reading plugin state any way but `cat` is refused** (`node -e` on state.json). *Workaround:* `sdlc status --json` or the Read tool.
+**F-8. Reading plugin state any way but `cat` is refused** (`node -e` on state.json). *Closed by design:* an interpreter could write as well as read, so the guard keeps refusing it; `cat`, `jq` and the Read tool are allowed. *Fixed:* the refusal now says how to read state (`sdlc status <feature> --json` or the Read tool).
 
-**F-9. In a new repo the proof says little:** the base commit has no code, so every test fails without the change by not compiling. *Still open:* mark the proof "greenfield" instead of claiming a dependency.
+**F-9. In a new repo the proof says little:** the base commit has no code, so every test fails without the change by not compiling. *Fixed:* when the base commit holds no code, the proof passes with a "Greenfield" note saying the tests failed there for want of the code, and to review what they assert.
 
 **F-10. The proof shares only the root `node_modules`;** a front end in a subfolder runs without dependencies. *Worked around* in the calculator's `tools/proof.mjs`. *Still open in the plugin.*
 
@@ -39,8 +39,8 @@ Verify took about 4 minutes and asked for three artefacts. The pre-review found 
 - **F-19. The size check refused the pre-review's own fix, and showed the count only when refusing.** *Fixed:* once a PR's size passed at Build or Verify, review fixes get 20% room; the gate prints the PR size every run.
 - **F-20. A refused request left no trace.** *Fixed:* `status` shows the last refusal and its reasons.
 - **F-21. Under autonomy a refusal had nowhere to go.** *Fixed:* the message says to fix each reason and request again, and to log a wrong check for the retro, never to work around it.
-- **F-22. Adding an acceptance example for a review fix sends the feature back to Plan.** By design (the spec changed); under autonomy it passes again on its checks, now as v2 with "Changes since v1". *Still open:* whether appending a scenario for an existing requirement should count as drift.
-- **F-23. The ledger's Location goes stale once a fix moves the lines.** *Still open.*
+- **F-22. Adding an acceptance example for a review fix sends the feature back to Plan.** By design (the spec changed); under autonomy it passes again on its checks, now as v2 with "Changes since v1". *Closed by design (2 Nov):* a new scenario changes what "done" means, even for an existing requirement, so the person who approved the spec sees it. Under autonomy it costs one request; without autonomy, one approval of v2.
+- **F-23. The ledger's Location goes stale once a fix moves the lines.** *Fixed:* an open or wontfix row whose line is past the end of its file is refused with "point the location at where the finding is now"; a fixed row may keep the line where the finding was. A line that moved but still exists is not detected.
 - **F-24. The pr.md and release.md templates said a person approves.** *Fixed* in every template.
 - **F-25. What worked:** the guard refused nothing in that run (after F-12), the proof ran in 7 seconds, the re-review list of changed files was exact, and the merge preconditions were right.
 
@@ -52,4 +52,4 @@ Verify took about 4 minutes and asked for three artefacts. The pre-review found 
 
 **F-5. The repo rules contradict autonomy.** `templates/repo/.claude/rules/ai-sdlc.md` says "Only a human approves a gate" and "Never merge". With autonomy granted both are false. *Fixed:* the rules, the skill, verify.md and the request messages say what changes under autonomy (F-13 too).
 
-Status of the earlier findings: F-1 *fixed* (first commit and first push of main to an empty remote); F-4 *fixed* (the guard judges the repo a write or a leading `cd` targets); F-6 *fixed*; F-7 and F-9 *open* (greenfield baseline and proof notes); F-8 *open* (reading state needs the CLI or the Read tool); F-10 *fixed* (every node_modules shared; a missing package is not red); F-11 *fixed* (only code counts; warn at Plan over 7 scenarios); F-12 *fixed*.
+Status of the earlier findings: F-1 *fixed* (first commit and first push of main to an empty remote); F-4 *fixed* (the guard judges the repo a write or a leading `cd` targets); F-6 *fixed*; F-7 and F-9 *fixed* (greenfield baseline and proof notes, 2 Nov); F-8 *closed by design*, with the refusal naming the read route (2 Nov); F-22 *closed by design* and F-23 *fixed* (2 Nov); F-10 *fixed* (every node_modules shared; a missing package is not red); F-11 *fixed* (only code counts; warn at Plan over 7 scenarios); F-12 *fixed*.
