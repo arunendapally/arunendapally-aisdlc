@@ -52,6 +52,12 @@ From [docs/decisions/2026-10-25-agile-with-agents.md](docs/decisions/2026-10-25-
 - **The light lane opens an outcome follow-up at release,** read after 7 days (the full lane keeps 14). Release in the light lane now needs `Metric:` and `Owner:` under `## Outcome metric`, or `Metric: None, because ...`, which opens none. An overdue outcome is a reminder in `status` and at session start, never a block on the next feature. A repo turns it off with `"outcomeWindowDays": { "light": 0 }`.
 - **`prd.md` asks for an `Objective:` line** beside the outcome metric: the objective or OKR key result the feature moves, so features roll up to one.
 - Tests in `tests/loop.test.mjs`.
+### The rest of the human-asks record ([decision](docs/decisions/2026-10-25-fewer-better-human-asks.md))
+
+- **`sdlc outcome` shows the person their own drop-if line** from their intent, when the outcome is read. It is shown, never required as a note (ruling 6).
+- **Rubber-stamp signals, per gate and never per person** (ruling 5): `sdlc metrics` and the retro report list, for each gate a person approved (lane:stage), the number of approvals, the fastest, median and slowest time to approve, and the longest run with no rejection and no human finding (an H row at review). Gates passed on checks are left out. There are no thresholds until a human picks them from real data.
+- **The product owner recommends no answer on intent, taste or risk,** and a wholesale "go with your recommendations" is recorded as `(recommended, accepted)` with its assumption kept `[unconfirmed]`. It is a rule the agent follows, not a hook, as the decision says.
+- Tests in `tests/human-asks.test.mjs`, and agent eval `product-owner-records-accepted-recommendations`.
 
 ## [0.5.2] - 2026-10-30
 

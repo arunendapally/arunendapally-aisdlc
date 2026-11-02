@@ -9,7 +9,7 @@ import { STAGES, root, git, loadConfig, readState, writeState, listFeatures, mis
   stageSpec, section, matches, changedFiles, changedLines, createFeature, copyTemplate, TEMPLATES, overdueGates, overduePostmortems,
   KINDS, trustedGates, promotable, readTrust, writeTrust, lessonPaid, lessonProblem, lessonsOwed, audit, withIntent, INTENT_PARTS, autonomy } from './lib.mjs'
 import { check, conformance, OKF_VERSION, relevant, writeIndex } from './knowledge.mjs'
-import { collect, analyze, report } from './retro.mjs'
+import { collect, analyze, report, approvalSignals, approvalLines } from './retro.mjs'
 import { lint, requirementsFrom } from './gherkin.mjs'
 import { packet, packetText, parseLedger, ledgerProblems } from './review.mjs'
 import { boardProblems } from './design-review.mjs'
@@ -675,6 +675,8 @@ const commands = {
     if (!state.outcome) fail(`${feature} has no outcome follow-up: one opens when a full or light feature is released.`)
     if (!['met', 'missed', 'breach'].includes(result)) fail('Usage: sdlc outcome <feature> met|missed|breach [note]')
     const note = rest.slice(1).join(' ')
+    // The person's own bar, shown when the outcome is read, never required as a note (human-asks ruling 6).
+    if (state.intent?.dropIf) console.log(`Your drop-if: ${state.intent.dropIf}`)
     if (result === 'breach') {
       state.outcome.breaches = [...(state.outcome.breaches ?? []), { at: new Date().toISOString(), note }]
       writeState(dir, state)
@@ -833,6 +835,8 @@ const commands = {
       const closed = s.closedReason ? `\n  closed without shipping: ${s.closedReason}` : ''
       console.log(`${s.feature}\n  lead time ${hours(s.createdAt)}h\n  cycle ${cycle}\n  gate wait ${waits}\n  rework ${rework}${rounds}${outcome}${closed}`)
     }
+    const signals = feature ? {} : approvalSignals([collect(dir)])
+    if (Object.keys(signals).length) console.log(`Gate approvals, per gate (never per person; no thresholds yet):\n${approvalLines(signals).map(l => `  ${l}`).join('\n')}`)
   },
 
   // Open a blameless postmortem. Its actions re-enter the cycle as new PRDs or new checks.

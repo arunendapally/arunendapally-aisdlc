@@ -58,6 +58,33 @@ export function collect(dir, sinceMs = 0) {
   }
 }
 
+// Rubber-stamp signals (docs/decisions/2026-10-25-fewer-better-human-asks.md, ruling 5): per gate, never
+// per person, raw numbers and no thresholds until a human picks them from real data. A human finding at
+// review (an H row) or a rejection breaks a clean run; gates passed on checks are not approvals.
+export function approvalSignals(evidence) {
+  const gates = {}
+  for (const e of evidence) {
+    for (const s of e.features) {
+      const humanRows = e.reviews.some(f => f.feature === s.feature && f.source === 'human')
+      for (const [stage, g] of Object.entries(s.gates)) {
+        if (g.auto || !g.requestedAt || !g.approvedAt) continue
+        const key = `${s.lane}:${stage}`
+        gates[key] = [...(gates[key] ?? []), { at: g.approvedAt, hours: hoursBetween(g.requestedAt, g.approvedAt), clean: !g.rejections && !(stage === '5' && humanRows) }]
+      }
+    }
+  }
+  return Object.fromEntries(Object.keys(gates).sort().map(key => {
+    const list = gates[key].sort((a, b) => Date.parse(a.at) - Date.parse(b.at))
+    let run = 0
+    let longest = 0
+    for (const a of list) longest = Math.max(longest, (run = a.clean ? run + 1 : 0))
+    const hours = list.map(a => a.hours).sort((a, b) => a - b)
+    return [key, { approvals: list.length, minHours: hours[0], medianHours: median(hours), maxHours: hours[hours.length - 1], longestCleanRun: longest }]
+  }))
+}
+export const approvalLines = signals => Object.entries(signals).map(([key, s]) =>
+  `${key}: ${s.approvals} approvals, time to approve ${s.minHours.toFixed(1)}h / ${s.medianHours.toFixed(1)}h / ${s.maxHours.toFixed(1)}h (fastest / median / slowest), longest run with no rejection and no human finding: ${s.longestCleanRun}`)
+
 // Turn the evidence into ranked proposals. Each names the plugin file to change, what to change,
 // the evidence, and how to prove the change helps.
 export function analyze(evidence) {
@@ -252,10 +279,11 @@ export function analyze(evidence) {
       humanCatches: missed.length,
     },
     proposals,
+    approvals: approvalSignals(evidence),
   }
 }
 
-export function report({ repos, stats, proposals }, date = new Date().toISOString().slice(0, 10)) {
+export function report({ repos, stats, proposals, approvals = {} }, date = new Date().toISOString().slice(0, 10)) {
   const lines = [
     `# Retro ${date}`,
     '',
@@ -267,5 +295,6 @@ export function report({ repos, stats, proposals }, date = new Date().toISOStrin
   for (const p of proposals) {
     lines.push(`### ${p.id} (${p.severity}) ${p.title}`, '', `- **Change:** \`${p.change.target}\`: ${p.change.what}`, `- **Prove it:** ${p.verify}`, '- **Evidence:**', ...p.evidence.map(e => `  - ${e}`), '')
   }
+  if (Object.keys(approvals).length) lines.push('## Gate approvals, per gate', '', 'Raw numbers for a human to judge, never per person, with no thresholds yet.', '', ...approvalLines(approvals).map(l => `- ${l}`), '')
   return lines.join('\n')
 }
