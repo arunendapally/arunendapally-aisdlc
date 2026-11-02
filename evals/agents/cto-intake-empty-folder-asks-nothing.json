@@ -1,0 +1,7 @@
+{
+  "name": "cto-intake-empty-folder-asks-nothing",
+  "role": "cto",
+  "prompt": "/ai-sdlc:start Let shoppers save basket items for later. Only do the intake and triage; do not run any command or change any file. Answer in under 150 words.",
+  "mustMatch": ["light"],
+  "mustNotMatch": ["build on (it|this|them|that|the draft|what)", "start (again |over )?(from scratch|fresh)\\?"]
+}

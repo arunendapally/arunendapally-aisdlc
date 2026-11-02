@@ -27,6 +27,12 @@ In the light lane, the default for new behaviour, a feature could ship without a
 - **`sdlc init <slug> --capability <capability>`** names the capability in the slice's `prd.md` and its state, and refuses a capability with no `slices.md`.
 - **`sdlc status`** shows each capability with its slices: the stage of each slice that is a feature, and the written status of each one not started, with what it depends on.
 - Tests in `tests/slices.test.mjs`.
+### `start` builds on what is there, assumptions instead of questions, and a second repo moves up a lane ([#27](https://github.com/arunendapally/arunendapally-aisdlc/issues/27))
+
+- **`start` looks before it triages.** It looks in the folder for drafts, requirements, architecture notes and code. If it finds any, it asks one question that names them: build on it, or start fresh? In an empty folder it asks nothing.
+- **The product owner asks only what is essential:** a decision that cannot be undone, a conflict with the existing docs, or a fork where a wrong guess means redoing most of the work. Everything else goes into the PRD's existing `## Assumptions` as `[unconfirmed]` and into `## Open questions`, which the Plan gate already checks. No new mechanism.
+- **A task in a second repo moves light-lane work up to the full lane.** A task in `tasks.md` with `repos: [web]` naming a repo other than this one is refused in the light lane with "ask a human to type `sdlc lane <feature> full`", and under autonomy moves the feature to Design itself, as a destructive migration or a high-risk path already did. A schema change already needed the data kind, so it is unchanged.
+- Agent evals `cto-intake-names-what-it-found`, `cto-intake-empty-folder-asks-nothing` and `product-owner-assumes-instead-of-asking`, and a test in `tests/lanes.test.mjs`.
 
 ## [0.5.2] - 2026-10-30
 
