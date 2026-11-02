@@ -19,7 +19,7 @@ The CTO triages (what, who, how urgent, how big, how risky) after reading the co
 | Learn an area, become an SME | `/ai-sdlc:learn` | none, knowledge only |
 | New behaviour | a feature: `init <slug>` | light (the default) |
 | A migration that alters or drops data, a high-risk path, a new datastore, dependency or service | a feature: `init <slug> --full` | full |
-| Big capability | slice it, then one feature per slice | per slice |
+| Big capability | slice it into `specs/<capability>/slices.md` (a record, not a gate), then `init <slug> --capability <capability>` per slice | per slice |
 
 Kinds stack and only add what the work needs: `brownfield` (facts), `perf` (budget and benchmarks), `api` (OpenAPI), `data` (down migration, the DBA on the PR).
 

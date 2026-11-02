@@ -19,6 +19,14 @@ In the light lane, the default for new behaviour, a feature could ship without a
 - **Field names the contract does not define are a warning.** At Design and Build, when the feature has `openapi.yaml`, names in `acceptance.feature` and `tasks.md` that look like fields (snake_case or camelCase, in backticks or quotes) and that the contract never defines are listed. It never refuses; it becomes blocking only if it proves reliable.
 - Not in this change: work packets per repo, which wait for a design decision.
 - Tests in `tests/tasks.test.mjs`.
+### A record of how a big capability was sliced ([#28](https://github.com/arunendapally/arunendapally-aisdlc/issues/28))
+
+`start` slices a big capability into features, but nothing recorded the slices, their order or which had shipped.
+
+- **`specs/<capability>/slices.md`**, from the new `slices.md` template: the capability's outcome, then one line per slice with its slug, what it delivers, what it depends on and its status. `start` writes it when it slices work. It is a record, not a stage: no gate, and no PRD or plan for the capability.
+- **`sdlc init <slug> --capability <capability>`** names the capability in the slice's `prd.md` and its state, and refuses a capability with no `slices.md`.
+- **`sdlc status`** shows each capability with its slices: the stage of each slice that is a feature, and the written status of each one not started, with what it depends on.
+- Tests in `tests/slices.test.mjs`.
 
 ## [0.5.2] - 2026-10-30
 
