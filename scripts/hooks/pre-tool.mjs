@@ -194,7 +194,7 @@ if (tool === 'Bash' || tool === 'PowerShell') {
   for (const p of parts) {
     const target = writeTarget(p)
     if (target && (matches(target, cfg.denyPaths) || matches(target, cfg.askPaths))) deny(`${target} is a guardrail, CI or ownership file: a shell write to it is never allowed. Use the Write tool, which asks a human.`, 'guardrail-command')
-    if (guardrail.test(code(p)) && !exempt(p)) deny('Commands may not touch feature state, guardrails, settings, CI or ownership files. Use sdlc.mjs, or ask a human.', 'guardrail-command')
+    if (guardrail.test(code(p)) && !exempt(p)) deny('Commands may not touch feature state, guardrails, settings, CI or ownership files. To read a feature\'s state, run "sdlc status <feature> --json" or use the Read tool. Otherwise use sdlc.mjs, or ask a human.', 'guardrail-command')
   }
   const single = !/[;&|`$<>]/.test(c.replace(/^node\s+"[^"]*"/, 'node x'))
   // A whole-file dump of a large file is the same mistake as a full Read.

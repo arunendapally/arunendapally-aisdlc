@@ -37,6 +37,14 @@ In the light lane, the default for new behaviour, a feature could ship without a
 
 - **Fixed: an agent eval could act on the person's accounts.** `claude -p` loaded the person's MCP servers, hooks and plugins, and one run added a task to their Todoist. The runner now passes `--strict-mcp-config` (no MCP servers) and `--setting-sources project,local` (no user settings).
 - **The product owner no longer grades evidence** (Established, Moderate, Preliminary). ADR-0003 removed `## Evidence` from `prd.md`, and an unproven claim already goes in `## Assumptions` as `[unconfirmed]`. Its eval, which failed on every run for that line, is now `product-owner-writes-the-brief`.
+### The calculator run's open findings ([log](docs/feedback/2026-10-29-calculator-run.md))
+
+- **F-7, a new repo's first gate:** the first Build run with nothing passing says the baseline is 0, which is expected, and to write the first test and see it fail before the code. `build.md` says the same.
+- **F-9, a new repo's proof:** when the base commit holds no code, the proof passes with a "Greenfield" note: the tests failed there because the code is missing, not because they check its behaviour.
+- **F-8, reading state:** the guard still refuses an interpreter (`node -e`) on feature state, since it could write, and the refusal now says to run `sdlc status <feature> --json` or use the Read tool.
+- **F-23, stale ledger locations:** an open or wontfix finding whose line is past the end of its file is refused until it points at the code as it is now.
+- **F-22 is closed by design:** a new scenario for an existing requirement still sends the spec back for approval, since it changes what "done" means.
+- Tests in `tests/calculator-run.test.mjs`.
 
 ## [0.5.2] - 2026-10-30
 
