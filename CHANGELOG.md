@@ -4,6 +4,13 @@ All notable changes to this repository. The format follows [Keep a Changelog](ht
 
 ## [Unreleased]
 
+### The rest of the human-asks record ([decision](docs/decisions/2026-10-25-fewer-better-human-asks.md))
+
+- **`sdlc outcome` shows the person their own drop-if line** from their intent, when the outcome is read. It is shown, never required as a note (ruling 6).
+- **Rubber-stamp signals, per gate and never per person** (ruling 5): `sdlc metrics` and the retro report list, for each gate a person approved (lane:stage), the number of approvals, the fastest, median and slowest time to approve, and the longest run with no rejection and no human finding (an H row at review). Gates passed on checks are left out. There are no thresholds until a human picks them from real data.
+- **The product owner recommends no answer on intent, taste or risk,** and a wholesale "go with your recommendations" is recorded as `(recommended, accepted)` with its assumption kept `[unconfirmed]`. It is a rule the agent follows, not a hook, as the decision says.
+- Tests in `tests/human-asks.test.mjs`, and agent eval `product-owner-records-accepted-recommendations`.
+
 ## [0.5.2] - 2026-10-30
 
 - **The gate and proof scripts no longer count toward PR size.** The scripts `gateCommand` and `proofCommand` run, directly or through an npm script, are the harness the plugin asks a repo for, not the change under review. A first feature with its own gate scripts was refused at 305 of 300 lines for them (finding F-26).
