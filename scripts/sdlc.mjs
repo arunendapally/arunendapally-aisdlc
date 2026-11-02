@@ -484,7 +484,9 @@ const commands = {
     const size = `PR size: ${changedLines(dir, cfg)} of ${cfg.maxPrLines[state.lane] ?? cfg.maxPrLines.full} code lines.`
     if (ok && count < floor) fail(`Gate RED: ${count} passing is below the ${floor} this feature has reached: a test was removed or skipped. Restore it, or replace it with one that proves the same criterion. ${size}`)
     const verdict = `Gate ${ok ? 'green' : 'RED'}: ${count} passing (baseline ${state.baseline ?? 'not set'}). ${size}`
-    if (!ok) fail(verdict)
+    // A new repo (finding F-7): the first Build run has nothing to pass, and that is the baseline, not a fault.
+    const fresh = state.stage === 4 && !hadGreen && count === 0 ? ' Nothing passes yet, which is expected in a new repo: the baseline is 0. Write the first test, see it fail, then the code.' : ''
+    if (!ok) fail(`${verdict}${fresh}`)
     console.log(verdict)
   },
 
@@ -552,7 +554,7 @@ const commands = {
     state.proof = result
     writeState(dir, state)
     if (!result.ok) fail(`Proof FAILED${result.base ? ` against ${result.base}` : ''}:\n- ${result.problems.join('\n- ')}`)
-    console.log(`Proof passed against ${result.base}: ${result.acs.join(', ')} ${result.perTest ? 'each failed' : 'failed'} on the base code and pass here. Locked ${Object.keys(result.files).length} test file(s); changing one means proving again.`)
+    console.log(`Proof passed against ${result.base}: ${result.acs.join(', ')} ${result.perTest ? 'each failed' : 'failed'} on the base code and pass here. Locked ${Object.keys(result.files).length} test file(s); changing one means proving again.${result.greenfield ? ' Greenfield: the base commit has no code, so the tests failed there because the code is missing, not because they check its behaviour. Review the tests for what they assert.' : ''}`)
   },
 
   // A spike may skip the red-first habit inside a slice, never the proof; its code cannot merge.

@@ -246,6 +246,11 @@ export function ledgerProblems(dir, findings, seenIds = [], { strictFixes = true
     const loc = f.location?.match(/^([^:\s]+):(\d+)/)
     if (!loc) problems.push(`${f.id}: location must be file:line`)
     else if (!status.startsWith('fixed') && !fs.existsSync(path.join(dir, loc[1]))) problems.push(`${f.id}: ${loc[1]} does not exist`)
+    // A fix elsewhere moves lines (finding F-23): a row still in force must point at the code as it is now.
+    else if (!status.startsWith('fixed')) {
+      const lines = fs.readFileSync(path.join(dir, loc[1]), 'utf8').replace(/\n$/, '').split('\n').length
+      if (Number(loc[2]) > lines) problems.push(`${f.id}: ${loc[1]} has ${lines} lines, so line ${loc[2]} is out of date: point the location at where the finding is now`)
+    }
     if (!f.finding) problems.push(`${f.id}: says nothing`)
     if (!SOURCES.test(f.source ?? '')) problems.push(`${f.id}: source must be pre-review, human or lens:<name>`)
     if (f.id.startsWith('H') !== (f.source === 'human')) problems.push(`${f.id}: H ids are for human findings and F ids for agent findings`)
