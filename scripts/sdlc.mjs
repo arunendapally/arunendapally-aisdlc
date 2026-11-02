@@ -61,10 +61,12 @@ const chargeEscape = (causedBy, bug) => {
   writeTrust(dir, ledger)
   return `Charged to ${causedBy}: gates ${passed.join(', ') || 'none'} lose their streak${passed.some(k => readTrust(dir)[k]?.demotedBy === `escape: bug ${bug}`) ? ' and promotion' : ''}.`
 }
+// A task line: "- [ ] T1 ...", "- T1 ...", "1. [ ] T1 ..." or "- [ ] **T1** ..." (pre-review F-5).
+const TASK_LINE = /^\s*(?:[-*]|\d+\.)\s*(?:\[[ xX]\]\s*)?\**(T\d+)\b\**(.*)$/gm
 // Issue #26: task order is data. Every task in tasks.md names what it waits for ("depends-on: []" for
 // nothing), only tasks that exist, and never in a loop, so batches can be released in order.
 const taskProblems = text => {
-  const tasks = new Map([...(section(text, '## Tasks') ?? '').matchAll(/^\s*[-*]\s*\[[ xX]\]\s*(T\d+)\b(.*)$/gm)].map(m => [m[1], m[2]]))
+  const tasks = new Map([...(section(text, '## Tasks') ?? '').matchAll(TASK_LINE)].map(m => [m[1], m[2]]))
   const problems = []
   const deps = new Map()
   for (const [id, rest] of tasks) {
@@ -100,14 +102,15 @@ const fieldWarnings = state => {
 }
 // Work across repos (issue #27 d, #26 packets). Each task names its repos ("repos: [web]", this repo when
 // absent); a feature-level architecture-overview.md declares the systems under change before tasks exist.
-const tasksOf = text => [...(section(text, '## Tasks') ?? '').matchAll(/^\s*[-*]\s*\[[ xX]\]\s*(T\d+)\b(.*)$/gm)].map(([, id, rest]) => ({
+const thisRepo = () => path.basename(git('remote get-url origin', dir) || dir).replace(/\.git$/, '')
+const tasksOf = text => [...(section(text, '## Tasks') ?? '').matchAll(TASK_LINE)].map(([, id, rest]) => ({
   id,
-  repos: (rest.match(/repos:\s*\[([^\]]*)\]/)?.[1] ?? path.basename(dir)).split(',').map(s => s.trim()).filter(Boolean),
+  repos: (rest.match(/repos:\s*\[([^\]]*)\]/)?.[1] ?? thisRepo()).split(',').map(s => s.trim()).filter(Boolean),
   deps: (rest.match(/depends-on:\s*\[([^\]]*)\]/)?.[1] ?? '').split(',').map(s => s.trim()).filter(Boolean),
   scenarios: [...rest.matchAll(/\bAC-\d+\b/g)].map(m => m[0]),
 }))
 const CHANGE_TYPES = ['new', 'modified', 'config-only', 'consumer-only (verify)']
-const systemsOf = text => (section(text, '## Systems under change') ?? '').split('\n').filter(l => /^\s*\|/.test(l) && !/^\s*\|\s*-/.test(l)).slice(1)
+const systemsOf = text => (section(text, '## Systems under change') ?? '').split('\n').filter(l => /^\s*\|/.test(l) && !/^\s*\|[\s:|-]+$/.test(l)).slice(1)
   .map(l => l.split('|').slice(1, -1).map(c => c.trim().replace(/`/g, ''))).map(([system, type, owner, contract, data, order]) => ({ system, type, owner, contract, data, order }))
 const systemProblems = state => {
   const folder = path.join(dir, loadConfig(dir).specsDir, state.feature)
@@ -135,7 +138,7 @@ const acceptanceProblems = state => {
 // Issue #29: each non-functional need is a requirement acceptance.feature tests, or says why not. A
 // security and privacy need that touches auth, payments or personal data is a high-risk path.
 const NON_FUNCTIONAL = ['Performance', 'Security and privacy', 'Accessibility', 'Limits and quotas']
-const HIGH_RISK_NEED = /\b(auth|authenticat\w*|authori[sz]\w*|passwords?|payments?|credit cards?|card details|personal data|PII)\b/i
+const HIGH_RISK_NEED = /\b(auth|authenticat\w*|authori[sz]\w*|passwords?|payments?|credit cards?|card details|personal data|PII|oauth|sso|log ?ins?|sign[- ]?ins?|credentials?|access tokens?|e-?mail addresses?|phone numbers?|home addresses?|GDPR)\b/i
 const nonFunctionalProblems = prdText => {
   const body = section(prdText, '## Non-functional requirements')
   if (body === null) return { problems: [], risky: null }
@@ -308,8 +311,8 @@ const commands = {
       const risky = changedFiles(dir, cfg).map(f => f.file).filter(f => matches(f, cfg.highRiskPaths) && !matches(f, ['**/migrations/**']))
       // A task that names another repo ("repos: [web]") makes this work span repos (issue #27).
       const tasksFile = path.join(dir, cfg.specsDir, feature, 'tasks.md')
-      const others = [...(fs.existsSync(tasksFile) ? fs.readFileSync(tasksFile, 'utf8') : '').matchAll(/^\s*[-*]\s*\[[ xX]\]\s*(T\d+)\b.*?repos:\s*\[([^\]]*)\]/gm)]
-        .map(([, id, list]) => [id, list.split(',').map(s => s.trim()).filter(s => s && s !== path.basename(dir))]).find(([, repos]) => repos.length)
+      const others = [...(fs.existsSync(tasksFile) ? fs.readFileSync(tasksFile, 'utf8') : '').matchAll(new RegExp(`${TASK_LINE.source.replace('(.*)$', '.*?repos:\\s*\\[([^\\]]*)\\]')}`, 'gm'))]
+        .map(([, id, list]) => [id, list.split(',').map(s => s.trim()).filter(s => s && s !== thisRepo())]).find(([, repos]) => repos.length)
       const spans = others && `${others[0]} changes a second repo (${others[1].join(', ')})`
       // Under autonomy the move to the full lane is made here: it only adds checks, so it needs no person.
       if (granted && (destructive.length || risky.length || spans)) {

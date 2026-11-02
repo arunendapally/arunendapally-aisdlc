@@ -119,7 +119,8 @@ export function runProof(dir, state, opts = {}, cfg = loadConfig(dir)) {
     const problems = verdicts.filter(v => !v.red).map(v => `${v.ac}: ${v.why}`)
     const hashes = Object.fromEntries(files.map(f => [f, sha256(fs.readFileSync(path.join(dir, f), 'utf8'))]))
     // A base with no code (finding F-9): every test fails there for want of the code, which proves less.
-    const greenfield = !git(`ls-tree -r --name-only ${base}`, dir).split('\n').filter(Boolean).some(f => !matches(f, cfg.prLineExcludes))
+    const listed = git(`ls-tree -r --name-only ${base}`, dir).split('\n').filter(Boolean)
+    const greenfield = listed.length > 0 && !listed.some(f => !matches(f, cfg.prLineExcludes))
     return { ok: !problems.length, problems, base: base.slice(0, 7), files: hashes, acs, perTest: Boolean(red.cases) && !opts.files, ...(greenfield ? { greenfield } : {}), at: new Date().toISOString() }
   } finally {
     // Unlink the shared folder first, so removing the worktree cannot reach through it.

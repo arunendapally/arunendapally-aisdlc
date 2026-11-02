@@ -15,6 +15,15 @@ Issues [#26](https://github.com/arunendapally/arunendapally-aisdlc/issues/26) to
 - **`sdlc packets <feature>`** prints one packet per repo, in deploy order: its tasks, the scenarios they prove, and the tasks it waits on in another repo. Printed, never written, so the specs stay the one source.
 - Tests in `tests/systems.test.mjs`.
 
+### Fixed before release, from the pre-review of v0.6.0
+
+- **"This repo" is named by its `origin` remote,** falling back to its folder, so a worktree or a renamed clone is no longer read as a second repo.
+- **An aligned table separator** (`|:---|`) is not read as a system.
+- **Task lines in other common shapes** (`- T1`, `1. [ ] T1`, `- [ ] **T1**`) are checked like `- [ ] T1`; before, they passed every task check unseen.
+- **More auth and personal-data wording routes to the full lane:** OAuth, SSO, login, sign-in, credentials, access tokens, email and home addresses, phone numbers, GDPR.
+- **A failed or empty file listing of the base is never called greenfield.**
+- Tests in `tests/prereview-060.test.mjs`.
+
 ### Non-functional requirements in every PRD ([#29](https://github.com/arunendapally/arunendapally-aisdlc/issues/29))
 
 In the light lane, the default for new behaviour, a feature could ship without anyone saying what "fast enough" or "safe enough" means.
