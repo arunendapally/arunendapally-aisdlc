@@ -4,6 +4,11 @@ All notable changes to this repository. The format follows [Keep a Changelog](ht
 
 ## [Unreleased]
 
+### Agent evals run apart from the person's own setup
+
+- **Fixed: an agent eval could act on the person's accounts.** `claude -p` loaded the person's MCP servers, hooks and plugins, and one run added a task to their Todoist. The runner now passes `--strict-mcp-config` (no MCP servers) and `--setting-sources project,local` (no user settings).
+- **The product owner no longer grades evidence** (Established, Moderate, Preliminary). ADR-0003 removed `## Evidence` from `prd.md`, and an unproven claim already goes in `## Assumptions` as `[unconfirmed]`. Its eval, which failed on every run for that line, is now `product-owner-writes-the-brief`.
+
 ## [0.5.2] - 2026-10-30
 
 - **The gate and proof scripts no longer count toward PR size.** The scripts `gateCommand` and `proofCommand` run, directly or through an npm script, are the harness the plugin asks a repo for, not the change under review. A first feature with its own gate scripts was refused at 305 of 300 lines for them (finding F-26).
