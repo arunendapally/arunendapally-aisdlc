@@ -86,6 +86,24 @@ The templates are in `skills/org-ai-sdlc/templates/`; each lists its optional se
 
 ---
 
+## 3a. Each stage: input, work, owners, output
+
+What each stage expects, what happens in it, who leads and who decides, and what it hands to the next stage. Agents lead the work; a named human decides at the gates (`gateOwners` in `.ai-sdlc/config.json`, or CODEOWNERS on GitHub). Under earned autonomy a gate may pass on its checks instead (section 5).
+
+| Stage | Input | What happens | Leads (agents) | Decides (human) | Output |
+|---|---|---|---|---|---|
+| **Start** | A request in plain words, or an issue or ticket link | Reads the code and the knowledge base, triages in five lines (what, who, how urgent, how big, how risky), picks the lane and kinds | `cto` | Nobody, except that only a human declares a hotfix | A lane and kinds, the `feature/<slug>` branch and worktree, and `specs/<slug>/` with `state.json` |
+| **1 Plan** | The request and triage, the answers to the questions asked, and for brownfield or data work the facts pinned to the code | Asks the questions that would change the spec, records assumptions, writes numbered requirements, and turns every requirement into a Gherkin scenario. The gate checks that each requirement has one | `product-owner`, `qa-engineer` (`architect` for facts) | Product lead approves the spec | `prd.md`, `acceptance.feature` and, when needed, `facts.md`, approved together |
+| **3 Design** (full lane) | The approved PRD and scenarios, and the facts | Records each decision as an ADR with two options, cross-questioned by a reviewer from another discipline; covers the data model, contracts (breaking changes declared), threat model, test plan and how it runs | `architect`, `design-reviewer` (`dba`, `sre`, `safe-ai-sdlc-expert` where they apply) | Architect and product lead approve the design | `plan.md`, ADRs in `docs/adr/` and, for api work, `openapi.yaml` with `swagger.html` |
+| **4 Build** | The approved spec (and the plan in the full lane), the standards and traps | Breaks the work into tasks; each slice runs test, implement, gate, retry, with the retries capped and the gate never below its baseline | `tech-lead`, `builder` | Nobody: it passes on its checks | `tasks.md` ticked off, code and tests, the gate green, the diff under the lane's limit |
+| **5 Verify** | The branch, its tests and the spec | Proves the new tests fail on the base code and pass on the branch, then the pre-reviewer reviews the PR through expert lenses and scores the risk | `pre-reviewer`, `qa-engineer` | A CODEOWNER engineer approves and merges | The PR (summary, test results, pre-review, not verified), the review packet and test matrix, merged to `main` |
+| **6 Release** | The merged change on `main` | Checks the change is live (`Live: <sha>`), the rollback was tested and every probe has a result | `sre` | The release owner approves the release | `release.md` (rollout, tested rollback, probes, outcome metric), and the feature closed |
+| **Observe** | The outcome metric and its watch window (14 days in the full lane) | Reads the metric against its target | The metric's owner | The owner records it; a breach goes to the incident commander | The outcome recorded as met, missed or breach |
+| **Remember** | What the change touched | Flags stale knowledge pages, facts and superseded ADRs at Release; a bug or hotfix owes a trap guarded by a check | The agent on the feature | Reviewed with the release | Updated knowledge, facts and ADR status, and new traps |
+| **Improve** | Rejections, escalations and escapes across features | Ranks proposals, changes at most three plugin files, and adds an eval for each that fails before and passes after; never loosens a gate | `cto` | A platform owner merges the retro PR | A `retro/<date>` PR that tightens the plugin |
+
+---
+
 ## 4. Review wait: the bottleneck we design against
 
 Agents write code faster than people can review it, so the process spends human attention only where it changes the outcome.
