@@ -139,8 +139,10 @@ test('release: rollout readiness needs a tested rollback and probe results; the 
   assert.deepEqual(releaseProblems(r.repo, state, ready).problems, [])
   const none = ready.replace(/Metric: [^\n]*\nOwner: [^\n]*\n/, 'Metric: None, because it is a refactor behind a flag\n')
   assert.deepEqual(releaseProblems(r.repo, state, none).problems, [], 'a feature may have no outcome to read')
+  // Agile change 2: the light lane has an outcome follow-up too, so it names an owner or says why not.
   const light = ready.replace(/## Outcome metric[\s\S]*/, '')
-  assert.deepEqual(releaseProblems(r.repo, { ...state, lane: 'light' }, light).problems, [], 'the light lane opens no outcome follow-up by default')
+  assert.match(releaseProblems(r.repo, { ...state, lane: 'light' }, light).problems.join(), /needs "Metric:" and "Owner:"/)
+  assert.deepEqual(releaseProblems(r.repo, { ...state, lane: 'light' }, none).problems, [], 'the light lane may still have no outcome to read')
   assert.deepEqual(releaseProblems(r.repo, { ...state, lane: 'hotfix' }, `## Probes\n\nLive: ${live}\n`).problems, [], 'the incident commander judges a hotfix, but not what is live')
 })
 
@@ -203,7 +205,7 @@ test('outcome: a full-lane feature closes at release and leaves a follow-up with
   assert.doesNotMatch(r.sdlc('status').out, /OUTCOME/)
 })
 
-test('outcome: release.md can name its own read date; the light lane opens none unless the repo asks', () => {
+test('outcome: release.md can name its own read date; the light lane opens one too (agile change 2)', () => {
   const r = makeRepo()
   r.sdlc('init', 'demo', '--full')
   r.setState('demo', { stage: 6, stages: { 6: { enteredAt: hoursAgo(1) } }, gates: { 6: { status: 'approved' } } })
@@ -215,18 +217,32 @@ test('outcome: release.md can name its own read date; the light lane opens none 
   r.put('specs/small/release.md', '## Outcome metric\n\nMetric: m\nOwner: o\n')
   const closed = r.sdlc('advance', 'small')
   assert.equal(closed.status, 0, closed.out)
-  assert.equal(r.state('small').outcome, undefined)
-  r.sdlc('init', 'refactor', '--full')
+  assert.equal(r.state('small').outcome.status, 'open', 'the light lane opens an outcome follow-up by default')
+  assert.ok(Math.abs(Date.parse(r.state('small').outcome.due) - Date.now() - 7 * 864e5) < 6e4, 'the light lane watch window is 7 days')
+  r.sdlc('init', 'refactor')
   r.setState('refactor', { stage: 6, stages: { 6: { enteredAt: hoursAgo(1) } }, gates: { 6: { status: 'approved' } } })
   r.put('specs/refactor/release.md', '## Outcome metric\n\nMetric: None, because nothing a user sees changes\n')
   r.sdlc('advance', 'refactor')
   assert.equal(r.state('refactor').outcome, undefined, '"None, because ..." opens no follow-up')
-  r.config({ outcomeWindowDays: { light: 7 } })
+
+  // An overdue outcome is a reminder, never a block on the next feature.
+  r.setState('small', { outcome: { ...r.state('small').outcome, due: hoursAgo(1) } })
+  assert.match(r.sdlc('status').out, /OUTCOME OVERDUE/)
+  assert.equal(r.sdlc('init', 'next').status, 0, 'an overdue outcome never blocks the next feature')
+
+  r.config({ outcomeWindowDays: { light: 0 } })
   r.sdlc('init', 'small2')
   r.setState('small2', { stage: 6, stages: { 6: { enteredAt: hoursAgo(1) } }, gates: { 6: { status: 'approved' } } })
   r.put('specs/small2/release.md', '## Outcome metric\n\nMetric: m\nOwner: o\n')
   r.sdlc('advance', 'small2')
-  assert.equal(r.state('small2').outcome.status, 'open', 'a repo can turn it on for light')
+  assert.equal(r.state('small2').outcome, undefined, 'a repo can turn it off for light')
+})
+
+test('agile change 2: the PRD names the objective its outcome metric serves', () => {
+  const r = makeRepo()
+  r.sdlc('init', 'demo')
+  const prd = fs.readFileSync(path.join(r.repo, 'specs', 'demo', 'prd.md'), 'utf8')
+  assert.match(prd.split('## Outcome metric')[1].split('\n## ')[0], /\nObjective: /)
 })
 
 test('freeze: a spent error budget refuses new features but not bugs or tasks', () => {

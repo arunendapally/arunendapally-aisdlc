@@ -45,6 +45,13 @@ In the light lane, the default for new behaviour, a feature could ship without a
 - **F-23, stale ledger locations:** an open or wontfix finding whose line is past the end of its file is refused until it points at the code as it is now.
 - **F-22 is closed by design:** a new scenario for an existing requirement still sends the spec back for approval, since it changes what "done" means.
 - Tests in `tests/calculator-run.test.mjs`.
+### The outcome follow-up in the light lane, and an Objective line (agile change 2)
+
+From [docs/decisions/2026-10-25-agile-with-agents.md](docs/decisions/2026-10-25-agile-with-agents.md): most features run in the light lane, where nobody was asked whether the change worked.
+
+- **The light lane opens an outcome follow-up at release,** read after 7 days (the full lane keeps 14). Release in the light lane now needs `Metric:` and `Owner:` under `## Outcome metric`, or `Metric: None, because ...`, which opens none. An overdue outcome is a reminder in `status` and at session start, never a block on the next feature. A repo turns it off with `"outcomeWindowDays": { "light": 0 }`.
+- **`prd.md` asks for an `Objective:` line** beside the outcome metric: the objective or OKR key result the feature moves, so features roll up to one.
+- Tests in `tests/loop.test.mjs`.
 
 ## [0.5.2] - 2026-10-30
 

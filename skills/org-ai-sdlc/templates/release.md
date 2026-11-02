@@ -29,7 +29,7 @@ Metric: <the PRD's outcome metric and target, or "None, because ...">
 Owner: <who reads it>
 Read on: <YYYY-MM-DD, or leave out for the lane's default watch window>
 
-<!-- Full lane: the feature closes at release and this opens its outcome follow-up
-     (sdlc outcome <feature> met|missed|breach). -->
+<!-- Full and light lanes: the feature closes at release and this opens its outcome follow-up
+     (sdlc outcome <feature> met|missed|breach). "Metric: None, because ..." opens none. -->
 
 <!-- Optional: ## Artefact (build digest), ## Runbook, ## Cost delta, ## Traps added. -->
