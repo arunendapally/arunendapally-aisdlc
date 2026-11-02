@@ -72,6 +72,32 @@ const acceptanceProblems = state => {
   const noIds = fs.existsSync(prd) && !reqs.length ? ['prd.md has no requirement ids (R1, R2, ...) in "## Requirements", so coverage cannot be checked'] : []
   return [...noIds, ...lint(fs.readFileSync(file, 'utf8'), reqs.length ? reqs : null).errors.map(e => `acceptance.feature line ${e.line}: ${e.message}`)]
 }
+// Issue #29: each non-functional need is a requirement acceptance.feature tests, or says why not. A
+// security and privacy need that touches auth, payments or personal data is a high-risk path.
+const NON_FUNCTIONAL = ['Performance', 'Security and privacy', 'Accessibility', 'Limits and quotas']
+const HIGH_RISK_NEED = /\b(auth|authenticat\w*|authori[sz]\w*|passwords?|payments?|credit cards?|card details|personal data|PII)\b/i
+const nonFunctionalProblems = prdText => {
+  const body = section(prdText, '## Non-functional requirements')
+  if (body === null) return { problems: [], risky: null }
+  const reqs = requirementsFrom(prdText)
+  const reqText = id => (section(prdText, '## Requirements') ?? '').split('\n').find(l => new RegExp(`^\\s*[-*]?\\s*\\**${id}\\b`).test(l)) ?? ''
+  const problems = []
+  let risky = null
+  for (const need of NON_FUNCTIONAL) {
+    const line = body.split('\n').find(l => new RegExp(`^\\s*[-*]\\s*${need}\\s*:`, 'i').test(l))
+    if (!line) {
+      problems.push(`prd.md "## Non-functional requirements" has no "- ${need}:" line: name the requirement that states it (R3), or write "None, because ..."`)
+      continue
+    }
+    const value = line.replace(/^[^:]*:/, '').trim()
+    if (/^None, because \S/i.test(value)) continue
+    const ids = value.match(/\bR\d+\b/g) ?? []
+    if (!ids.length) problems.push(`prd.md: "${need}: ${value}" is neither a requirement (R1, R2, ...) nor "None, because ...". Write it as a requirement in "## Requirements", so acceptance.feature tests it`)
+    for (const id of ids.filter(i => !reqs.includes(i))) problems.push(`prd.md: ${need} names ${id}, which is not in "## Requirements"`)
+    if (need === 'Security and privacy') risky = [value, ...ids.map(reqText)].join(' ').match(HIGH_RISK_NEED)?.[0] ?? null
+  }
+  return { problems, risky }
+}
 // Data work shows its ER diagram and API work keeps a well-formed OpenAPI file: both only warn. A
 // breaking API change against the base branch must be declared in the plan's Contracts section.
 const openapiFile = state => path.join(dir, loadConfig(dir).specsDir, state.feature, 'openapi.yaml')
@@ -244,6 +270,15 @@ const commands = {
       else if (granted && !section(prdText, '## Intent')) missing.push('the PRD has no "## Intent" (change, smallest, drop if): with autonomy the agent writes it, and the request still checks it')
       else if (!granted && !state.intent) missing.push(`no intent from a person yet. Run "sdlc ask ${feature}" and ask its three questions with the question tool`)
       if (fs.existsSync(prd)) missing.push(...assumptionProblems(fs.readFileSync(prd, 'utf8')).map(p => `prd.md: ${p}`))
+      // The same route as a high-risk path at Build: a person moves it, or autonomy does, since it only adds checks.
+      const nfr = nonFunctionalProblems(prdText)
+      missing.push(...nfr.problems)
+      if (nfr.risky && state.lane === 'light' && granted) {
+        Object.assign(state, { lane: 'full', laneSetBy: `autonomy granted by ${granted.by}` })
+        writeState(dir, state)
+        audit(dir, { event: 'lane', feature, lane: 'full', by: `autonomy granted by ${granted.by}` })
+        console.log(`Security and privacy touches ${nfr.risky}, so ${feature} moves to the full lane: Design follows Plan.`)
+      } else if (nfr.risky && state.lane === 'light') missing.push(`Security and privacy touches ${nfr.risky}, which needs the full lane: ask a human to type "sdlc lane ${feature} full"`)
       missing.push(...acceptanceProblems(state))
       // Slice before building, not after: the PR line limit otherwise fires at the end of Build.
       const feat = path.join(dir, cfg.specsDir, feature, 'acceptance.feature')

@@ -4,6 +4,15 @@ All notable changes to this repository. The format follows [Keep a Changelog](ht
 
 ## [Unreleased]
 
+### Non-functional requirements in every PRD ([#29](https://github.com/arunendapally/arunendapally-aisdlc/issues/29))
+
+In the light lane, the default for new behaviour, a feature could ship without anyone saying what "fast enough" or "safe enough" means.
+
+- **`prd.md` has `## Non-functional requirements`:** one line each for performance, security and privacy, accessibility, and limits and quotas. Each names the requirement that states it (`R3`), so `acceptance.feature` must test it, or says "None, because ...".
+- **The Plan gate checks it** like the other sections. A missing line, a line that is neither a requirement nor "None, because ...", or a requirement that does not exist is refused, and the first refusal says what each line expects.
+- **A security and privacy need that touches auth, payments or personal data needs the full lane,** the same route as a high-risk path at Build: in the light lane the request asks a human for `sdlc lane <feature> full`, and under autonomy the feature moves itself.
+- Tests in `tests/nonfunctional.test.mjs`. The shared test PRD and five golden PRD fixtures gain the section.
+
 ## [0.5.2] - 2026-10-30
 
 - **The gate and proof scripts no longer count toward PR size.** The scripts `gateCommand` and `proofCommand` run, directly or through an npm script, are the harness the plugin asks a repo for, not the change under review. A first feature with its own gate scripts was refused at 305 of 300 lines for them (finding F-26).

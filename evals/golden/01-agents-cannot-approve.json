@@ -15,7 +15,7 @@
     {
       "put": [
         "specs/demo/prd.md",
-        "## Problem\n\nFilled.\n\n## Users and jobs\n\nFilled.\n\n## Questions asked\n\nFilled.\n\n## Assumptions\n\nFilled.\n\n## Never\n\nFilled.\n\n## Out of scope\n\nFilled.\n\n## Outcome metric\n\nFilled.\n\n## Open questions\n\nFilled.\n\n## Requirements\n\n- R1. (must) Save an item.\n"
+        "## Problem\n\nFilled.\n\n## Users and jobs\n\nFilled.\n\n## Questions asked\n\nFilled.\n\n## Assumptions\n\nFilled.\n\n## Never\n\nFilled.\n\n## Out of scope\n\nFilled.\n\n## Outcome metric\n\nFilled.\n\n## Open questions\n\nFilled.\n\n## Non-functional requirements\n\n- Performance: None, because a short list\n- Security and privacy: None, because nothing new is stored\n- Accessibility: None, because no new screen\n- Limits and quotas: None, because one list per user\n\n## Requirements\n\n- R1. (must) Save an item.\n"
       ]
     },
     {

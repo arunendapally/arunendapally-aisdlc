@@ -30,6 +30,17 @@
 
 - R1. (must) ... Data needed: ...
 
+## Non-functional requirements
+
+<!-- How fast, safe, usable and bounded it must be. One line each: the requirement above that states it
+     (so acceptance.feature tests it), or "None, because ...". A security and privacy need that touches
+     auth, payments or personal data needs the full lane. -->
+
+- Performance:
+- Security and privacy:
+- Accessibility:
+- Limits and quotas:
+
 ## Never
 
 <!-- What the product must never claim or do: overclaims, dark patterns, risky defaults. -->

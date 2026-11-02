@@ -80,7 +80,8 @@ export function makeRepo(branch = 'feature/demo') {
 
 // A spec the Plan gate accepts: every PRD section filled, one requirement, and its scenario.
 export const READY_PRD = ['## Problem', '## Users and jobs', '## Questions asked', '## Assumptions', '## Never', '## Out of scope', '## Outcome metric', '## Open questions']
-  .map(h => `${h}\n\nFilled.\n`).join('\n') + '\n## Requirements\n\n- R1. (must) Save an item.\n'
+  .map(h => `${h}\n\nFilled.\n`).join('\n') + '\n## Requirements\n\n- R1. (must) Save an item.\n' +
+  '\n## Non-functional requirements\n\n- Performance: None, because a short list\n- Security and privacy: None, because nothing new is stored\n- Accessibility: None, because no new screen\n- Limits and quotas: None, because one list per user\n'
 export const READY_FEATURE = 'Feature: Save\n  As a shopper\n  I want to save items\n  So that I buy later\n\n  @R1 @AC-1 @unit\n  Scenario: Save an item\n    Given an item\n    When I save it\n    Then it is saved\n'
 
 // A gate command whose result the test flips: node reads a file to decide pass or fail.
