@@ -98,6 +98,29 @@ const fieldWarnings = state => {
   const missing = undefinedFields(fs.readFileSync(openapiFile(state), 'utf8'), docs)
   return missing.length ? [`field names not defined in openapi.yaml: ${missing.map(m => `${m.name} (${m.where})`).join(', ')}. Use the contract's names, or add them to it`] : []
 }
+// Work across repos (issue #27 d, #26 packets). Each task names its repos ("repos: [web]", this repo when
+// absent); a feature-level architecture-overview.md declares the systems under change before tasks exist.
+const tasksOf = text => [...(section(text, '## Tasks') ?? '').matchAll(/^\s*[-*]\s*\[[ xX]\]\s*(T\d+)\b(.*)$/gm)].map(([, id, rest]) => ({
+  id,
+  repos: (rest.match(/repos:\s*\[([^\]]*)\]/)?.[1] ?? path.basename(dir)).split(',').map(s => s.trim()).filter(Boolean),
+  deps: (rest.match(/depends-on:\s*\[([^\]]*)\]/)?.[1] ?? '').split(',').map(s => s.trim()).filter(Boolean),
+  scenarios: [...rest.matchAll(/\bAC-\d+\b/g)].map(m => m[0]),
+}))
+const CHANGE_TYPES = ['new', 'modified', 'config-only', 'consumer-only (verify)']
+const systemsOf = text => (section(text, '## Systems under change') ?? '').split('\n').filter(l => /^\s*\|/.test(l) && !/^\s*\|\s*-/.test(l)).slice(1)
+  .map(l => l.split('|').slice(1, -1).map(c => c.trim().replace(/`/g, ''))).map(([system, type, owner, contract, data, order]) => ({ system, type, owner, contract, data, order }))
+const systemProblems = state => {
+  const folder = path.join(dir, loadConfig(dir).specsDir, state.feature)
+  const tasks = fs.existsSync(path.join(folder, 'tasks.md')) ? tasksOf(fs.readFileSync(path.join(folder, 'tasks.md'), 'utf8')) : []
+  const repos = [...new Set(tasks.flatMap(t => t.repos))]
+  const file = path.join(folder, 'architecture-overview.md')
+  if (!fs.existsSync(file)) return repos.length > 1 ? [`tasks.md names more than one repo (${repos.join(', ')}): write specs/${state.feature}/architecture-overview.md from the plugin's architecture-overview.md template, with a "## Systems under change" table, before the tasks are built`] : []
+  const systems = systemsOf(fs.readFileSync(file, 'utf8'))
+  const problems = systems.filter(s => !CHANGE_TYPES.includes(s.type)).map(s => `architecture-overview.md: ${s.system} has change type "${s.type}": use new, modified, config-only or consumer-only (verify)`)
+  for (const t of tasks) for (const repo of t.repos.filter(r => !systems.some(s => s.system === r))) problems.push(`architecture-overview.md: ${t.id} changes ${repo}, which is not in "## Systems under change"`)
+  for (const s of systems.filter(s => ['new', 'modified'].includes(s.type) && !tasks.some(t => t.repos.includes(s.system)))) problems.push(`architecture-overview.md: ${s.system} is ${s.type}, but no task in tasks.md changes it`)
+  return problems
+}
 // The Analyze gate needs acceptance.feature: valid Gherkin that covers every PRD requirement.
 const acceptanceProblems = state => {
   const folder = path.join(dir, loadConfig(dir).specsDir, state.feature)
@@ -341,11 +364,13 @@ const commands = {
       const contracts = contractProblems(state)
       missing.push(...contracts.problems)
       warnings.push(...contracts.warnings, ...fieldWarnings(state))
+      missing.push(...systemProblems(state).filter(p => p.startsWith('architecture-overview.md:') && p.includes('change type')))
     }
     if (state.stage === 4 && ['full', 'light'].includes(state.lane)) {
       const tasks = path.join(dir, cfg.specsDir, feature, 'tasks.md')
       if (fs.existsSync(tasks)) missing.push(...taskProblems(fs.readFileSync(tasks, 'utf8')))
       warnings.push(...fieldWarnings(state))
+      missing.push(...systemProblems(state))
     }
     if (state.lane === 'bug' && state.stage === 4) {
       // With a proofCommand, the repro test itself must fail on the base code; otherwise any red gate run counts.
@@ -752,6 +777,25 @@ const commands = {
     console.log(`openapi.yaml is well formed${breaks.length ? `; ${breaks.length} breaking change${breaks.length > 1 ? 's' : ''} to declare in plan.md` : ''}.`)
   },
 
+  // One work packet per repo (issue #26): its tasks, the scenarios they prove and the tasks it waits on in
+  // another repo, in the systems table's deploy order. Printed, never written: the specs stay the source.
+  packets() {
+    need()
+    const folder = path.join(dir, loadConfig(dir).specsDir, feature)
+    if (!fs.existsSync(path.join(folder, 'tasks.md'))) fail(`${feature} has no tasks.md yet: packets come from its tasks.`)
+    const tasks = tasksOf(fs.readFileSync(path.join(folder, 'tasks.md'), 'utf8'))
+    const overview = path.join(folder, 'architecture-overview.md')
+    const systems = fs.existsSync(overview) ? systemsOf(fs.readFileSync(overview, 'utf8')) : []
+    const order = repo => Number(systems.find(s => s.system === repo)?.order) || Infinity
+    const repoOf = id => tasks.find(t => t.id === id)?.repos.join(', ') ?? 'unknown'
+    for (const repo of [...new Set(tasks.flatMap(t => t.repos))].sort((a, b) => order(a) - order(b))) {
+      const mine = tasks.filter(t => t.repos.includes(repo))
+      const waits = [...new Set(mine.flatMap(t => t.deps).filter(d => !mine.some(t => t.id === d)))].map(d => `${d} (${repoOf(d)})`)
+      const deploy = systems.find(s => s.system === repo)?.order
+      console.log(`Packet ${repo} (${deploy ? `deploy ${deploy}` : 'not in the systems table'})\n  tasks: ${mine.map(t => t.id).join(', ')}\n  scenarios: ${[...new Set(mine.flatMap(t => t.scenarios))].join(', ') || 'none named'}\n  waits on: ${waits.join(', ') || 'nothing in another repo'}`)
+    }
+  },
+
   // The test matrix: each Gherkin criterion, its level, and the tests that name it.
   tests() {
     need()
@@ -886,6 +930,6 @@ if (HUMAN_VERBS.includes(cmd)) {
 }
 
 if (!commands[cmd]) {
-  fail(`Usage: sdlc <init|bug|task|kind|request|advance|gate|tests|proof|spike|review|gherkin|api|retry|status|outcome|trust|metrics|retro|incident|knowledge|init-repo> [feature] [...]\nA person, in their own terminal: sdlc <${HUMAN_VERBS.join('|')}> ...`)
+  fail(`Usage: sdlc <init|bug|task|kind|request|advance|gate|tests|proof|spike|review|gherkin|api|packets|retry|status|outcome|trust|metrics|retro|incident|knowledge|init-repo> [feature] [...]\nA person, in their own terminal: sdlc <${HUMAN_VERBS.join('|')}> ...`)
 }
 commands[cmd]()

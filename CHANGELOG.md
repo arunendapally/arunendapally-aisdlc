@@ -4,6 +4,17 @@ All notable changes to this repository. The format follows [Keep a Changelog](ht
 
 ## [Unreleased]
 
+## [0.6.0] - 2026-11-02
+
+Issues [#26](https://github.com/arunendapally/arunendapally-aisdlc/issues/26) to [#29](https://github.com/arunendapally/arunendapally-aisdlc/issues/29), the calculator run's open findings, agile change 2, the rest of the human-asks record, and agent evals that cannot touch the person's accounts.
+
+### Systems under change and work packets ([#27](https://github.com/arunendapally/arunendapally-aisdlc/issues/27) d, [#26](https://github.com/arunendapally/arunendapally-aisdlc/issues/26))
+
+- **A feature-level `architecture-overview.md`** (new template) holds `## Systems under change`: system or repo, change type (new, modified, config-only, consumer-only (verify)), owner, contract impact, data impact and deploy order, written before the tasks. One repo needs none of it.
+- **Build checks it both ways:** tasks that name more than one repo need the overview; every repo a task names must be in the table, and every new or modified system needs a task. Design checks the change types when the overview exists.
+- **`sdlc packets <feature>`** prints one packet per repo, in deploy order: its tasks, the scenarios they prove, and the tasks it waits on in another repo. Printed, never written, so the specs stay the one source.
+- Tests in `tests/systems.test.mjs`.
+
 ### Non-functional requirements in every PRD ([#29](https://github.com/arunendapally/arunendapally-aisdlc/issues/29))
 
 In the light lane, the default for new behaviour, a feature could ship without anyone saying what "fast enough" or "safe enough" means.
