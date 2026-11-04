@@ -100,11 +100,18 @@ const runIn = (cwd, files, cfg, report) => {
 export function runProof(dir, state, opts = {}, cfg = loadConfig(dir)) {
   const base = opts.base ?? mergeBase(dir, cfg)
   if (!base) return { ok: false, problems: ['no base commit to prove against'] }
-  const traced = opts.files ? { rows: [], files: opts.files } : tracedFiles(dir, state.feature)
+  // Levels the proof leaves to their own run (proofSkipLevels, finding V6): a browser suite needs tools
+  // the proof command does not have.
+  const skip = cfg.proofSkipLevels ?? []
+  const all = opts.files ? { rows: [], files: opts.files } : tracedFiles(dir, state.feature)
+  const kept = t => !skip.includes(t.match(/ \((\w+)\)$/)?.[1])
+  const traced = opts.files ? all : { rows: all.rows.map(r => ({ ...r, tests: r.tests.filter(kept) })), files: [...new Set(all.rows.flatMap(r => r.tests.filter(kept).map(t => t.replace(/ \(\w+\)$/, ''))))] }
+  const skippedAcs = opts.files ? [] : all.rows.filter(r => r.tests.length && !r.tests.some(kept)).map(r => r.ac)
   const added = opts.files ? [] : newCriteria(dir, state, traced.rows, base, cfg)
   // Only a criterion a test traces can be proved; the rest are named, never listed as proved (finding V1).
   const acs = opts.files ? ['the repro'] : added.filter(r => r.tests.length).map(r => r.ac)
-  const untested = added.filter(r => !r.tests.length).map(r => r.ac)
+  const untested = added.filter(r => !r.tests.length && !skippedAcs.includes(r.ac)).map(r => r.ac)
+  const skipped = added.filter(r => skippedAcs.includes(r.ac)).map(r => r.ac)
   const files = traced.files
   if (!acs.length) return { ok: false, problems: [untested.length ? `no test traces the new criteria yet (${untested.join(', ')}): write the tests first (sdlc tests)` : 'no new criteria to prove: acceptance.feature adds none on this branch'] }
   if (!files.length) return { ok: false, problems: ['no test traces any criterion yet: write the tests first (sdlc tests)'] }
@@ -144,7 +151,7 @@ export function runProof(dir, state, opts = {}, cfg = loadConfig(dir)) {
     // What "sdlc init-repo" writes is not product code either (finding V2).
     const scaffold = scaffoldFiles()
     const greenfield = listed.length > 0 && !listed.some(f => !matches(f, cfg.prLineExcludes) && !scaffold.has(f))
-    return { ok: !problems.length, problems, base: base.slice(0, 7), files: hashes, acs, ...(untested.length ? { untested } : {}), perTest: Boolean(red.cases) && !opts.files, ...(greenfield ? { greenfield } : {}), at: new Date().toISOString() }
+    return { ok: !problems.length, problems, base: base.slice(0, 7), files: hashes, acs, ...(untested.length ? { untested } : {}), ...(skipped.length ? { skipped, skipLevels: skip } : {}), perTest: Boolean(red.cases) && !opts.files, ...(greenfield ? { greenfield } : {}), at: new Date().toISOString() }
   } finally {
     // Unlink the shared folder first, so removing the worktree cannot reach through it.
     for (const shared of linked) fs.unlinkSync(shared)
@@ -189,6 +196,12 @@ export function releaseProblems(dir, state, artefactText, cfg = loadConfig(dir))
     if (!/\btested\b[^\n]*\d{4}-\d{2}-\d{2}/i.test(rollback)) problems.push('the rollback has no "Tested: <date>, <how>" line: test the rollback before release')
     const probes = section(artefactText, '## Probes') ?? ''
     if (!/\b(pass(ed)?|ok|green|fail(ed)?|red)\b/i.test(probes)) problems.push('"## Probes" records no result (pass or fail for each probe)')
+    // A @release criterion is proved here: a probe names it with its result (finding V4).
+    for (const r of matrix(dir, state.feature).rows.filter(r => r.due === 'release')) {
+      const line = probes.split('\n').find(l => new RegExp(`\\b${r.ac}\\b`).test(l))
+      const results = line ? [...line.matchAll(/\b(pass(ed)?|ok|green|fail(ed)?|red)\b/gi)] : []
+      if (!results.length || /^(fail(ed)?|red)$/i.test(results[results.length - 1][1])) problems.push(`${r.ac} is checked at release: name it in a probe with its result ("- ${r.ac} ${r.name}: pass")`)
+    }
     const outcome = section(artefactText, '## Outcome metric') ?? ''
     const none = /Metric:\s*None, because\s+\S/i.test(outcome)
     if (state.lane in cfg.outcomeWindowDays && !none && (!/Metric:\s*\S/i.test(outcome) || !/Owner:\s*\S/i.test(outcome))) problems.push('"## Outcome metric" needs "Metric:" and "Owner:" lines (or "Metric: None, because ..."), so the outcome follow-up has an owner')

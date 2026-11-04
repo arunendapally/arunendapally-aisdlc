@@ -2,7 +2,7 @@
 // test fails the Verify gate; the scenario's level is a hint, since levels are guessed from paths.
 import fs from 'node:fs'
 import path from 'node:path'
-import { git, loadConfig, matches } from './lib.mjs'
+import { git, loadConfig, matches, section } from './lib.mjs'
 import { lint } from './gherkin.mjs'
 
 // Where each level's tests live by default. A repo can add its own globs in config "testLevels".
@@ -46,11 +46,12 @@ export function matrix(dir, feature) {
   const rows = scenarios.map(s => {
     const id = s.ac.slice(1)
     const found = texts.filter(t => traces(t.text, t.file, feature, id))
-    return { ac: id, level: s.level, requirements: s.requirements, name: s.name, tests: found.map(t => `${t.file} (${t.level})`), traced: found.length > 0 }
+    return { ac: id, level: s.level, requirements: s.requirements, name: s.name, tests: found.map(t => `${t.file} (${t.level})`), traced: found.length > 0, due: s.due }
   })
   // A file that names the criterion but is not a known test file is the likelier cause: say so.
   const unrecognised = ac => git(`grep --untracked -l -w ${ac} -- .`, dir).split('\n').filter(f => f && !levelOf(f, map) && !f.startsWith(`${cfg.specsDir}/`) && !f.endsWith('.md'))
-  const problems = rows.filter(r => !r.traced).map(r => {
+  // A @release criterion is proved by a release probe, a @manual one by a person: neither needs a test file.
+  const problems = rows.filter(r => !r.traced && !r.due).map(r => {
     const near = unrecognised(r.ac)
     return near.length
       ? `${r.ac} has no test: ${near.slice(0, 3).join(', ')} names it but is not a recognised test file. Rename it to a test pattern, or a person adds its pattern to "testLevels" in .ai-sdlc/config.json`
@@ -61,6 +62,14 @@ export function matrix(dir, feature) {
 
 export function matrixText({ rows, problems }) {
   const lines = ['| AC | Level | Requirements | Scenario | Tests | Traced |', '|---|---|---|---|---|---|']
-  for (const r of rows) lines.push(`| ${r.ac} | ${r.level} | ${r.requirements.join(', ')} | ${r.name} | ${r.tests.join('<br>') || 'none'} | ${r.traced ? 'yes' : 'NO'} |`)
+  for (const r of rows) lines.push(`| ${r.ac} | ${r.level} | ${r.requirements.join(', ')} | ${r.name} | ${r.tests.join('<br>') || 'none'} | ${r.traced ? 'yes' : r.due === 'release' ? 'at release' : r.due === 'manual' ? 'by hand' : 'NO'} |`)
   return [...lines, '', ...(problems.length ? problems.map(p => `- ${p}`) : ['Every criterion has a test.'])].join('\n')
+}
+
+// A @manual criterion with no test is checked by a person, and the PR body says who, when and how.
+export function manualProblems(dir, feature, prText) {
+  const results = section(prText, '## Test results') ?? ''
+  return matrix(dir, feature).rows.filter(r => r.due === 'manual' && !r.traced).filter(r =>
+    !new RegExp(`Checked by hand:[ \\t]*${r.ac}\\b[^\\n]*,[^\\n,]+,[ \\t]*\\d{4}-\\d{2}-\\d{2}[ \\t]*,[ \\t]*\\S`, 'i').test(results))
+    .map(r => `${r.ac} is checked by hand: add "Checked by hand: ${r.ac}, <who>, <YYYY-MM-DD>, <how>" under "## Test results"`)
 }

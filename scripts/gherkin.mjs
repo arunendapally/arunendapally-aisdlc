@@ -76,7 +76,9 @@ export function lint(text, requirements = null) {
       if (placeholders.length) warn(c.line, `Scenario "${c.name}" uses <${placeholders[0]}> but is not a Scenario Outline.`)
       if (c.examples.length) warn(c.line, `Scenario "${c.name}" has Examples but is not a Scenario Outline.`)
     }
-    scenarios.push({ name: c.name, line: c.line, ac: acs[0]?.toUpperCase() ?? null, requirements: reqs, level: levels[0]?.slice(1).toLowerCase() ?? null })
+    // @release: proved by a release probe; @manual: checked by hand, recorded in the PR body.
+    const due = tags.some(t => /^@release$/i.test(t)) ? 'release' : tags.some(t => /^@manual$/i.test(t)) ? 'manual' : null
+    scenarios.push({ name: c.name, line: c.line, ac: acs[0]?.toUpperCase() ?? null, requirements: reqs, level: levels[0]?.slice(1).toLowerCase() ?? null, due })
   }
 
   const lines = text.split(/\r?\n/)

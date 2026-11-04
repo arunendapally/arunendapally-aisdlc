@@ -4,6 +4,15 @@ All notable changes to this repository. The format follows [Keep a Changelog](ht
 
 ## [Unreleased]
 
+### Criteria proved at release, checked by hand, or left to their own run
+
+Found in the unit-converter run (that repo's `docs/plugin-feedback.md`, V4 to V6).
+
+- **`@release` on a scenario:** a criterion that can only run against the live system (the page is the released version, the owner hears about an outage) is due at Release, not refused at Verify. Release refuses until a probe names it with a passing result. The run had to write a probe and its tests early to get past Verify.
+- **`@manual` on a scenario:** a criterion a person checks (in a browser, on a phone) passes Verify when the PR's `## Test results` says `Checked by hand: AC-n, <who>, <YYYY-MM-DD>, <how>`. A committed test is still better; the run's hand check lived in a scratch folder and could not fail. `sdlc tests` shows these rows as "at release" and "by hand".
+- **`proofSkipLevels`** (for example `["e2e"]`): the proof leaves those levels' tests to their own run and names the criteria it did not prove, instead of failing on a browser suite the proof command cannot run.
+- Tests in `tests/release-criteria.test.mjs`.
+
 ### Every test file runs
 
 - **`npm test` runs every `tests/*.test.mjs`,** by a quoted glob that node expands, instead of a hand-kept list. Merging two branches that each added a file to the list dropped one of them silently; now a new test file runs without being listed.

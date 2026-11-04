@@ -13,7 +13,7 @@ import { collect, analyze, report, approvalSignals, approvalLines } from './retr
 import { lint, requirementsFrom } from './gherkin.mjs'
 import { packet, packetText, parseLedger, ledgerProblems } from './review.mjs'
 import { boardProblems } from './design-review.mjs'
-import { matrix, matrixText } from './testmatrix.mjs'
+import { matrix, matrixText, manualProblems } from './testmatrix.mjs'
 import { factsGateProblems, assumptionProblems } from './facts.mjs'
 import { erProblems, openapiProblems, breakingChanges, undefinedFields } from './contracts.mjs'
 import { solutionWarnings } from './solutions.mjs'
@@ -440,7 +440,11 @@ const commands = {
       missing.push(...ledgerProblems(dir, findings, state.ledgerIds ?? [], { strictFixes: highRisk }).map(p => `review.md: ${p}`))
       state.ledgerIds = [...new Set([...(state.ledgerIds ?? []), ...findings.map(f => f.id)])]
       writeState(dir, state)
-      if (fs.existsSync(path.join(folder, 'acceptance.feature'))) missing.push(...matrix(dir, feature).problems.map(p => `test matrix: ${p}`))
+      if (fs.existsSync(path.join(folder, 'acceptance.feature'))) {
+        missing.push(...matrix(dir, feature).problems.map(p => `test matrix: ${p}`))
+        const prFile = path.join(folder, spec.artefact)
+        missing.push(...manualProblems(dir, feature, fs.existsSync(prFile) ? fs.readFileSync(prFile, 'utf8') : '').map(p => `test matrix: ${p}`))
+      }
       if (pre && !/Risk:\s*(low|medium|high)\b/i.test(pre)) missing.push('the pre-review gives no "Risk: low|medium|high"')
       if (pre && !/Open findings:\s*0\b/i.test(pre)) missing.push('the pre-review still has open findings ("Open findings: 0" is required)')
       // A ledger with no rows reads the same as a skipped review, so the pre-review says what ran (F10).
@@ -722,7 +726,7 @@ const commands = {
     state.proof = result
     writeState(dir, state)
     if (!result.ok) fail(`Proof FAILED${result.base ? ` against ${result.base}` : ''}:\n- ${result.problems.join('\n- ')}`)
-    console.log(`Proof passed against ${result.base}: ${result.acs.join(', ')} ${result.perTest ? 'each failed' : 'failed'} on the base code and pass here. Locked ${Object.keys(result.files).length} test file(s); changing one means proving again.${result.untested ? ` Not proved, no test traces them: ${result.untested.join(', ')}.` : ''}${result.greenfield ? ' Greenfield: the base commit has no code, so the tests failed there because the code is missing, not because they check its behaviour. Review the tests for what they assert.' : ''}`)
+    console.log(`Proof passed against ${result.base}: ${result.acs.join(', ')} ${result.perTest ? 'each failed' : 'failed'} on the base code and pass here. Locked ${Object.keys(result.files).length} test file(s); changing one means proving again.${result.untested ? ` Not proved, no test traces them: ${result.untested.join(', ')}.` : ''}${result.skipped ? ` Not proved, ${result.skipLevels.join(' and ')} tests are left to their own run (proofSkipLevels): ${result.skipped.join(', ')}.` : ''}${result.greenfield ? ' Greenfield: the base commit has no code, so the tests failed there because the code is missing, not because they check its behaviour. Review the tests for what they assert.' : ''}`)
   },
 
   // A spike may skip the red-first habit inside a slice, never the proof; its code cannot merge.
