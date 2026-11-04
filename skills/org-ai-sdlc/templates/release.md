@@ -10,8 +10,8 @@
 
 ## Decision
 
-<!-- Written last, two lines, each pointing at the section that proves it. No check reads this section, and
-     a failed probe still passes the gate, so anything that failed or is unconfirmed goes first. Example:
+<!-- Written last, two lines, each pointing at the section that proves it. No check reads this section; the gate
+     refuses a failed probe, so anything unconfirmed goes first. Example:
 Recommend: keep live. Probes: 3 pass, 0 fail; Live 9c8b7a6 holds this release and the previous one (## Probes).
 Unconfirmed: the dead-letter alert was not seen firing (## Not verified). -->
 

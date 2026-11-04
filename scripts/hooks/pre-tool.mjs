@@ -180,7 +180,9 @@ if (tool === 'Bash' || tool === 'PowerShell') {
   // content changes), or to run the state CLI. Redirects, $( ) and backticks make any of them a write.
   // settings.json only as a name of its own: .NET's appsettings.json is not Claude's settings.
   const guardrail = /(state\.json|\.ai-sdlc|PAUSED|BUDGET_FROZEN|(^|[^\w.-])settings(\.local)?\.json|\.github[\\/]workflows|CODEOWNERS)/i
-  const plain = t => !/[>`]|\$\(/.test(t.replace(/<<-?\s*'\w+'/g, ''))
+  // Sending output to /dev/null, or stderr to stdout, writes no file (finding G1 of the unit-converter
+  // run). Exact bytes only: ASCII space or tab around it, lower case. Process substitution runs code.
+  const plain = t => !/[>`]|\$\(|[<>]\(/.test(t.replace(/<<-?\s*'\w+'/g, '').replace(/(^|[ \t])([12&]?>[ \t]*\/dev\/null|2>&1)(?=[ \t]|$)/g, ' '))
   const exempt = p => {
     if (p.unsure || !quotedOnly(p)) return false
     const t = p.text
@@ -189,7 +191,7 @@ if (tool === 'Bash' || tool === 'PowerShell') {
     if (!plain(t)) return false
     if (/^git\s+(add|commit|status|diff|log|show)\b/.test(t)) return true
     if (/^sed\s+-n\s+(['"]?)\d+(,\d+)?p\1(\s+[^\s'"]+)+$/.test(t)) return true
-    return /^(cat|grep|rg|head|tail|less|jq|type|ls|wc|Get-Content|Select-String)\b/i.test(t) && !/\s--pre\b/.test(t) && !p.heredocs.length
+    return /^(cat|grep|rg|head|tail|less|jq|type|ls|stat|wc|Get-Content|Select-String)\b/i.test(t) && !/\s--pre\b/.test(t) && !p.heredocs.length
   }
   for (const p of parts) {
     const target = writeTarget(p)
