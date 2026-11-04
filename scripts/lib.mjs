@@ -120,6 +120,8 @@ export const DEFAULT_CONFIG = {
   gateOwners: {},
   // The repo's full gate, and how to read the passing test count from its output.
   gateCommand: '',
+  // The runtime the gate's tests run on, recorded with each run (set it to "python --version" and so on).
+  runtimeCommand: 'node --version',
   testCountPattern: '(\\d+)\\s+(?:tests?\\s+)?pass(?:ed|ing)?|pass(?:ed)?[:\\s]+(\\d+)',
   // MCP tools whose names look like they merge, deploy or change settings are denied unless listed in mcpAllow.
   mcpDenyPattern: '(merge|deploy|promote|rollback|release|publish|delete|apply|push|ruleset|protection|secret|setting|permission)',
@@ -148,7 +150,9 @@ export const DEFAULT_CONFIG = {
   // What a reviewer does not reason about line by line: docs, lockfiles, snapshots, tests (counting them
   // made test-first PRs "too big"), project and tool boilerplate, and this plugin's own state.
   prLineExcludes: ['specs/**', 'docs/**', '**/*.md', '**/package-lock.json', '**/yarn.lock', '**/pnpm-lock.yaml', '**/*.lock', '**/*.snap',
-    '**/*.test.*', '**/*.spec.*', '**/*_test.go', '**/test_*.py', '**/*Tests.cs', '**/*Test.cs', '**/*Test.java', '**/*Test.kt',
+    '**/*.test.*', '**/*.spec.*',
+    // End-to-end tests: exactly what the test matrix treats as e2e (testmatrix.mjs DEFAULT_LEVELS).
+    'e2e/**', 'tests/e2e/**', 'test/e2e/**', 'playwright/**', '**/*.e2e.*', '**/*.e2e-spec.*', '**/*_test.go', '**/test_*.py', '**/*Tests.cs', '**/*Test.cs', '**/*Test.java', '**/*Test.kt',
     '**/*.sln', '**/*.csproj', '**/tsconfig*.json', '**/launchSettings.json', '**/appsettings*.json', '**/.gitignore', '.ai-sdlc/**'],
   // Hours a human gate may wait before it is overdue and escalated, by lane.
   reviewSlaHours: { full: 24, light: 8, bug: 8, task: 8, hotfix: 1 },
