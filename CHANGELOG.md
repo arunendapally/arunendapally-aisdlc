@@ -39,6 +39,12 @@ Found in the unit-converter run (that repo's `docs/plugin-feedback.md`, P2 and B
 - **A starter trap, "Subtests that were never awaited",** in the repo template's `standards/traps.md`, and the getting-started guide gives the quoted `node --test "test/**/*.test.mjs"` form.
 - Not done: `sdlc init-repo` does not run the gate command once; the first `sdlc gate` names a broken one instead.
 - Tests in `tests/gate-runtime.test.mjs`.
+### A read may silence its errors; process substitution is refused
+
+- **Fixed: `ls .ai-sdlc .github/workflows 2>/dev/null` was refused** as a write to a guardrail, and the refusal counted toward the cap that holds the session. Sending output to `/dev/null` (`>/dev/null`, `2>/dev/null`, `&>/dev/null`) or stderr to stdout (`2>&1`) writes no file, so a listed read with it is allowed, and `stat` joins the listed reads. Only those exact bytes count: `2>nul` (a real file in Bash), `2>/DEV/NULL`, a no-break space or any other redirect is still refused. Found in the unit-converter run (G1).
+- **Fixed: process substitution ran unchecked.** `ls .ai-sdlc <(touch .ai-sdlc/PAUSED)` was allowed, because `<(...)` holds no `>`, `$(` or backtick. A segment that names a guardrail with `<(` or `>(` is now refused.
+- Not done: a refused read-only command still counts toward the refusal cap.
+- Tests in `tests/hooks.test.mjs`.
 
 ## [0.6.0] - 2026-11-02
 
