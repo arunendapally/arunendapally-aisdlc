@@ -9,9 +9,10 @@ All notable changes to this repository. The format follows [Keep a Changelog](ht
 Found in the unit-converter run (that repo's `docs/plugin-feedback.md`, V1 to V3 and B2).
 
 - **The proof names only criteria a test traces.** It listed all 29 criteria as "failed on the base code and pass here" while six had no test. Now it proves the traced ones and adds "Not proved, no test traces them: AC-21, AC-29."; with none traced it says which criteria still need a test.
+- **Fixed: the proof counted criteria the base already had.** The check that leaves them out wrote `\b` inside a template string, which is a backspace, so it never matched: a second slice of a feature re-proved the first slice's criteria.
 - **A base holding only the init-repo scaffold is greenfield.** The standards, `.github` scripts and `.claude` rules `sdlc init-repo` copies counted as code, so the "Greenfield" note never showed in a new repo.
-- **Prose never traces a criterion.** A Markdown file that cites an AC id (the plugin's own `standards/traps.md` cited "AC-7") was reported against the product's AC-7. The test matrix skips `*.md`, and the repo template's `traps.md` names the plugin test by file instead of by id.
-- **End-to-end tests do not count toward the PR line limit:** `**/*.e2e.*`, `**/*.e2e-spec.*` and `**/e2e/**`, which the test matrix already treats as tests.
+- **A Markdown file never names a test.** The plugin's own `standards/traps.md` cited "AC-7", and `sdlc tests` told the product to rename it as a test. The "not a recognised test file" hint now skips `*.md`, and the repo template's `traps.md` names the plugin test by file, not by id.
+- **End-to-end tests do not count toward the PR line limit,** in the gate and in CI alike: exactly the paths the test matrix calls e2e (`e2e/`, `tests/e2e/`, `test/e2e/`, `playwright/`, `*.e2e.*`, `*.e2e-spec.*`). A product folder such as `src/e2e/` still counts.
 - Tests in `tests/proof-accuracy.test.mjs`.
 
 ## [0.6.0] - 2026-11-02

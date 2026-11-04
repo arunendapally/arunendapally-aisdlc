@@ -79,7 +79,7 @@ export function scaffoldFiles() {
 // The criteria this branch adds: those the base commit's acceptance.feature does not already have.
 const newCriteria = (dir, state, rows, base, cfg) => {
   const before = git(`show ${base}:${cfg.specsDir}/${state.feature}/acceptance.feature`, dir)
-  return rows.filter(r => !new RegExp(`\b${r.ac}\b`).test(before))
+  return rows.filter(r => !new RegExp(`\\b${r.ac}\\b`).test(before))
 }
 
 // Run the proof command in a folder; with {report} it also reads the JUnit report the runner wrote.

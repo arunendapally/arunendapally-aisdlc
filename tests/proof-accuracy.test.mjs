@@ -21,6 +21,35 @@ test('V1: the proof names only the criteria a test traces, and lists the rest as
   assert.match(out.out, /Not proved, no test traces them: AC-2\./)
 })
 
+test('V1: criteria the base already has are not proved again', () => {
+  const r = makeRepo()
+  r.git('checkout', '-q', 'main')
+  r.put('specs/demo/acceptance.feature', 'Feature: F\n  As a user\n  I want x\n  So that y\n\n  @R1 @AC-1 @unit\n  Scenario: S\n    Given a\n    When b\n    Then c\n')
+  r.put('src/greet.cjs', "module.exports = () => 'hi'\n")
+  r.put('tests/demo.test.cjs', greetTest)
+  r.git('add', '-A')
+  r.git('commit', '-q', '-m', 'the first slice')
+  r.git('checkout', '-q', 'feature/demo')
+  r.git('merge', '-q', 'main')
+  r.config({ proofCommand: 'node --test {files}' })
+  r.sdlc('init', 'demo')
+  r.put('specs/demo/acceptance.feature', ACCEPT)
+  r.put('src/bye.cjs', "module.exports = () => 'bye'\n")
+  r.put('tests/demo-bye.test.cjs', "const { test } = require('node:test')\nconst assert = require('node:assert')\ntest('demo AC-2 says bye', () => assert.equal(require('../src/bye.cjs')(), 'bye'))\n")
+  const out = r.sdlc('proof', 'demo')
+  assert.match(out.out, /: AC-2 failed on the base code/)
+  assert.doesNotMatch(out.out, /AC-1/)
+})
+
+test('V1: with no criterion traced, the proof says which need a test', () => {
+  const r = makeRepo()
+  r.config({ proofCommand: 'node --test {files}' })
+  r.sdlc('init', 'demo')
+  r.put('specs/demo/acceptance.feature', ACCEPT)
+  r.put('tests/other.test.cjs', "const { test } = require('node:test')\ntest('demo unrelated', () => {})\n")
+  assert.match(r.sdlc('proof', 'demo').out, /no test traces the new criteria yet \(AC-1, AC-2\): write the tests first/)
+})
+
 test('V2: a base holding only what init-repo writes is greenfield', () => {
   const r = makeRepo()
   r.git('checkout', '-q', 'main')
@@ -62,10 +91,18 @@ test('B2: end-to-end test files do not count toward the PR line limit', () => {
   r.sdlc('init', 'demo')
   r.setState('demo', { stage: 4, stages: { 4: { enteredAt: '2026-10-31T00:00:00Z' } } })
   r.put('src/a.js', 'module.exports = 1\n')
-  r.put('test/e2e/demo.e2e.cjs', Array.from({ length: 50 }, (_, i) => `// e2e line ${i}`).join('\n') + '\n')
-  r.put('e2e/flow.spec.ts', Array.from({ length: 30 }, (_, i) => `// flow ${i}`).join('\n') + '\n')
+  const lines = n => Array.from({ length: n }, (_, i) => `// line ${i}`).join('\n') + '\n'
+  for (const f of ['src/demo.e2e.cjs', 'src/flow.e2e-spec.js', 'e2e/flow.js', 'tests/e2e/flow.js', 'test/e2e/flow.js', 'playwright/flow.js']) r.put(f, lines(20))
+  r.put('src/e2e/crypto.js', lines(5))
   r.git('add', '-A')
   r.git('commit', '-q', '-m', 'work')
   const out = r.sdlc('gate', 'demo').out
-  assert.match(out, /PR size: 1 of 300 code lines/)
+  assert.match(out, /PR size: 6 of 300 code lines/, 'src/e2e/ is product code (end-to-end encryption), not a test')
+})
+
+test('B2: CI counts PR size the same way', async () => {
+  const { countLines } = await import('../templates/repo/.github/scripts/check-pr-size.mjs')
+  const file = filename => ({ filename, additions: 10, deletions: 0 })
+  const tests = ['src/demo.e2e.cjs', 'src/flow.e2e-spec.js', 'e2e/flow.js', 'tests/e2e/flow.js', 'test/e2e/flow.js', 'playwright/flow.js']
+  assert.equal(countLines([...tests.map(file), file('src/a.js'), file('src/e2e/crypto.js')]), 20)
 })
