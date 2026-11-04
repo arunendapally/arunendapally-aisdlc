@@ -54,7 +54,7 @@ An escaped bug (`sdlc bug <slug> --caused-by <feature>`) or a hotfix owes a less
 ### Context spent before the source of truth
 - **What happened:** thousands of lines of validators, design documents and a 185KB schema were read in full before the implementation that governed the design, and the design had to be rewritten.
 - **How it was found:** the rewrite.
-- **Guard now:** the pre-tool hook refuses a full read of a large file and gives the sliced call; brownfield and data facts need a "[governing]" fact pinned to implementation code (tests: AC-7, "large files are read in slices"); golden eval 21.
+- **Guard now:** the pre-tool hook refuses a full read of a large file and gives the sliced call; brownfield and data facts need a "[governing]" fact pinned to implementation code (test: "large files are read in slices" in the plugin's tests/failures.test.mjs); golden eval 21.
 
 ### A branch deploy was erased by the next merge
 - **What happened:** a feature was deployed from an unmerged, unpushed branch, looked shipped, and was rolled back by the next deploy from main. The branch was the only copy.

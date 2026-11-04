@@ -688,7 +688,7 @@ const commands = {
     state.proof = result
     writeState(dir, state)
     if (!result.ok) fail(`Proof FAILED${result.base ? ` against ${result.base}` : ''}:\n- ${result.problems.join('\n- ')}`)
-    console.log(`Proof passed against ${result.base}: ${result.acs.join(', ')} ${result.perTest ? 'each failed' : 'failed'} on the base code and pass here. Locked ${Object.keys(result.files).length} test file(s); changing one means proving again.${result.greenfield ? ' Greenfield: the base commit has no code, so the tests failed there because the code is missing, not because they check its behaviour. Review the tests for what they assert.' : ''}`)
+    console.log(`Proof passed against ${result.base}: ${result.acs.join(', ')} ${result.perTest ? 'each failed' : 'failed'} on the base code and pass here. Locked ${Object.keys(result.files).length} test file(s); changing one means proving again.${result.untested ? ` Not proved, no test traces them: ${result.untested.join(', ')}.` : ''}${result.greenfield ? ' Greenfield: the base commit has no code, so the tests failed there because the code is missing, not because they check its behaviour. Review the tests for what they assert.' : ''}`)
   },
 
   // A spike may skip the red-first habit inside a slice, never the proof; its code cannot merge.
