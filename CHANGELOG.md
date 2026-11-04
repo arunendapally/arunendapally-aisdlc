@@ -4,6 +4,16 @@ All notable changes to this repository. The format follows [Keep a Changelog](ht
 
 ## [Unreleased]
 
+### The proof and the test matrix say only what is true
+
+Found in the unit-converter run (that repo's `docs/plugin-feedback.md`, V1 to V3 and B2).
+
+- **The proof names only criteria a test traces.** It listed all 29 criteria as "failed on the base code and pass here" while six had no test. Now it proves the traced ones and adds "Not proved, no test traces them: AC-21, AC-29."; with none traced it says which criteria still need a test.
+- **A base holding only the init-repo scaffold is greenfield.** The standards, `.github` scripts and `.claude` rules `sdlc init-repo` copies counted as code, so the "Greenfield" note never showed in a new repo.
+- **Prose never traces a criterion.** A Markdown file that cites an AC id (the plugin's own `standards/traps.md` cited "AC-7") was reported against the product's AC-7. The test matrix skips `*.md`, and the repo template's `traps.md` names the plugin test by file instead of by id.
+- **End-to-end tests do not count toward the PR line limit:** `**/*.e2e.*`, `**/*.e2e-spec.*` and `**/e2e/**`, which the test matrix already treats as tests.
+- Tests in `tests/proof-accuracy.test.mjs`.
+
 ## [0.6.0] - 2026-11-02
 
 Issues [#26](https://github.com/arunendapally/arunendapally-aisdlc/issues/26) to [#29](https://github.com/arunendapally/arunendapally-aisdlc/issues/29), the calculator run's open findings, agile change 2, the rest of the human-asks record, and agent evals that cannot touch the person's accounts.

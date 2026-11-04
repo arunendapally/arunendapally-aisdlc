@@ -11,6 +11,7 @@ import os from 'node:os'
 import path from 'node:path'
 import crypto from 'node:crypto'
 import { spawnSync } from 'node:child_process'
+import { fileURLToPath } from 'node:url'
 import { STAGES, stageSpec, git, gitOk, loadConfig, section, changedFiles, listFeatures, nextStage, writeState, matches, destructiveMigrations } from './lib.mjs'
 import { matrix } from './testmatrix.mjs'
 import { check as knowledgeCheck, pages as knowledgePages } from './knowledge.mjs'
@@ -58,6 +59,23 @@ export function judgeProof(acs, run) {
   return acs.map(ac => (run.status !== 0 ? { ac, red: true } : { ac, red: false, why: 'the run passed against the base code' }))
 }
 
+// The files "sdlc init-repo" copies from templates/repo, as repo paths: the scaffold, not product code.
+let scaffoldCache
+export function scaffoldFiles() {
+  if (scaffoldCache) return scaffoldCache
+  const root = path.join(path.dirname(fileURLToPath(import.meta.url)), '..', 'templates', 'repo')
+  const out = new Set()
+  const walk = rel => {
+    for (const e of fs.readdirSync(path.join(root, rel), { withFileTypes: true })) {
+      const from = path.join(rel, e.name)
+      if (e.isDirectory()) walk(from)
+      else out.add(from.split(path.sep).join('/'))
+    }
+  }
+  if (fs.existsSync(root)) walk('')
+  return (scaffoldCache = out)
+}
+
 // The criteria this branch adds: those the base commit's acceptance.feature does not already have.
 const newCriteria = (dir, state, rows, base, cfg) => {
   const before = git(`show ${base}:${cfg.specsDir}/${state.feature}/acceptance.feature`, dir)
@@ -83,9 +101,12 @@ export function runProof(dir, state, opts = {}, cfg = loadConfig(dir)) {
   const base = opts.base ?? mergeBase(dir, cfg)
   if (!base) return { ok: false, problems: ['no base commit to prove against'] }
   const traced = opts.files ? { rows: [], files: opts.files } : tracedFiles(dir, state.feature)
-  const acs = opts.files ? ['the repro'] : newCriteria(dir, state, traced.rows, base, cfg).map(r => r.ac)
+  const added = opts.files ? [] : newCriteria(dir, state, traced.rows, base, cfg)
+  // Only a criterion a test traces can be proved; the rest are named, never listed as proved (finding V1).
+  const acs = opts.files ? ['the repro'] : added.filter(r => r.tests.length).map(r => r.ac)
+  const untested = added.filter(r => !r.tests.length).map(r => r.ac)
   const files = traced.files
-  if (!acs.length) return { ok: false, problems: ['no new criteria to prove: acceptance.feature adds none on this branch'] }
+  if (!acs.length) return { ok: false, problems: [untested.length ? `no test traces the new criteria yet (${untested.join(', ')}): write the tests first (sdlc tests)` : 'no new criteria to prove: acceptance.feature adds none on this branch'] }
   if (!files.length) return { ok: false, problems: ['no test traces any criterion yet: write the tests first (sdlc tests)'] }
   const missing = files.filter(f => !fs.existsSync(path.join(dir, f)))
   if (missing.length) return { ok: false, problems: [`${missing.join(', ')} does not exist`] }
@@ -120,8 +141,10 @@ export function runProof(dir, state, opts = {}, cfg = loadConfig(dir)) {
     const hashes = Object.fromEntries(files.map(f => [f, sha256(fs.readFileSync(path.join(dir, f), 'utf8'))]))
     // A base with no code (finding F-9): every test fails there for want of the code, which proves less.
     const listed = git(`ls-tree -r --name-only ${base}`, dir).split('\n').filter(Boolean)
-    const greenfield = listed.length > 0 && !listed.some(f => !matches(f, cfg.prLineExcludes))
-    return { ok: !problems.length, problems, base: base.slice(0, 7), files: hashes, acs, perTest: Boolean(red.cases) && !opts.files, ...(greenfield ? { greenfield } : {}), at: new Date().toISOString() }
+    // What "sdlc init-repo" writes is not product code either (finding V2).
+    const scaffold = scaffoldFiles()
+    const greenfield = listed.length > 0 && !listed.some(f => !matches(f, cfg.prLineExcludes) && !scaffold.has(f))
+    return { ok: !problems.length, problems, base: base.slice(0, 7), files: hashes, acs, ...(untested.length ? { untested } : {}), perTest: Boolean(red.cases) && !opts.files, ...(greenfield ? { greenfield } : {}), at: new Date().toISOString() }
   } finally {
     // Unlink the shared folder first, so removing the worktree cannot reach through it.
     for (const shared of linked) fs.unlinkSync(shared)
