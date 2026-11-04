@@ -5,7 +5,7 @@ import fs from 'node:fs'
 import path from 'node:path'
 import { fileURLToPath } from 'node:url'
 import { spawnSync } from 'node:child_process'
-import { STAGES, root, git, loadConfig, readState, writeState, listFeatures, missingHeadings, isFrozen, destructiveMigrations,
+import { STAGES, LANES, root, git, loadConfig, readState, writeState, listFeatures, missingHeadings, isFrozen, destructiveMigrations,
   stageSpec, section, matches, changedFiles, changedLines, createFeature, copyTemplate, TEMPLATES, overdueGates, overduePostmortems,
   KINDS, trustedGates, promotable, readTrust, writeTrust, lessonPaid, lessonProblem, lessonsOwed, audit, withIntent, INTENT_PARTS, autonomy } from './lib.mjs'
 import { check, conformance, OKF_VERSION, relevant, writeIndex } from './knowledge.mjs'
@@ -444,12 +444,14 @@ const commands = {
         missing.push(...matrix(dir, feature).problems.map(p => `test matrix: ${p}`))
         const prFile = path.join(folder, spec.artefact)
         missing.push(...manualProblems(dir, feature, fs.existsSync(prFile) ? fs.readFileSync(prFile, 'utf8') : '').map(p => `test matrix: ${p}`))
+        // A lane with no Release has no probe to prove a @release criterion.
+        if (!LANES[state.lane]?.stages.includes(6)) missing.push(...matrix(dir, feature).rows.filter(r => r.due === 'release').map(r => `test matrix: ${r.ac} is tagged @release, but the ${state.lane} lane has no Release to probe it: write a test`))
       }
-      if (pre && !/Risk:\s*(low|medium|high)\b/i.test(pre)) missing.push('the pre-review gives no "Risk: low|medium|high"')
-      if (pre && !/Open findings:\s*0\b/i.test(pre)) missing.push('the pre-review still has open findings ("Open findings: 0" is required)')
+      if (pre && !/Risk:[ \t]*(low|medium|high)\b/i.test(pre)) missing.push('the pre-review gives no "Risk: low|medium|high"')
+      if (pre && !/Open findings:[ \t]*0\b/i.test(pre)) missing.push('the pre-review still has open findings ("Open findings: 0" is required)')
       // A ledger with no rows reads the same as a skipped review, so the pre-review says what ran (F10).
-      if (pre && !/Lenses run:\s*\S/i.test(pre)) missing.push('the pre-review does not say which lenses ran ("Lenses run: ...")')
-      if (pre && !/Revert:\s*\S/i.test(pre)) missing.push('the pre-review does not say how to undo this ("Revert: <command or flag>")')
+      if (pre && !/Lenses run:[ \t]*\S/i.test(pre)) missing.push('the pre-review does not say which lenses ran ("Lenses run: ...")')
+      if (pre && !/Revert:[ \t]*\S/i.test(pre)) missing.push('the pre-review does not say how to undo this ("Revert: <command or flag>")')
       const proof = proofProblems(dir, state, fs.existsSync(file) ? fs.readFileSync(file, 'utf8') : '', cfg)
       if (proof.warning) warnings.push(proof.warning)
       missing.push(...proof.problems)
@@ -726,7 +728,8 @@ const commands = {
     state.proof = result
     writeState(dir, state)
     if (!result.ok) fail(`Proof FAILED${result.base ? ` against ${result.base}` : ''}:\n- ${result.problems.join('\n- ')}`)
-    console.log(`Proof passed against ${result.base}: ${result.acs.join(', ')} ${result.perTest ? 'each failed' : 'failed'} on the base code and pass here. Locked ${Object.keys(result.files).length} test file(s); changing one means proving again.${result.untested ? ` Not proved, no test traces them: ${result.untested.join(', ')}.` : ''}${result.skipped ? ` Not proved, ${result.skipLevels.join(' and ')} tests are left to their own run (proofSkipLevels): ${result.skipped.join(', ')}.` : ''}${result.greenfield ? ' Greenfield: the base commit has no code, so the tests failed there because the code is missing, not because they check its behaviour. Review the tests for what they assert.' : ''}`)
+    if (!result.acs.length) return console.log(`Nothing for the proof to run against ${result.base}: every new criterion is proved another way.${result.due ? ` ${result.due.join(', ')}.` : ''}${result.skipped ? ` Left to their own run (proofSkipLevels): ${result.skipped.join(', ')}.` : ''}`)
+    console.log(`Proof passed against ${result.base}: ${result.acs.join(', ')} ${result.perTest ? 'each failed' : 'failed'} on the base code and pass here. Locked ${Object.keys(result.files).length} test file(s); changing one means proving again.${result.untested ? ` Not proved, no test traces them: ${result.untested.join(', ')}.` : ''}${result.skipped ? ` Not proved, ${result.skipLevels.join(' and ')} tests are left to their own run (proofSkipLevels): ${result.skipped.join(', ')}.` : ''}${result.due ? ` Proved another way: ${result.due.join(', ')}.` : ''}${result.greenfield ? ' Greenfield: the base commit has no code, so the tests failed there because the code is missing, not because they check its behaviour. Review the tests for what they assert.' : ''}`)
   },
 
   // A spike may skip the red-first habit inside a slice, never the proof; its code cannot merge.

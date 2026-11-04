@@ -77,7 +77,10 @@ export function lint(text, requirements = null) {
       if (c.examples.length) warn(c.line, `Scenario "${c.name}" has Examples but is not a Scenario Outline.`)
     }
     // @release: proved by a release probe; @manual: checked by hand, recorded in the PR body.
-    const due = tags.some(t => /^@release$/i.test(t)) ? 'release' : tags.some(t => /^@manual$/i.test(t)) ? 'manual' : null
+    const due = c.tags.some(t => /^@release$/i.test(t)) ? 'release' : c.tags.some(t => /^@manual$/i.test(t)) ? 'manual' : null
+    if ([...featureTags, ...c.ruleTags].some(t => /^@(release|manual)$/i.test(t))) err(c.line, `Scenario "${c.name}": put @release or @manual on the scenario itself, never on a Feature or Rule, so each untested criterion is chosen one by one.`)
+    if (c.tags.filter(t => /^@(release|manual)$/i.test(t)).length > 1) err(c.line, `Scenario "${c.name}" has both @release and @manual: pick one.`)
+    if (due && levels.some(l => l !== '@e2e')) err(c.line, `Scenario "${c.name}" is @${due} but ${levels.join(' ')}: a unit, subsystem or API criterion has a test, never a hand check or a release probe.`)
     scenarios.push({ name: c.name, line: c.line, ac: acs[0]?.toUpperCase() ?? null, requirements: reqs, level: levels[0]?.slice(1).toLowerCase() ?? null, due })
   }
 

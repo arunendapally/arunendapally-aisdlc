@@ -63,13 +63,29 @@ export function matrix(dir, feature) {
 export function matrixText({ rows, problems }) {
   const lines = ['| AC | Level | Requirements | Scenario | Tests | Traced |', '|---|---|---|---|---|---|']
   for (const r of rows) lines.push(`| ${r.ac} | ${r.level} | ${r.requirements.join(', ')} | ${r.name} | ${r.tests.join('<br>') || 'none'} | ${r.traced ? 'yes' : r.due === 'release' ? 'at release' : r.due === 'manual' ? 'by hand' : 'NO'} |`)
-  return [...lines, '', ...(problems.length ? problems.map(p => `- ${p}`) : ['Every criterion has a test.'])].join('\n')
+  const manual = rows.filter(r => r.due === 'manual' && !r.traced).map(r => r.ac)
+  const release = rows.filter(r => r.due === 'release' && !r.traced).map(r => r.ac)
+  const untested = manual.length || release.length ? [`${manual.length + release.length} of ${rows.length} criteria have no test: ${[manual.length ? `by hand ${manual.join(', ')}` : '', release.length ? `at release ${release.join(', ')}` : ''].filter(Boolean).join('; ')}.`] : []
+  return [...lines, '', ...(problems.length ? problems.map(p => `- ${p}`) : untested.length ? untested : ['Every criterion has a test.'])].join('\n')
 }
 
-// A @manual criterion with no test is checked by a person, and the PR body says who, when and how.
+// A @manual criterion with no test is checked by a person, and the PR body records it:
+// "Checked by hand: AC-2, AC-7, <who>, <YYYY-MM-DD>, <how>, pass". The date is not in the future, no
+// "<placeholder>" is left, and the result is pass. The agent can write this line too; the person at the
+// merge reads it, so the packet lists these criteria apart (finding V5).
 export function manualProblems(dir, feature, prText) {
-  const results = section(prText, '## Test results') ?? ''
-  return matrix(dir, feature).rows.filter(r => r.due === 'manual' && !r.traced).filter(r =>
-    !new RegExp(`Checked by hand:[ \\t]*${r.ac}\\b[^\\n]*,[^\\n,]+,[ \\t]*\\d{4}-\\d{2}-\\d{2}[ \\t]*,[ \\t]*\\S`, 'i').test(results))
-    .map(r => `${r.ac} is checked by hand: add "Checked by hand: ${r.ac}, <who>, <YYYY-MM-DD>, <how>" under "## Test results"`)
+  const today = new Date().toISOString().slice(0, 10)
+  const lines = (section(prText, '## Test results') ?? '').split('\n')
+    .map(l => l.replace(/\*\*/g, '').match(/Checked by hand:[ \t]*(.*)$/i)?.[1]).filter(Boolean)
+  const proved = new Set()
+  for (const l of lines) {
+    const date = l.match(/\b(\d{4}-\d{2}-\d{2})(?!\d)/)?.[1]
+    if (!date || date > today || /<[^>]*>/.test(l) || !/\bpass(ed)?\b/i.test(l) || /\bfail(ed)?\b|\bnot ok\b/i.test(l)) continue
+    const parts = l.split(',').map(x => x.trim())
+    const ids = parts.filter(x => /^AC-\d+$/i.test(x)).map(x => x.toUpperCase())
+    const who = parts[ids.length]
+    if (ids.length && who && parts.length >= ids.length + 4) ids.forEach(id => proved.add(id))
+  }
+  return matrix(dir, feature).rows.filter(r => r.due === 'manual' && !r.traced && !proved.has(r.ac))
+    .map(r => `${r.ac} is checked by hand: add "Checked by hand: ${r.ac}, <who>, <YYYY-MM-DD>, <how>, pass" under "## Test results", dated no later than today`)
 }
