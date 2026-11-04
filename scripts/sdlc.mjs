@@ -581,10 +581,17 @@ const commands = {
     const ok = runs.every(r => r.ok) && !leaked
     const now = new Date().toISOString()
     const hadGreen = state.gateRuns?.[state.stage]?.ok
-    state.gateRuns = { ...state.gateRuns, [state.stage]: { ok, count, at: now, runs: runs.length, ...(flaky ? { flaky } : {}), ...(leaked ? { leaked } : {}) } }
+    // A command that cannot start reads like a new repo with nothing passing (finding P2): name it, and
+    // set no baseline from it.
+    const broken = !ok && count === 0 && out.match(/Cannot find module '[^']*'|ERR_MODULE_NOT_FOUND|Could not find '[^']*'|No test files found|No tests found|no tests ran|command not found|is not recognized as an internal or external command/i)?.[0]
+    if (broken) fail(`The gate command failed before any test ran (${broken}). That is the command, not the code: a person should fix gateCommand in .ai-sdlc/config.json (for node:test, list the files: "node --test test/*.test.mjs"). No baseline was recorded.`)
+    // The runtime that ran the tests (finding B1): a newer Node cancelled subtests an older one ran.
+    const runtime = `node ${process.version}`
+    state.gateRuns = { ...state.gateRuns, [state.stage]: { ok, count, at: now, runs: runs.length, runtime, ...(flaky ? { flaky } : {}), ...(leaked ? { leaked } : {}) } }
+    if (state.baselineRuntime && state.baselineRuntime !== runtime) console.log(`RUNTIME CHANGED: this run used ${runtime}; the baseline was set on ${state.baselineRuntime}. A runtime change can change which tests run: compare the counts, and look for cancelled or skipped tests.`)
     if (flaky) console.log(`FLAKY: ${runs.length} runs gave ${runs.map(r => `${r.ok ? 'green' : 'red'} ${r.count}`).join(', ')}. Quarantine with an owner and a date, or fix it; never retry until green.`)
     if (leaked) console.log(`TEST DATA LEAKED: the data check failed after a run. Each test must tear down what it creates.\n${runs.find(r => r.leaked).leakOut.trim().slice(0, 400)}`)
-    if (state.stage === 4 && state.baseline === undefined) state.baseline = count
+    if (state.stage === 4 && state.baseline === undefined) Object.assign(state, { baseline: count, baselineRuntime: runtime })
     // The baseline ratchets: a green run raises it, so tests the feature has passed cannot quietly go.
     const floor = state.baseline ?? 0
     if (ok && count > floor && state.baseline !== undefined) state.baseline = count

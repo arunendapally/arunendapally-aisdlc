@@ -40,7 +40,7 @@ claude plugin update ai-sdlc@arunendapally-aisdlc
 
    The first time, this copies the repo kit in (section 6 lists it) and never overwrites a file that already exists. Then it picks the lane and opens a feature branch.
 
-2. **Set your gate command** in `.ai-sdlc/config.json`: the one command that runs your types, lint and tests, for example `"gateCommand": "npm run gate"`. Agents cannot edit this file, so you do it. Build refuses to pass without it.
+2. **Set your gate command** in `.ai-sdlc/config.json`: the one command that runs your types, lint and tests, for example `"gateCommand": "npm run gate"`, or for Node's built-in runner `"node --test test/*.test.mjs"` (on Node 22, `node --test test/` fails: a folder is read as a module). Run it once by hand before the first feature. Agents cannot edit this file, so you do it. Build refuses to pass without it.
 
 3. **Say what it is for.** Before any spec is written, type your intent in the Claude Code prompt (not a terminal), in your own words:
 
@@ -155,6 +155,8 @@ Off by default, so the default path stays short. Turn them on when the risk call
 | The chat does not record your command at all | The session has no plugin hooks, for example one started from another session | In your own terminal, run the same command through the CLI: `node <plugin>/scripts/sdlc.mjs approve <feature> <stage>` (also `intent`, `reject`, `close`, `lane`). Agents are refused this path |
 | An `sdlc` command or a slash command is not recognised | The installed plugin is older than these docs | Update it (section 1) and start a new session |
 | "No gateCommand" at Build | The gate command is not set | Set `gateCommand` in `.ai-sdlc/config.json` (section 2) |
+| "The gate command failed before any test ran" | The command cannot start (a wrong path, a missing tool) | Run it by hand and fix `gateCommand` (section 2) |
+| "RUNTIME CHANGED" after `sdlc gate` | The tests ran on a different Node than the baseline | Compare the counts; look for cancelled or skipped tests |
 | "is not an owner of gate N" | `gateOwners` lists other names | Approve as a listed owner, or change the config |
 | An edit or command is refused with "[ai-sdlc]" | A guardrail: protected branch, secrets, a deploy, a guardrail file, or code before Build | Read the reason; humans run deploys and merges |
 | "is not on origin/main" or "Live:" at Release | The change was deployed from a branch, or the running build is not this release | Merge and push, deploy from main, read the build id again |

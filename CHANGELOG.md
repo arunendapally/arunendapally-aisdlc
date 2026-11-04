@@ -4,6 +4,15 @@ All notable changes to this repository. The format follows [Keep a Changelog](ht
 
 ## [Unreleased]
 
+### A broken gate command is named, and the gate records its runtime
+
+Found in the unit-converter run (that repo's `docs/plugin-feedback.md`, P2 and B1).
+
+- **A gate command that cannot start is named as the command.** `node --test test/` fails on Node 22 before any test runs, and the first Build run read it as a new repo ("Nothing passes yet ... the baseline is 0"). Now the gate says "The gate command failed before any test ran (Cannot find module ...)", asks a person to fix `gateCommand`, and records no baseline.
+- **The gate records the runtime** with each run and with the baseline, and prints "RUNTIME CHANGED" when they differ. A newer Node cancelled 55 of 88 subtests that were never awaited, and nothing said the runtime had changed.
+- **A starter trap, "Subtests that were never awaited",** in the repo template's `standards/traps.md`, and the getting-started guide gives the working `node --test` form.
+- Tests in `tests/gate-runtime.test.mjs`.
+
 ## [0.6.0] - 2026-11-02
 
 Issues [#26](https://github.com/arunendapally/arunendapally-aisdlc/issues/26) to [#29](https://github.com/arunendapally/arunendapally-aisdlc/issues/29), the calculator run's open findings, agile change 2, the rest of the human-asks record, and agent evals that cannot touch the person's accounts.
