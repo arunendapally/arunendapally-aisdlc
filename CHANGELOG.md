@@ -4,6 +4,17 @@ All notable changes to this repository. The format follows [Keep a Changelog](ht
 
 ## [Unreleased]
 
+### Requirements, not solutions
+
+The unit-converter run's PRD named a meta tag, a commit sha, a workflow, a Node module and browser storage in its requirements. The light lane has no Design stage, so the solution had nowhere else to go, and nothing checked.
+
+- **The PRD template says it:** a requirement is what a user or the business can observe, true whatever is built; code, files, APIs, tables, markup, storage, hosting and deploy mechanics go in the design. `Data needed: <fields>` is now `Needs: <information, in plain words>`, and the examples carry no technical detail. The outcome metric is value to users or the business; uptime is a release probe. The template is also the council's redesign: filled examples in comments, sourced claims, no restated sections (Stakeholders, Dependencies and Release criteria are gone).
+- **`## Constraints` in the PRD** (optional) holds solutions a person already chose, with who chose them; no requirement repeats one.
+- **`## Approach` in `tasks.md`** is the light lane's design: what changes, where it lives, the one arguable choice. In the full lane it links `plan.md`. The tech lead writes it before the tasks.
+- **The Plan gate warns** when a requirement line or a scenario step reads like a solution (code in backticks, markup, a file, an endpoint, a status code, or a design word such as module, table, workflow, commit, cookie), and says where it belongs. It never refuses: like the field-name check, it becomes blocking only if it proves reliable.
+- **The product owner** writes needs and passes solution ideas to the architect or tech lead; the tech lead writes the Approach.
+- Tests in `tests/solutions.test.mjs`, golden eval `requirements-not-solutions`, agent eval `product-owner-states-needs-not-solutions`.
+
 ## [0.6.0] - 2026-11-02
 
 Issues [#26](https://github.com/arunendapally/arunendapally-aisdlc/issues/26) to [#29](https://github.com/arunendapally/arunendapally-aisdlc/issues/29), the calculator run's open findings, agile change 2, the rest of the human-asks record, and agent evals that cannot touch the person's accounts.

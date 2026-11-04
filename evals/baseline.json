@@ -114,5 +114,9 @@
   {
     "name": "human-commands-are-never-lost",
     "passed": true
+  },
+  {
+    "name": "requirements-not-solutions",
+    "passed": true
   }
 ]
