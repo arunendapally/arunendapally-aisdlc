@@ -17,7 +17,7 @@ An escaped bug (`sdlc bug <slug> --caused-by <feature>`) or a hotfix owes a less
 ## Starter entries (generic, from real cycles)
 
 ### Subtests that were never awaited
-- **What happened:** tests started subtests with `t.test()` inside a loop without `await`. One Node version ran them; a newer one cancelled them when the parent returned, so 55 of 88 tests stopped running while the suite had been counted green.
+- **What happened:** tests started subtests with `t.test()` inside a loop without `await`. One Node version ran them; a newer one cancelled them when the parent returned: 43 cancelled and 12 failed, so 33 of 88 passed where the suite had been counted green.
 - **How it was found:** the gate went red on a newer Node; the gate now prints "RUNTIME CHANGED" when the runtime differs from the baseline's.
 - **Guard now:** make the parent test `async` and `await` every `t.test()`; a node:test run must report `# cancelled 0`, and the gate fails on any cancelled test because node:test exits non-zero.
 

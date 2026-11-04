@@ -8,9 +8,11 @@ All notable changes to this repository. The format follows [Keep a Changelog](ht
 
 Found in the unit-converter run (that repo's `docs/plugin-feedback.md`, P2 and B1).
 
-- **A gate command that cannot start is named as the command.** `node --test test/` fails on Node 22 before any test runs, and the first Build run read it as a new repo ("Nothing passes yet ... the baseline is 0"). Now the gate says "The gate command failed before any test ran (Cannot find module ...)", asks a person to fix `gateCommand`, and records no baseline.
-- **The gate records the runtime** with each run and with the baseline, and prints "RUNTIME CHANGED" when they differ. A newer Node cancelled 55 of 88 subtests that were never awaited, and nothing said the runtime had changed.
-- **A starter trap, "Subtests that were never awaited",** in the repo template's `standards/traps.md`, and the getting-started guide gives the working `node --test` form.
+- **A gate command that cannot start is named as the command.** `node --test test/` fails on Node 22 before any test runs, and the first Build run read it as a new repo ("Nothing passes yet ... the baseline is 0"). Now, when what is missing is the command's own program or a file or folder it names, the gate says "The gate command failed before any test ran (Cannot find module ...)", asks a person to fix `gateCommand`, records the run as red and sets no baseline. A module a test imports that is not written yet is still the ordinary red-first run, in a new repo and as a bug's repro.
+- **The gate records its runtime:** `runtimeCommand` (default `node --version`, run like the gate) with each run and with the baseline, and prints "RUNTIME CHANGED" when they differ. A newer Node cancelled 43 and failed 12 of 88 subtests that were never awaited, and nothing said the runtime had changed. A green run that raises the baseline moves its runtime too.
+- **The gate clears `NODE_TEST_CONTEXT`** before running, as the proof already did, so a node test runner inside another one runs its tests instead of skipping them.
+- **A starter trap, "Subtests that were never awaited",** in the repo template's `standards/traps.md`, and the getting-started guide gives the quoted `node --test "test/**/*.test.mjs"` form.
+- Not done: `sdlc init-repo` does not run the gate command once; the first `sdlc gate` names a broken one instead.
 - Tests in `tests/gate-runtime.test.mjs`.
 
 ## [0.6.0] - 2026-11-02
