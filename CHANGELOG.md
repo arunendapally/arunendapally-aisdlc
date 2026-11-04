@@ -4,6 +4,10 @@ All notable changes to this repository. The format follows [Keep a Changelog](ht
 
 ## [Unreleased]
 
+## [0.7.0] - 2026-11-04
+
+The unit-converter run's findings, the council on templates, and issue [#25](https://github.com/arunendapally/arunendapally-aisdlc/issues/25). PRs #40 to #47.
+
 ### Issue #25: Spec Kit as input, other agents, browser QA, a second field run
 
 - **`sdlc import-speckit <feature> <spec.md>`** starts the Plan gate from a GitHub Spec Kit spec: functional requirements, acceptance scenarios, assumptions, clarifications and the first success criterion, each with its Spec Kit id. It never overwrites a written PRD; the Plan gate names what Spec Kit does not say. Tests in `tests/speckit.test.mjs`.
