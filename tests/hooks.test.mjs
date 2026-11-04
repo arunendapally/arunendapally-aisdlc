@@ -326,7 +326,7 @@ test('the build gate records a baseline and refuses a request below it', () => {
   s.stage = 4
   s.stages[4] = { enteredAt: s.createdAt }
   fs.writeFileSync(path.join(repo, 'specs', 'demo', 'state.json'), JSON.stringify(s))
-  fill('tasks.md', ['## Tasks'])
+  fill('tasks.md', ['## Approach', '## Tasks'])
   assert.notEqual(sdlc('request', 'demo').status, 0, 'no gate run yet')
   cfg(10)
   assert.equal(sdlc('gate', 'demo').status, 0)

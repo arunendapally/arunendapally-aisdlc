@@ -4,6 +4,41 @@ All notable changes to this repository. The format follows [Keep a Changelog](ht
 
 ## [Unreleased]
 
+### Every test file runs
+
+- **`npm test` runs every `tests/*.test.mjs`,** by a quoted glob that node expands, instead of a hand-kept list. Merging two branches that each added a file to the list dropped one of them silently; now a new test file runs without being listed.
+
+### The proof and the test matrix say only what is true
+
+Found in the unit-converter run (that repo's `docs/plugin-feedback.md`, V1 to V3 and B2).
+
+- **The proof names only criteria a test traces.** It listed all 29 criteria as "failed on the base code and pass here" while six had no test. Now it proves the traced ones and adds "Not proved, no test traces them: AC-21, AC-29."; with none traced it says which criteria still need a test.
+- **Fixed: the proof counted criteria the base already had.** The check that leaves them out wrote `\b` inside a template string, which is a backspace, so it never matched: a second slice of a feature re-proved the first slice's criteria.
+- **A base holding only the init-repo scaffold is greenfield.** The standards, `.github` scripts and `.claude` rules `sdlc init-repo` copies counted as code, so the "Greenfield" note never showed in a new repo.
+- **A Markdown file never names a test.** The plugin's own `standards/traps.md` cited "AC-7", and `sdlc tests` told the product to rename it as a test. The "not a recognised test file" hint now skips `*.md`, and the repo template's `traps.md` names the plugin test by file, not by id.
+- **End-to-end tests do not count toward the PR line limit,** in the gate and in CI alike: exactly the paths the test matrix calls e2e (`e2e/`, `tests/e2e/`, `test/e2e/`, `playwright/`, `*.e2e.*`, `*.e2e-spec.*`). A product folder such as `src/e2e/` still counts.
+- Tests in `tests/proof-accuracy.test.mjs`.
+### Requirements, not solutions
+
+The unit-converter run's PRD named a meta tag, a commit sha, a workflow, a Node module and browser storage in its requirements. The light lane has no Design stage, so the solution had nowhere else to go, and nothing checked.
+
+- **The PRD template says it:** a requirement is what a user or the business can observe, true whatever is built. `Data needed: <fields>` is now `Needs: <information, in plain words>`. The outcome metric is value to users or the business; uptime is a release probe. Each section shows a filled example in its comment instead of prose, with one running example (saved items) whose requirements, non-functional lines and scope agree. The template now has `## Intent` (the request writes the person's words there) and an optional `## Constraints` for solutions a person already chose, with who chose them. Stakeholders and Release criteria are gone (both were optional and restated the brief or the gate); Dependencies stays optional.
+- **`## Approach` in `tasks.md` is required at Build in the light lane:** it is that lane's design (what changes, where it lives, the one arguable choice). In the full lane it is optional and links `plan.md`. `tasks.md` also opens with the spec links, the baseline and the line budget, and each task gets "done when" and "traps" lines.
+- **The Plan gate warns** when a requirement or a scenario step names a mechanism: code in backticks, real markup, a file, an identifier (`saved_items`, `useEffect`), an endpoint, a status code, or named storage or technology (Postgres, React, local storage, GitHub Actions). It reads only signs that are almost never a need, so business words such as branch, queue, table or commit do not fire. In api work the endpoints, status codes and fields are the requirement, and in data work the datasets are, so those signs are skipped. It never refuses. `tests/fixtures/solution-corpus.json` measures it: no need is flagged, and at least 85% of solutions are; add a line whenever it is wrong in a real run.
+- **The product owner** writes needs, asks at most three questions, and passes solution ideas to the architect or tech lead; the tech lead writes the Approach.
+- **Fixed: the CTO's intake did not look at the folder** when told not to run commands. Looking is not running: it reads with Glob, Grep and Read, or read-only `ls`, `find` and `grep` where those tools are missing, and names each file it found.
+- Agent eval `product-owner-assumes-instead-of-asking` now accepts any unconfirmed assumption, not only A1: an assumption the request itself states is rightly confirmed.
+- Tests in `tests/solutions.test.mjs`, golden eval `requirements-not-solutions`, agent eval `product-owner-states-needs-not-solutions`.
+### A broken gate command is named, and the gate records its runtime
+
+Found in the unit-converter run (that repo's `docs/plugin-feedback.md`, P2 and B1).
+
+- **A gate command that cannot start is named as the command.** `node --test test/` fails on Node 22 before any test runs, and the first Build run read it as a new repo ("Nothing passes yet ... the baseline is 0"). Now, when what is missing is the command's own program or a file or folder it names, the gate says "The gate command failed before any test ran (Cannot find module ...)", asks a person to fix `gateCommand`, records the run as red and sets no baseline. A module a test imports that is not written yet is still the ordinary red-first run, in a new repo and as a bug's repro.
+- **The gate records its runtime:** `runtimeCommand` (default `node --version`, run like the gate) with each run and with the baseline, and prints "RUNTIME CHANGED" when they differ. A newer Node cancelled 43 and failed 12 of 88 subtests that were never awaited, and nothing said the runtime had changed. A green run that raises the baseline moves its runtime too.
+- **The gate clears `NODE_TEST_CONTEXT`** before running, as the proof already did, so a node test runner inside another one runs its tests instead of skipping them.
+- **A starter trap, "Subtests that were never awaited",** in the repo template's `standards/traps.md`, and the getting-started guide gives the quoted `node --test "test/**/*.test.mjs"` form.
+- Not done: `sdlc init-repo` does not run the gate command once; the first `sdlc gate` names a broken one instead.
+- Tests in `tests/gate-runtime.test.mjs`.
 ### A read may silence its errors; process substitution is refused
 
 - **Fixed: `ls .ai-sdlc .github/workflows 2>/dev/null` was refused** as a write to a guardrail, and the refusal counted toward the cap that holds the session. Sending output to `/dev/null` (`>/dev/null`, `2>/dev/null`, `&>/dev/null`) or stderr to stdout (`2>&1`) writes no file, so a listed read with it is allowed, and `stat` joins the listed reads. Only those exact bytes count: `2>nul` (a real file in Bash), `2>/DEV/NULL`, a no-break space or any other redirect is still refused. Found in the unit-converter run (G1).
