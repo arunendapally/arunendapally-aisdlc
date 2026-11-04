@@ -1,0 +1,12 @@
+{
+  "name": "product-owner-states-needs-not-solutions",
+  "role": "product-owner",
+  "prompt": "Use the product-owner agent to draft, in under 250 words and without web research or file changes, the requirements for a public one-page unit converter (length, weight, temperature). The owner has already decided it is plain HTML and JavaScript on GitHub Pages, and wants to know when the live page breaks. Print the requirements numbered R1, R2, ..., then a Constraints heading with any constraints.",
+  "mustMatch": [
+    "\\bR-?1\\b|\\bFR-?1\\b|^\\W*1[.)]",
+    "^\\W*Constraints?\\W*$[\\s\\S]*GitHub Pages"
+  ],
+  "mustNotMatch": [
+    "^\\W*(R-?|FR-?)\\d+\\b.*\\b(meta tag|<meta|commit (sha|hash)|workflow|module|endpoint|localStorage|local storage|sessionStorage|GitHub Pages|GitHub Actions|Node)\\b"
+  ]
+}

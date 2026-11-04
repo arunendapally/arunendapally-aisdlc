@@ -3,6 +3,7 @@
 # the @Rn requirement(s) from prd.md it proves, and every PRD requirement has a scenario.
 # Advice it warns about: a narrative (As a ..., I want ..., So that ...); one test level as a hint
 # (@unit, @subsystem, @api, @e2e); Given, one When, Then, in that order; behaviour, not UI mechanics.
+# The example covers R1 and R2 of the PRD template's example; a real feature covers every requirement.
 # Replace the example below with this feature's scenarios.
 
 Feature: Save items for later
@@ -35,5 +36,4 @@ Feature: Save items for later
   Scenario: A saved item that sells out is marked unavailable
     Given "Blue mug" is in the saved list
     When "Blue mug" sells out
-    Then the saved list shows "Blue mug" as unavailable
-    And the shopper can ask to be told when it is back
+    Then within 5 minutes the saved list shows "Blue mug" as unavailable
