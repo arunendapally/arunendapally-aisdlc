@@ -4,6 +4,13 @@ All notable changes to this repository. The format follows [Keep a Changelog](ht
 
 ## [Unreleased]
 
+### Issue #25: Spec Kit as input, other agents, browser QA, a second field run
+
+- **`sdlc import-speckit <feature> <spec.md>`** starts the Plan gate from a GitHub Spec Kit spec: functional requirements, acceptance scenarios, assumptions, clarifications and the first success criterion, each with its Spec Kit id. It never overwrites a written PRD; the Plan gate names what Spec Kit does not say. Tests in `tests/speckit.test.mjs`.
+- **`docs/other-agents.md`** says which guarantees hold when another coding agent, or a person at a terminal, does the work (the CLI's gate checks, the proof, CI and branch protection) and which need Claude Code's hooks (only a person approves, the guardrail files, the refusal loop).
+- **Browser QA** (`docs/decisions/2026-11-04-browser-qa.md`): the product's own committed end-to-end suite proves `@e2e` criteria; the plugin does not drive a browser.
+- **The second field run,** `docs/feedback/2026-11-04-unit-converter-run.md`: what it found and which change fixed each finding.
+
 ### Templates at every stage, and db-design.md as the data contract
 
 A council of five experts drafted each stage's templates, five sceptics tested the drafts against the parsers and against each other, and research on PRDs, Gherkin, C4, design docs, ADRs, release plans and postmortems fed both. The record: `docs/decisions/2026-11-04-templates-at-every-stage.md`.
