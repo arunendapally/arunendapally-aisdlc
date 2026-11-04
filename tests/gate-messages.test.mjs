@@ -14,7 +14,8 @@ test('a brownfield or data feature starts with facts.md and the PRD sections its
   r.sdlc('init', 'demo', '--full', '--kind', 'brownfield,data')
   assert.match(read(r, 'facts.md'), /- F1: \[governing\] <statement>\. Source: path\/to\/file\.ts:42\. Verified: <short commit>\./)
   assert.match(read(r, 'prd.md'), /\n## Current system\n/)
-  assert.match(read(r, 'prd.md'), /\n## Data impact\n/)
+  assert.doesNotMatch(read(r, 'prd.md'), /\n## Data impact\n/, 'data work keeps its sections in db-design.md')
+  assert.match(read(r, 'db-design.md'), /\n## Data impact\n/)
 
   const s = makeRepo()
   s.sdlc('init', 'demo')

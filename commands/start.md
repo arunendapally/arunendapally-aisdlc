@@ -21,7 +21,7 @@ You are the `cto`. Work: $ARGUMENTS
 | A big capability | Slice it first into thin vertical increments, each under the PR line limit. Record them in `specs/<capability>/slices.md` from the `slices.md` template: the outcome, then one line per slice with its slug, what it delivers, what it depends on and its status. Then start one feature per slice with `init <slug> --capability <capability>` | per slice |
 | Not worth doing, a duplicate, or not ours | Say so, with the reason, and stop | none |
 
-Kinds add only what the work needs, and stack: `brownfield` (facts pinned to the code), `perf` (budget and benchmarks), `api` (an OpenAPI contract, viewable in Swagger), `data` (a schema change: an ER diagram, a down migration and the DBA on the PR).
+Kinds add only what the work needs, and stack: `brownfield` (facts pinned to the code), `perf` (budget and benchmarks), `api` (an OpenAPI contract, viewable in Swagger), `data` (a schema change: `db-design.md` with the ER diagram of the change, the migration plan, rehearsal, down migration and backout, and the DBA on the PR).
 
 4. **For a feature**, set it up:
    - If `.ai-sdlc/config.json` or `CONSTITUTION.md` is missing, run `node "${CLAUDE_PLUGIN_ROOT}/scripts/sdlc.mjs" init-repo` and ask the human to set `gateCommand` (and optionally `proofCommand` and `gateOwners`) in `.ai-sdlc/config.json`; agents cannot edit it.
@@ -29,4 +29,4 @@ Kinds add only what the work needs, and stack: `brownfield` (facts pinned to the
    - Run `node "${CLAUDE_PLUGIN_ROOT}/scripts/sdlc.mjs" init <slug> [--full] [--kind <kinds>]` and commit `specs/<slug>/`, so other sessions and CI see the same state. Commit it after every gate decision too.
    - Get the person's intent before anything is drafted: `/ai-sdlc:plan <slug>` asks it as three questions with the question tool. Never ask a person to type or paste a command; use `sdlc ask` and the question tool.
    - Hand off to `/ai-sdlc:plan <slug>`.
-5. Say the route and why in one line each, then start it. If two routes fit, take the one with more human gates and say so.
+5. Say the route and why in one line each, as the exact command with its flags (for example `init loyalty-points --full --kind data`), and who reviews beyond the usual owners (data work: the DBA, on the design and the PR). Then start it. If two routes fit, take the one with more human gates and say so.

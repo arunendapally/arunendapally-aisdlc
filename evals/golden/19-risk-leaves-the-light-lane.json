@@ -34,7 +34,18 @@
         "specs/demo/tasks.md",
         [
           "## Approach",
-          "## Tasks",
+          "## Tasks"
+        ]
+      ]
+    },
+    {
+      "fill": [
+        "specs/demo/db-design.md",
+        [
+          "## Data impact",
+          "## Data model",
+          "## Migration plan (expand-contract)",
+          "## Rehearsal",
           "## Down migration"
         ]
       ]

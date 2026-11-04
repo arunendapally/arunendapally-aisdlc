@@ -1,5 +1,5 @@
 // Contracts a reviewer can see: an ER diagram for data changes and an OpenAPI file for API changes.
-// - erProblems(): the plan's Data model holds a Mermaid erDiagram whose "%% changed:" line names the
+// - erProblems(): db-design.md's Data model holds a Mermaid erDiagram whose "%% changed:" line names the
 //   entities this change adds or alters, each drawn in the diagram. GitHub and Confluence render it.
 // - openapiProblems(): a structural check of an OpenAPI 3 file (a YAML subset: block style, two-space
 //   indent), with no dependencies. Full validation belongs in CI (Redocly or Spectral).
@@ -8,10 +8,10 @@ import { section } from './lib.mjs'
 
 const METHODS = ['get', 'put', 'post', 'delete', 'patch', 'head', 'options', 'trace']
 
-export function erProblems(planText) {
+export function erProblems(planText, file = 'db-design.md') {
   const model = section(planText, '## Data model') ?? ''
   const block = model.match(/```mermaid\s*\n([\s\S]*?)```/)?.[1]
-  if (!block || !/^\s*erDiagram\b/m.test(block)) return ['plan.md "## Data model" has no Mermaid erDiagram: draw the entities this change touches (```mermaid erDiagram ...```)']
+  if (!block || !/^\s*erDiagram\b/m.test(block)) return [`${file} "## Data model" has no Mermaid erDiagram: draw the entities this change touches (\`\`\`mermaid erDiagram ...\`\`\`)`]
   const problems = []
   const entities = new Map()
   for (const m of block.matchAll(/^\s*([A-Za-z_][\w-]*)\s*\{([^}]*)\}/gm)) {
