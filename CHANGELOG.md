@@ -4,6 +4,15 @@ All notable changes to this repository. The format follows [Keep a Changelog](ht
 
 ## [Unreleased]
 
+### Criteria proved at release, checked by hand, or left to their own run
+
+Found in the unit-converter run (that repo's `docs/plugin-feedback.md`, V4 to V6).
+
+- **`@release` on an `@e2e` scenario:** a criterion that can only run against the live system is due at Release, not refused at Verify. Every lane that releases (full, light, hotfix) refuses until a probe line of its own names it with a passing result; the bug and task lanes, which never release, refuse the tag at Verify.
+- **`@manual` on an `@e2e` scenario:** a criterion a person checks passes Verify when the PR's `## Test results` says `Checked by hand: AC-n, <who>, <YYYY-MM-DD>, <how>, pass`, dated no later than today, with no placeholder left. The line may list several criteria. An agent can write it, so the review packet lists every hand-checked and release-time criterion apart, for the person at the merge to judge, and `sdlc tests` counts them.
+- **The tags are chosen one criterion at a time:** only on a scenario (never a Feature or Rule), only on `@e2e`, and never both.
+- **`proofSkipLevels`** (for example `["e2e"]`): the proof, and Verify's check of it, leave those levels' tests to their own run and name the criteria not proved. A proof whose new criteria are all proved another way passes and says so.
+- Tests in `tests/release-criteria.test.mjs`.
 ### Templates at every stage, and db-design.md as the data contract
 
 A council of five experts drafted each stage's templates, five sceptics tested the drafts against the parsers and against each other, and research on PRDs, Gherkin, C4, design docs, ADRs, release plans and postmortems fed both. The record: `docs/decisions/2026-11-04-templates-at-every-stage.md`.

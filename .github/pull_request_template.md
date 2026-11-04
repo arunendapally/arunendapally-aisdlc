@@ -23,7 +23,8 @@ Suite: 412 passed, 0 failed, 0 skipped (baseline 405)
 Proof: sdlc proof saved-items green on the branch, red on the base, 3 test files
 Criteria: 3 of 3 traced at their level (specs/saved-items/test-matrix.md)
 New tests: tests/lists/save.test.ts (AC-1, AC-2), e2e/saved.spec.ts (AC-3)
-Removed, skipped or quarantined: none -->
+Removed, skipped or quarantined: none
+Checked by hand: AC-3, Priya, 2026-11-03, Safari on an iPhone 13, saved list after a sell-out, pass -->
 
 ## Pre-review
 
