@@ -109,6 +109,8 @@ export const DEFAULT_CONFIG = {
   gateOwners: {},
   // The repo's full gate, and how to read the passing test count from its output.
   gateCommand: '',
+  // The runtime the gate's tests run on, recorded with each run (set it to "python --version" and so on).
+  runtimeCommand: 'node --version',
   testCountPattern: '(\\d+)\\s+(?:tests?\\s+)?pass(?:ed|ing)?|pass(?:ed)?[:\\s]+(\\d+)',
   // MCP tools whose names look like they merge, deploy or change settings are denied unless listed in mcpAllow.
   mcpDenyPattern: '(merge|deploy|promote|rollback|release|publish|delete|apply|push|ruleset|protection|secret|setting|permission)',
