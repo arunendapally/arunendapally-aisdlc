@@ -52,14 +52,16 @@ export const citedFacts = text => [...new Set([...text.matchAll(/\b(F\d+)\b/g)].
 export function factsGateProblems(dir, state) {
   const folder = path.join(dir, loadConfig(dir).specsDir, state.feature)
   const file = path.join(folder, 'facts.md')
-  if (!fs.existsSync(file)) return ['facts.md does not exist: pin what is true about the current system to the code (or write "None, because ..." for greenfield)']
+  if (!fs.existsSync(file)) return ['facts.md does not exist: pin what is true about the current system to the code (or write "None, because ..." under "## Facts" for greenfield)']
   const text = fs.readFileSync(file, 'utf8').replace(/<!--[\s\S]*?-->/g, '')
   const { facts, malformed } = parseFacts(text)
   const problems = [...malformed.map(m => `facts.md ${m}`), ...factProblems(dir, facts).map(p => `facts.md: ${p}`)]
   // A malformed fact explains a missing one; do not report the same cause three ways.
   // "None, because" counts only in "## Facts": elsewhere (Not found) it does not stand in for a fact.
   if (!facts.length && !malformed.length && !/None, because\s+\S/i.test(section(text, '## Facts') ?? '')) problems.push('facts.md has no facts: write each as "- F<n>: <statement>. Source: <path:line>. Verified: <commit>." under "## Facts", or "None, because ..." if there is truly no current system')
-  for (const k of ['brownfield', 'data'].filter(k => (state.kinds ?? []).includes(k))) if (!facts.length && !malformed.length) problems.push(`${k} work needs at least one fact about the current system`)
+  // Brownfield work changes a system that exists, so it needs a fact. Data work may be greenfield: a new
+  // store says "None, because ..." under "## Facts".
+  if ((state.kinds ?? []).includes('brownfield') && !facts.length && !malformed.length) problems.push('brownfield work needs at least one fact about the current system')
   // Read what governs before designing against it (ADR-0004, failure F2): one fact is the implementation
   // the design must follow, pinned to code rather than to a document, a schema or a spec.
   const changesWhatExists = ['brownfield', 'data'].some(k => (state.kinds ?? []).includes(k))

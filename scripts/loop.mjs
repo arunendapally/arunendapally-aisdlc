@@ -176,10 +176,28 @@ export function proofProblems(dir, state, artefactText, cfg = loadConfig(dir)) {
   return { problems, warning: null }
 }
 
-// The value on a "Metric:" or "Owner:" line, on that line only, and never a "<placeholder>" (later change 1).
+// The value on a "Metric:" or "Owner:" line, on that line only, and never one holding a "<placeholder>".
 const outcomeValue = (text, label) => {
-  const value = text.match(new RegExp(`${label}:[ \\t]*(.*)`, 'i'))?.[1]?.trim()
-  return value && !/^<[^>]*>$/.test(value) ? value : null
+  const value = text.match(new RegExp(`${label}:(?:\\*\\*)?[ \\t]*(.*)`, 'i'))?.[1]?.replace(/^\*+\s*/, '').trim()
+  return value && !/<[^>]*>/.test(value) ? value : null
+}
+
+// The date a rollback was tested: "Tested: 2026-11-02, how" ("**Tested:**" and "Tested on" too), and
+// not later than today, so a planned date does not count.
+const testedOn = text => {
+  const date = text.match(/\bTested(?::\*\*|:| on)[ \t]*(\d{4}-\d{2}-\d{2})(?!\d)/i)?.[1]
+  return date && date <= new Date().toISOString().slice(0, 10) ? date : null
+}
+
+// A probe's result: the last cell of a table row, or the words after the last ": " of a line, and the
+// first result word there. "5xx rate: ok, was red yesterday" passed; "checkout: FAIL, expected pass" failed.
+const isHeaderRow = (line, next) => /^\s*\|/.test(line) && /^\s*\|[\s:|-]+\|\s*$/.test(next ?? '')
+export function probeResult(line) {
+  if (/^\s*\|[\s:|-]+\|\s*$/.test(line)) return null
+  const cells = /^\s*\|/.test(line) ? line.split('|').map(c => c.trim()).filter(Boolean) : null
+  const where = cells ? cells[cells.length - 1] ?? '' : line.includes(': ') ? line.slice(line.lastIndexOf(': ') + 2) : line
+  const word = where.match(/\b(pass(ed)?|ok|green|fail(ed)?|red)\b/i)?.[1]
+  return word ? (/^(fail(ed)?|red)$/i.test(word) ? 'fail' : 'pass') : null
 }
 
 // Release: is it safe to ship (problems block), and is what we know still true (warnings)?
@@ -193,13 +211,11 @@ export function releaseProblems(dir, state, artefactText, cfg = loadConfig(dir))
   if (['full', 'light'].includes(state.lane)) {
     const rollback = section(artefactText, '## Rollback (tested)') ?? ''
     // The date the rollback ran, on a "Tested:" line, never a planned one (later change 2).
-    if (!/\bTested:[ \t]*\d{4}-\d{2}-\d{2}\b/i.test(rollback) || /\bTested:[^\n]*\b(not|planned|will|to be)\b/i.test(rollback)) problems.push('the rollback has no "Tested: <date>, <how>" line: test the rollback before release')
+    if (!testedOn(rollback)) problems.push('the rollback has no "Tested: <date>, <how>" line: test the rollback before release')
     const probes = section(artefactText, '## Probes') ?? ''
     if (!/\b(pass(ed)?|ok|green|fail(ed)?|red)\b/i.test(probes)) problems.push('"## Probes" records no result (pass or fail for each probe)')
-    // A probe's result is the last result word on its line: "a failed payment is retried: pass" passed.
-    for (const line of probes.split('\n')) {
-      const results = [...line.matchAll(/\b(pass(ed)?|ok|green|fail(ed)?|red)\b/gi)]
-      if (results.length && /^(fail(ed)?|red)$/i.test(results[results.length - 1][1])) problems.push(`a probe failed: ${line.replace(/\s+/g, ' ').trim().slice(0, 120)}. Fix it or roll back; a release with a failed probe is not done`)
+    for (const line of probes.split('\n').filter((l, i, all) => !isHeaderRow(l, all[i + 1]))) {
+      if (probeResult(line) === 'fail') problems.push(`a probe failed: ${line.replace(/\s+/g, ' ').trim().slice(0, 120)}. Fix it or roll back; a release with a failed probe is not done`)
     }
     const outcome = section(artefactText, '## Outcome metric') ?? ''
     const none = /Metric:[ \t]*None, because[ \t]+\S/i.test(outcome)
