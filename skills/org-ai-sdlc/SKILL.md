@@ -21,7 +21,7 @@ The CTO first looks for drafts, requirements, architecture notes and code, and i
 | A migration that alters or drops data, a high-risk path, a new datastore, dependency or service | a feature: `init <slug> --full` | full |
 | Big capability | slice it into `specs/<capability>/slices.md` (a record, not a gate), then `init <slug> --capability <capability>` per slice | per slice |
 
-Kinds stack and only add what the work needs: `brownfield` (facts), `perf` (budget and benchmarks), `api` (OpenAPI), `data` (down migration, the DBA on the PR).
+Kinds stack and only add what the work needs: `brownfield` (facts), `perf` (budget and benchmarks), `api` (OpenAPI), `data` (`db-design.md`, the DBA on the PR).
 
 ## Lanes
 
@@ -42,7 +42,7 @@ Build passes on checks in every lane. Templates are in `templates/`; write "None
 - Only a human records a decision by typing `sdlc approve <slug> <stage>`, `sdlc reject <slug> <stage> <reason>` or `sdlc close <slug> <reason>` (retire work that will not ship). The approval moves the feature on. Never claim a gate is passed. Approval needs a request first.
 - **Ask, never make people type commands.** When a gate waits or the intent is missing, run `sdlc.mjs ask <slug>` and put its question to the person with the question tool (AskUserQuestion). Their click is recorded with the same checks as a typed command; never fill in the answer. Typed `sdlc ...` commands remain a fallback.
 - **Autonomy** (optional, per repo): a person types `sdlc autonomy on <why this repo needs no person at its gates>`. Then every `request` passes on its checks, recorded as granted by them; risky work moves itself to the full lane; `sdlc merge <slug>` lands the reviewed commit on main, fast-forward only. Checks, guards and spec drift work exactly as without it. `sdlc autonomy off` takes it back.
-- If the spec (`prd.md` or `acceptance.feature`) changes after Plan was approved, or `plan.md` after Design, the next request sends the feature back to that stage for a person to approve again. That is the way back: change the spec when it is wrong, never build around it.
+- If the spec (`prd.md` or `acceptance.feature`) changes after Plan was approved, or `plan.md` (or `db-design.md`'s data model and migration plan) after Design, the next request sends the feature back to that stage for a person to approve again. That is the way back: change the spec when it is wrong, never build around it.
 - One feature, one folder (`specs/<slug>/`), one branch. `gate`, `proof`, `review` and a Build or Verify request refuse on any other branch.
 - `sdlc.mjs gate <slug>` runs the full gate. The first run in Build is the baseline.
 - Two different loops (ADR-0004):
@@ -54,7 +54,7 @@ Build passes on checks in every lane. Templates are in `templates/`; write "None
 ## What each gate checks
 
 - **Plan (one approval):** the questions asked before drafting (no recommended answer on intent, taste or risk; an answer the person accepted wholesale, "go with your recommendations", is written `A: <answer> (recommended, accepted)` and its assumption stays `[unconfirmed]`); every assumption `[confirmed]` or `[unconfirmed]`; numbered requirements R1, R2 ... that state needs, never solutions (code, files, APIs, tables, markup, storage, hosting and deploy mechanics in a requirement or a scenario step draw a warning; a solution a person chose goes in `## Constraints`, and the light lane's design goes in `## Approach` in `tasks.md`); `## Non-functional requirements` with one line each for performance, security and privacy, accessibility, and limits and quotas, each a requirement or "None, because ..." (in the light lane, one that touches auth, payments or personal data needs the full lane); `acceptance.feature` with a scenario per requirement, each tagged `@AC-n @Rn` (a level tag is a hint; style issues only warn; `sdlc.mjs gherkin <slug>`). Brownfield and data work also pin `facts.md` to `file:line` at a commit.
-- **Design (full lane):** each ADR the plan names weighs two options and records its review in `## Review`; a breaking API change is declared in `## Contracts`; `## Error handling` and `## Data and tenancy` are answered or "None, because ...". Field names in `acceptance.feature` and `tasks.md` that `openapi.yaml` does not define only warn, at Design and Build. ER diagrams and OpenAPI style only warn.
+- **Design (full lane):** each ADR the plan names weighs two options and records its review in `## Review`; a breaking API change is declared in `## Contracts`; `## Error handling` and `## Data and tenancy` are answered or "None, because ...". Field names in `acceptance.feature` and `tasks.md` that `openapi.yaml` does not define only warn, at Design and Build. ER diagrams and OpenAPI style only warn. Data work keeps one document the DBA owns, `db-design.md` (the data contract, as `openapi.yaml` is the API's): data impact at Plan, the ER diagram of the change and the migration plan at Design (at Build in the light lane), rehearsal and down migration at Build, backout at Release.
 - **Work across repos:** the architect writes `architecture-overview.md` with its `## Systems under change` table before the tasks; Build checks it both ways (every repo a task names is in it, every new or modified system has a task), and `sdlc.mjs packets <slug>` prints each repo's tasks, scenarios and cross-repo waits in deploy order.
 - **Build:** the gate green at or above the baseline, the diff under the limit, every task in `tasks.md` with `depends-on: [..]` naming only real tasks and no loop; in the light lane, no destructive migration, no high-risk path and no task in a second repo (`repos: [..]` in `tasks.md`): each moves the work up to the full lane.
 - **Verify:** every criterion has a test (`sdlc.mjs tests <slug>`); the test proof (`sdlc.mjs proof <slug>`: green here, red on the base code, test files locked); the review packet (rebuilt for you at HEAD) and `review.md` with nothing serious open; `## Pre-review` with `Risk:`, `Open findings: 0`, `Look here first:` and `Lenses run:`. No `proofCommand`: say under `## Not verified` that the proof did not run.
@@ -85,7 +85,7 @@ Record the outcome when its owner has read it: `sdlc.mjs outcome <slug> met|miss
 
 ## Knowledge
 
-Before changing an area: `sdlc.mjs knowledge for <files>` and read what it lists. After learning something durable: write or update a page in `knowledge/` (frontmatter: name, description, type, sources, verified commit, confidence).
+Before changing an area: `sdlc.mjs knowledge for <files>` and read what it lists. After learning something durable: write or update a page in `knowledge/` from the template (frontmatter: type, title, description, sources, generated, verified, verified_commit, confidence; `sdlc knowledge check` validates it).
 
 ## Talking to people
 

@@ -379,10 +379,10 @@ test('AC-17 data work shows an ER diagram that marks the entities it changes', (
   const r = makeRepo('feature/loyalty')
   r.sdlc('init', 'loyalty', '--kind', 'data')
   r.setState('loyalty', { stage: 3 })
-  const plan = model => r.put('specs/loyalty/plan.md', `## Data model\n\n${model}\n\n## Decisions\n\nNone, because no ADR.\n`)
+  const plan = model => r.put('specs/loyalty/db-design.md', `## Data impact\n\nNew points per customer.\n\n## Data model\n\n${model}\n`)
   const er = () => r.sdlc('request', 'loyalty').out
   plan('A new table for points.')
-  assert.match(er(), /ER diagram: plan\.md "## Data model" has no Mermaid erDiagram/)
+  assert.match(er(), /ER diagram: db-design\.md "## Data model" has no Mermaid erDiagram/)
   plan('```mermaid\nerDiagram\n  CUSTOMERS {\n    uuid id PK\n  }\n  CUSTOMERS ||--o| LOYALTY_POINTS : earns\n```')
   let out = er()
   assert.match(out, /no "%% changed: ENTITY, \.\.\." line/)
@@ -392,13 +392,13 @@ test('AC-17 data work shows an ER diagram that marks the entities it changes', (
   assert.doesNotMatch(er(), /ER diagram/)
   r.put('db/migrations/003_points.sql', 'create table loyalty_points (customer_id uuid, balance int);\n')
   out = r.sdlc('review', 'loyalty').out
-  assert.doesNotMatch(out, /ER diagram did not/, 'the plan changed with the schema')
+  assert.doesNotMatch(out, /ER diagram did not/, 'db-design.md changed with the schema')
   r.git('add', '.')
   r.git('commit', '-m', 'points')
-  r.git('branch', '-f', 'main') // the plan is now on main; the next migration comes without it
+  r.git('branch', '-f', 'main') // db-design.md is now on main; the next migration comes without it
   r.put('db/migrations/004_more.sql', 'alter table loyalty_points add tier text;\n')
   out = r.sdlc('review', 'loyalty').out
-  assert.match(out, /004_more\.sql.*schema changed but the plan and its ER diagram did not/)
+  assert.match(out, /004_more\.sql.*schema changed but db-design\.md and its ER diagram did not/)
 })
 
 test('AC-18 API work has a valid OpenAPI contract, and breaking changes must be declared', () => {

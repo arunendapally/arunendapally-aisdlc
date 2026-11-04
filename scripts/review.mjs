@@ -77,7 +77,8 @@ export function packet(dir, state) {
   const cfg = loadConfig(dir)
   const base = cfg.protectedBranches.map(b => git(`merge-base ${b} HEAD`, dir)).find(Boolean)
   const allChanged = changedFiles(dir, cfg)
-  const planChanged = allChanged.some(f => f.file === `${cfg.specsDir}/${state.feature}/plan.md`)
+  // The ER diagram lives in db-design.md (the data contract); a plan.md change still counts for old features.
+  const planChanged = allChanged.some(f => [`${cfg.specsDir}/${state.feature}/db-design.md`, `${cfg.specsDir}/${state.feature}/plan.md`].includes(f.file))
   const files = allChanged.filter(f => !f.file.startsWith('.ai-sdlc/') && (!f.file.startsWith(`${cfg.specsDir}/`) || CONTRACT.test(f.file)))
   const added = base ? addedLines(dir, base) : {}
   const testLevels = levels(dir)
@@ -107,7 +108,7 @@ export function packet(dir, state) {
     if (matches(f.file, cfg.highRiskPaths)) signals.push('high-risk path')
     if (deps[f.file]?.changed) signals.push('dependency change')
     if (SCHEMA.test(f.file)) signals.push('schema or data change')
-    if (SCHEMA.test(f.file) && !planChanged) signals.push('schema changed but the plan and its ER diagram did not')
+    if (SCHEMA.test(f.file) && !planChanged) signals.push('schema changed but db-design.md and its ER diagram did not')
     if (CONTRACT.test(f.file)) signals.push('API contract change')
     if (PLATFORM.test(f.file)) signals.push('CI or infrastructure')
     const stem = path.basename(f.file).replace(/\.[^.]+$/, '')

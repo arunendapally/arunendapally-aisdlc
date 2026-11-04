@@ -178,9 +178,10 @@ const contractProblems = state => {
   const folder = path.join(dir, loadConfig(dir).specsDir, state.feature)
   const plan = path.join(folder, 'plan.md')
   const planText = fs.existsSync(plan) ? fs.readFileSync(plan, 'utf8') : ''
+  const db = path.join(folder, 'db-design.md')
   const problems = []
   const warnings = []
-  if (kinds.includes('data')) warnings.push(...erProblems(planText).map(p => `ER diagram: ${p}`))
+  if (kinds.includes('data')) warnings.push(...erProblems(fs.existsSync(db) ? fs.readFileSync(db, 'utf8') : '').map(p => `ER diagram: ${p}`))
   if (kinds.includes('api')) {
     const file = openapiFile(state)
     if (!fs.existsSync(file)) problems.push(`no ${path.relative(dir, file).split(path.sep).join('/')}: API work needs its OpenAPI contract (sdlc api ${state.feature})`)
@@ -204,6 +205,8 @@ const scaffoldKinds = state => {
   if (!fs.existsSync(prd)) return
   let text = fs.readFileSync(prd, 'utf8')
   for (const k of state.kinds ?? []) {
+    // A kind with its own document (data: db-design.md) starts it from the template instead.
+    if (KINDS[k]?.artefact) { copyTemplate(dir, feature, KINDS[k].artefact); continue }
     for (const h of KINDS[k]?.headings?.[1] ?? []) if (!text.split(/\r?\n/).some(l => l.trim() === h)) text += `\n${h}\n\n<!-- Required for ${k} work. -->\n`
   }
   fs.writeFileSync(prd, text)
@@ -373,6 +376,8 @@ const commands = {
       missing.push(...systemProblems(state).filter(p => p.startsWith('architecture-overview.md:') && p.includes('change type')))
     }
     if (state.stage === 4 && ['full', 'light'].includes(state.lane)) {
+      // The light lane has no Design stage, so its data model is first checked here.
+      if (state.lane === 'light') warnings.push(...contractProblems({ ...state, kinds: (state.kinds ?? []).filter(k => k === 'data') }).warnings)
       const tasks = path.join(dir, cfg.specsDir, feature, 'tasks.md')
       if (fs.existsSync(tasks)) missing.push(...taskProblems(fs.readFileSync(tasks, 'utf8')))
       warnings.push(...fieldWarnings(state))
