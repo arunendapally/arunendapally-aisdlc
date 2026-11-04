@@ -57,7 +57,7 @@ Start anything with `/ai-sdlc:start <what you want>`. The CTO reads the code and
 | brownfield | the current system in the PRD, facts pinned to the code, characterisation tests before changing behaviour |
 | perf | a performance budget, a benchmark before, the same benchmark after |
 | api | the API changes in the PRD and an OpenAPI contract; breaking changes must be declared |
-| data | data impact and facts, a down migration, the DBA on the PR; in the full lane also an expand-contract plan, a rehearsal and a backout |
+| data | facts, and `db-design.md`, the data contract the DBA owns: data impact at Plan, the ER diagram of the change and an expand-contract plan at Design (at Build in the light lane), a rehearsal and a down migration at Build, a backout at Release; the DBA on the PR |
 
 A change to migrations or SQL that is not marked as data work cannot pass its gate. Agents may add a kind but never remove one.
 

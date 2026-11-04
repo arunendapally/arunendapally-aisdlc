@@ -193,9 +193,11 @@ const contractProblems = state => {
   const folder = path.join(dir, loadConfig(dir).specsDir, state.feature)
   const plan = path.join(folder, 'plan.md')
   const planText = fs.existsSync(plan) ? fs.readFileSync(plan, 'utf8') : ''
+  const db = path.join(folder, 'db-design.md')
   const problems = []
   const warnings = []
-  if (kinds.includes('data')) warnings.push(...erProblems(planText).map(p => `ER diagram: ${p}`))
+  // The ER diagram is in db-design.md, or in plan.md for a data feature started before it.
+  if (kinds.includes('data')) warnings.push(...erProblems(state.dataDoc ? (fs.existsSync(db) ? fs.readFileSync(db, 'utf8') : '') : planText, state.dataDoc ? 'db-design.md' : 'plan.md').map(p => `ER diagram: ${p}`))
   if (kinds.includes('api')) {
     const file = openapiFile(state)
     if (!fs.existsSync(file)) problems.push(`no ${path.relative(dir, file).split(path.sep).join('/')}: API work needs its OpenAPI contract (sdlc api ${state.feature})`)
@@ -219,6 +221,13 @@ const scaffoldKinds = state => {
   if (!fs.existsSync(prd)) return
   let text = fs.readFileSync(prd, 'utf8')
   for (const k of state.kinds ?? []) {
+    // A kind with its own document (data: db-design.md) starts it from the template instead, and the
+    // feature is stamped so the gates read that document; a feature without the stamp keeps the old homes.
+    if (KINDS[k]?.artefact) {
+      copyTemplate(dir, feature, KINDS[k].artefact)
+      if (k === 'data' && !state.dataDoc) { state.dataDoc = true; writeState(dir, state) }
+      continue
+    }
     for (const h of KINDS[k]?.headings?.[1] ?? []) if (!text.split(/\r?\n/).some(l => l.trim() === h)) text += `\n${h}\n\n<!-- Required for ${k} work. -->\n`
   }
   fs.writeFileSync(prd, text)
@@ -262,6 +271,8 @@ const commands = {
     const add = rest[0]
     if (!KINDS[add]) fail(`Kinds: ${Object.keys(KINDS).join(', ')}`)
     if (add === 'data' && !['full', 'light'].includes(state.lane)) fail('Data work is a feature, so the DBA reviews it. Start it with: sdlc init <slug> --kind data')
+    // A kind it already has changes nothing: a data feature from before db-design.md keeps its sections.
+    if ((state.kinds ?? []).includes(add)) return console.log(`${feature} is already: ${state.kinds.join(', ')}.`)
     state.kinds = [...new Set([...(state.kinds ?? []), add])]
     writeState(dir, state)
     scaffoldKinds(state)
@@ -292,7 +303,9 @@ const commands = {
     const next = n => (granted ? `Request gate ${n} again: it passes on its checks under autonomy.` : `Request gate ${n} again so a person approves the new version.`)
     // A spec or plan edited after it was approved has not been seen by a person: back to that stage,
     // not on to ship. The approvals after it went with the old version, so they go too.
-    const drifted = [[1, 'Plan', 'the spec (prd.md or acceptance.feature)'], [3, 'Design', 'the plan (plan.md)']]
+    const drifted = (state.dataDoc
+      ? [[1, 'Plan', 'the spec (prd.md, acceptance.feature, or db-design.md "## Data impact")'], [3, 'Design', 'the design (plan.md, or db-design.md "## Data model" or "## Migration plan (expand-contract)")']]
+      : [[1, 'Plan', 'the spec (prd.md or acceptance.feature)'], [3, 'Design', 'the plan (plan.md)']])
       .find(([s]) => state.stage > s && state.gates[s]?.status === 'approved' && state.gates[s].fingerprint && state.gates[s].fingerprint !== gateFingerprint(dir, state, s, cfg))
     if (drifted) {
       const [back, name, what] = drifted
@@ -317,7 +330,7 @@ const commands = {
     }
     if ([4, 5].includes(state.stage) && !(state.kinds ?? []).includes('data')) {
       const schema = changedFiles(dir, cfg).filter(f => matches(f.file, ['**/migrations/**', '**/*.sql', '**/schema.prisma'])).map(f => f.file)
-      if (schema.length) missing.push(`${schema.join(', ')} change the schema: this is data work. Run "sdlc kind ${feature} data" (the DBA reviews the PR)`)
+      if (schema.length) missing.push(`${schema.join(', ')} change the schema: this is data work. Run "sdlc kind ${feature} data" (the DBA reviews the PR); it starts db-design.md, and its "## Data impact" is part of the spec, so filling it sends the spec back to Plan for approval`)
     }
     // The light lane is for additive, low-risk work: altering or dropping data, or a high-risk path,
     // needs the Design gate of the full lane.
@@ -388,6 +401,8 @@ const commands = {
       missing.push(...systemProblems(state).filter(p => p.startsWith('architecture-overview.md:') && p.includes('change type')))
     }
     if (state.stage === 4 && ['full', 'light'].includes(state.lane)) {
+      // The light lane has no Design stage, so its data model is first checked here.
+      if (state.lane === 'light') warnings.push(...contractProblems({ ...state, kinds: (state.kinds ?? []).filter(k => k === 'data') }).warnings)
       const tasks = path.join(dir, cfg.specsDir, feature, 'tasks.md')
       if (fs.existsSync(tasks)) missing.push(...taskProblems(fs.readFileSync(tasks, 'utf8')))
       warnings.push(...fieldWarnings(state))
@@ -529,7 +544,7 @@ const commands = {
       return console.log(JSON.stringify({
         questions: [{
           header: `Gate ${state.stage}`,
-          question: `Approve ${name} for ${feature}?${changed ? ` Changed since v${revision}: ${changed.trim()}` : ''} It covers ${loadConfig(dir).specsDir}/${feature}/${spec.artefact}.${intent} [gate ${feature} ${state.stage} ${(gate.fingerprint ?? '').slice(0, 8)}]`,
+          question: `Approve ${name} for ${feature}?${changed ? ` Changed since v${revision}: ${changed.trim()}` : ''} It covers ${[spec.artefact, ...Object.keys(spec.docs ?? {})].map(f => `${loadConfig(dir).specsDir}/${feature}/${f}`).join(' and ')}.${intent} [gate ${feature} ${state.stage} ${(gate.fingerprint ?? '').slice(0, 8)}]`,
           multiSelect: false,
           options: [
             { label: 'Approve', description: 'Record your approval; the feature moves on by itself.' },

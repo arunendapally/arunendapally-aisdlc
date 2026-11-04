@@ -55,8 +55,14 @@ export const KINDS = {
   api: { headings: { 1: ['## API changes'] } },
   // An additive migration runs in the light lane with a down migration and the DBA on the PR. One that
   // alters or drops what exists needs the full lane (see destructiveMigrations).
+  // Data work keeps one document the DBA owns, db-design.md, the data contract as openapi.yaml is the
+  // API's. Its sections are due stage by stage and stay due, so the light lane, which has no Design
+  // stage, is asked for the data model and migration plan at Build.
+  // A feature started before db-design.md (no state.dataDoc) keeps the old homes, so its approvals hold.
   data: {
-    headings: { 1: ['## Data impact'], 3: ['## Migration plan (expand-contract)', '## Rehearsal'], 4: ['## Down migration'], 6: ['## Backout'] },
+    artefact: 'db-design.md',
+    headings: { 1: ['## Data impact'], 3: ['## Data model', '## Migration plan (expand-contract)'], 4: ['## Rehearsal', '## Down migration'], 6: ['## Backout'] },
+    legacy: { 1: ['## Data impact'], 3: ['## Migration plan (expand-contract)', '## Rehearsal'], 4: ['## Down migration'], 6: ['## Backout'] },
     owners: { 3: 'DBA', 5: 'DBA', 6: 'DBA' },
   },
 }
@@ -72,10 +78,18 @@ export function destructiveMigrations(dir, cfg = loadConfig(dir)) {
 // A gate the trust ledger promoted runs on checks, unless the error budget is frozen.
 export function stageSpec(state, stage = state.stage, trusted = []) {
   const lane = LANES[state.lane] ?? LANES.full
+  // A data feature started before db-design.md keeps its sections in the stage documents (legacy).
   const kinds = (state.kinds ?? []).map(k => KINDS[k]).filter(Boolean)
-  // Kind sections land in the lane's artefact. A one-document lane (bug, task, hotfix) carries
+    .map(k => (k.artefact && k.legacy && !state.dataDoc ? { ...k, artefact: undefined, headings: k.legacy } : k))
+  // A kind with its own document checks every section due up to this stage, in that document.
+  const docs = {}
+  for (const k of kinds.filter(k => k.artefact)) {
+    const due = Object.entries(k.headings).filter(([s]) => Number(s) <= stage).flatMap(([, h]) => h)
+    if (due.length) docs[k.artefact] = [...new Set([...(docs[k.artefact] ?? []), ...due])]
+  }
+  // Other kind sections land in the lane's artefact. A one-document lane (bug, task, hotfix) carries
   // every kind section up to the current stage, since there is no earlier document to hold them.
-  const extra = kinds.flatMap(k => Object.entries(k.headings ?? {})
+  const extra = kinds.filter(k => !k.artefact).flatMap(k => Object.entries(k.headings ?? {})
     .filter(([s]) => lane.artefact ? Number(s) <= stage && lane.stages.includes(stage) : Number(s) === stage)
     .flatMap(([, h]) => h))
   const owners = [lane.owners?.[stage] ?? STAGES[stage].owner, ...kinds.map(k => k.owners?.[stage]).filter(Boolean)]
@@ -83,6 +97,7 @@ export function stageSpec(state, stage = state.stage, trusted = []) {
     name: STAGES[stage].name,
     artefact: lane.artefact ?? STAGES[stage].artefact,
     headings: [...new Set([...(lane.headings?.[stage] ?? STAGES[stage].headings), ...extra])],
+    docs,
     owner: owners.join(' + '),
     isAuto: (lane.auto ?? []).includes(stage) || trusted.includes(`${state.lane}:${stage}`),
   }
@@ -252,15 +267,21 @@ const HINTS = {
 // Sections the stage's artefact must hold, each with real content (template comments do
 // not count; write "None, because ..." when a section does not apply).
 export function missingHeadings(dir, state, stage = state.stage) {
-  const { artefact, headings } = stageSpec(state, stage)
-  const file = path.join(dir, loadConfig(dir).specsDir, state.feature, artefact)
-  if (!fs.existsSync(file)) return [`${artefact} does not exist`]
+  const { artefact, headings, docs } = stageSpec(state, stage)
   const problems = []
-  for (const h of headings) {
-    const body = section(fs.readFileSync(file, 'utf8'), h)
-    const hint = HINTS[h] ? `: ${HINTS[h]}` : ''
-    if (body === null) problems.push(`${artefact} has no "${h}" section${hint}`)
-    else if (!body) problems.push(`${artefact} section "${h}" is empty${hint}`)
+  for (const [doc, due] of [[artefact, headings], ...Object.entries(docs ?? {})]) {
+    const file = path.join(dir, loadConfig(dir).specsDir, state.feature, doc)
+    if (!fs.existsSync(file)) {
+      problems.push(doc === artefact ? `${doc} does not exist` : `${doc} does not exist: start it from the template with "sdlc kind ${state.feature} data"`)
+      continue
+    }
+    const text = fs.readFileSync(file, 'utf8')
+    for (const h of due) {
+      const body = section(text, h)
+      const hint = HINTS[h] ? `: ${HINTS[h]}` : ''
+      if (body === null) problems.push(`${doc} has no "${h}" section${hint}`)
+      else if (!body) problems.push(`${doc} section "${h}" is empty${hint}`)
+    }
   }
   return problems
 }

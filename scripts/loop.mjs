@@ -439,8 +439,12 @@ export function gateFingerprint(dir, state, stage, cfg = loadConfig(dir)) {
   const read = f => (fs.existsSync(path.join(folder, f)) ? fs.readFileSync(path.join(folder, f), 'utf8').replace(/\r\n/g, '\n') : '')
   // The intent is part of what Plan approves, so a new one lapses a waiting gate 1.
   const intent = state.intent ? JSON.stringify([state.intent.change, state.intent.smallest, state.intent.dropIf]) : ''
-  if (stage === 1) return sha256(read('prd.md') + read('acceptance.feature') + intent)
-  if (stage === 3) return sha256(read('plan.md'))
+  // db-design.md's sections approved at Plan and Design; its Build and Release sections may grow later
+  // without lapsing an approval.
+  // Nothing when the feature has no db-design.md, so other features hash exactly as before.
+  const db = (...hs) => (state.dataDoc ? hs.map(h => `${h}\n${section(read('db-design.md'), h) ?? ''}`).join('\n') : '')
+  if (stage === 1) return sha256(read('prd.md') + read('acceptance.feature') + intent + db('## Data impact'))
+  if (stage === 3) return sha256(read('plan.md') + db('## Data model', '## Migration plan (expand-contract)'))
   const files = changedFiles(dir, cfg).map(f => f.file).filter(f => !f.startsWith(`${cfg.specsDir}/`) && !f.startsWith('.ai-sdlc/')).sort()
   const hashes = contentHashes(dir, files)
   return sha256(files.map(f => `${f}:${hashes[f] ?? 'deleted'}`).join('\n'))
