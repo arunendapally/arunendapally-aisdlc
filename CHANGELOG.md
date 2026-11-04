@@ -4,6 +4,17 @@ All notable changes to this repository. The format follows [Keep a Changelog](ht
 
 ## [Unreleased]
 
+### Checks that passed on what nobody wrote
+
+From the council on templates (its later changes 1 to 3).
+
+- **A value must be on its own line.** `Metric:`, `Owner:`, `Risk:`, `Open findings:`, `Lenses run:` and `Revert:` read across a line break, so an empty one passed on the next line's text, and the outcome follow-up recorded "Owner: Priya" as the metric. A value holding a `<placeholder>` is not a value either, and `**Metric:**` is read without its stars.
+- **A failed probe stops the release.** "## Probes" passed on any result word, "fail" included. A probe's result is read from its last table cell, or from the words after its last ": ": "5xx rate: ok, was red yesterday" passed, "checkout: FAIL, expected pass" failed. A table's header row is not a probe.
+- **A rollback is tested on a date it ran.** "Not tested yet, planned 2026-11-05" passed. Now the date must follow "Tested:" ("**Tested:**" and "Tested on" too) and be no later than today.
+- **"None, because" in `facts.md` counts only under "## Facts".** Under Not found it passed a feature with no facts. Brownfield work still needs a fact; greenfield data work may say "None, because ..." under "## Facts".
+- Considered, not done: running the full-lane check on a "None, because" security reason. A pattern cannot tell "no personal data is stored" from a reason that touches it, and the first is a deliberate light-lane answer (`tests/nonfunctional.test.mjs`).
+- Tests in `tests/harden.test.mjs`; golden eval `release-needs-tested-rollback` gains a failed probe and a planned date.
+
 ### Every test file runs
 
 - **`npm test` runs every `tests/*.test.mjs`,** by a quoted glob that node expands, instead of a hand-kept list. Merging two branches that each added a file to the list dropped one of them silently; now a new test file runs without being listed.
