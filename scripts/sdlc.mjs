@@ -93,6 +93,21 @@ const taskProblems = text => {
   }
   return problems
 }
+// What the gate command needs and cannot find: its own program, or a file or folder it names. A module a
+// test imports is not the command's fault: that is how a red-first run looks.
+function commandBroken(command, out) {
+  const tokens = command.match(/"[^"]*"|'[^']*'|\S+/g)?.map(t => t.replace(/^["']|["']$/g, '')) ?? []
+  const program = tokens[0]
+  const notFound = out.match(/(?:^|\s|:)(\S+): (?:command )?not found|'(\S+)' is not recognized as an internal or external command/m)
+  if (notFound && [notFound[1], notFound[2]].includes(program)) return notFound[0].trim()
+  const named = new Set(tokens.slice(1).filter(t => !t.startsWith('-')).map(t => path.resolve(dir, t).replace(/[\\/]+$/, '')))
+  for (const m of out.matchAll(/Cannot find module '([^']+)'|Could not find '([^']+)'/g)) {
+    const missing = path.resolve(dir, m[1] ?? m[2]).replace(/[\\/]+$/, '')
+    if (named.has(missing)) return m[0]
+  }
+  return null
+}
+
 // Field names the feature's contract does not define: a warning at Design and Build, never a refusal.
 const fieldWarnings = state => {
   const folder = path.join(dir, loadConfig(dir).specsDir, state.feature)
@@ -570,7 +585,10 @@ const commands = {
     if (!Number.isInteger(repeats) || repeats < 1 || repeats > 20) fail('--repeat takes a whole number from 1 to 20.')
     const runs = []
     for (let i = 0; i < repeats; i++) {
-      const r = spawnSync(gateCommand, { cwd: dir, shell: true, encoding: 'utf8' })
+      // A node test runner inside another one reports to its parent and runs nothing, as in the proof.
+      const env = { ...process.env }
+      delete env.NODE_TEST_CONTEXT
+      const r = spawnSync(gateCommand, { cwd: dir, env, shell: true, encoding: 'utf8' })
       const out = `${r.stdout ?? ''}${r.stderr ?? ''}`
       const counts = [...out.matchAll(new RegExp(testCountPattern, 'gi'))].map(m => Number(m[1] ?? m[2]))
       const leak = dataCheckCommand ? spawnSync(dataCheckCommand, { cwd: dir, shell: true, encoding: 'utf8' }) : null
@@ -584,13 +602,29 @@ const commands = {
     const ok = runs.every(r => r.ok) && !leaked
     const now = new Date().toISOString()
     const hadGreen = state.gateRuns?.[state.stage]?.ok
-    state.gateRuns = { ...state.gateRuns, [state.stage]: { ok, count, at: now, runs: runs.length, ...(flaky ? { flaky } : {}), ...(leaked ? { leaked } : {}) } }
+    // The runtime that ran the tests (finding B1): a newer Node cancelled subtests an older one ran.
+    // runtimeCommand runs like the gate, in the repo's shell, so a version manager's choice is the one seen.
+    const { runtimeCommand } = loadConfig(dir)
+    const rt = runtimeCommand ? spawnSync(runtimeCommand, { cwd: dir, shell: true, encoding: 'utf8' }) : null
+    const runtime = rt?.status === 0 ? `${rt.stdout}${rt.stderr}`.trim().split('\n')[0] : undefined
+    state.gateRuns = { ...state.gateRuns, [state.stage]: { ok, count, at: now, runs: runs.length, ...(runtime ? { runtime } : {}), ...(flaky ? { flaky } : {}), ...(leaked ? { leaked } : {}) } }
+    // A command that cannot start reads like a new repo with nothing passing (finding P2). It counts only
+    // when what is missing is the command itself or a path it names, not a module a test imports: that is
+    // the ordinary red-first run. The red run is recorded; no baseline is set from it.
+    const broken = !ok && count === 0 && commandBroken(gateCommand, out)
+    if (broken) {
+      writeState(dir, state)
+      fail(`The gate command failed before any test ran (${broken}). That is the command, not the code: a person should fix gateCommand in .ai-sdlc/config.json (for node:test, let node find the files: node --test "test/**/*.test.mjs"). No baseline was recorded.`)
+    }
+    if (runtime && state.baselineRuntime && state.baselineRuntime !== runtime) console.log(`RUNTIME CHANGED: this run used ${runtime}; the baseline was set on ${state.baselineRuntime}. A runtime change can change which tests run: compare the counts, and look for cancelled or skipped tests.`)
     if (flaky) console.log(`FLAKY: ${runs.length} runs gave ${runs.map(r => `${r.ok ? 'green' : 'red'} ${r.count}`).join(', ')}. Quarantine with an owner and a date, or fix it; never retry until green.`)
     if (leaked) console.log(`TEST DATA LEAKED: the data check failed after a run. Each test must tear down what it creates.\n${runs.find(r => r.leaked).leakOut.trim().slice(0, 400)}`)
     if (state.stage === 4 && state.baseline === undefined) state.baseline = count
     // The baseline ratchets: a green run raises it, so tests the feature has passed cannot quietly go.
+    // Its runtime follows: set when missing, and moved by a green run that raises the baseline.
     const floor = state.baseline ?? 0
-    if (ok && count > floor && state.baseline !== undefined) state.baseline = count
+    if (ok && count > floor && state.baseline !== undefined) Object.assign(state, { baseline: count, ...(runtime ? { baselineRuntime: runtime } : {}) })
+    if (runtime && !state.baselineRuntime && state.baseline !== undefined) state.baselineRuntime = runtime
     // The code before any fix: a hotfix proves its repro against it after the merge.
     if (state.stage === 4 && !state.proofBase) state.proofBase = loadConfig(dir).protectedBranches.map(b => git(`merge-base ${b} HEAD`, dir)).find(Boolean)
     if (!ok && !flaky && !leaked && !hadGreen && !state.reproRedAt && state.stage === 4 && ['bug', 'hotfix'].includes(state.lane)) {
