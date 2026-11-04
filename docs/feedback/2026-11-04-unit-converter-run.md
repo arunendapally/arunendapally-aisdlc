@@ -26,7 +26,7 @@
 | V6 the proof ran a browser suite it could not | #46: `proofSkipLevels` |
 | G1 a silenced read of `.ai-sdlc` was refused | #43; process substitution, found in review, is refused too |
 
-Every fix was reviewed by an agent other than the one that wrote it before it merged. Those reviews found a blocker in two of the fixes: a broken gate run left an earlier green on record, and a fingerprint change would have reset every in-flight Design approval. Both were fixed before merging.
+Every fix was reviewed by an agent other than the one that wrote it before it merged. Those reviews found a blocker in three of the fixes: a broken gate run left an earlier green on record, a fingerprint change would have reset every in-flight Design approval, and a skipped proof level would have refused Verify for ever. All three were fixed before merging.
 
 ## Still open
 
