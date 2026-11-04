@@ -1,0 +1,288 @@
+{
+ "about": "Labelled requirement lines for scripts/solutions.mjs. solution=false must never warn; at least 85% of solution=true must. Add a line whenever the warning is wrong in a real run.",
+ "cases": [
+  {
+   "text": "A customer can find the nearest branch open on Saturday.",
+   "solution": false,
+   "kinds": []
+  },
+  {
+   "text": "A customer can commit to a fixed-term deposit and sees the maturity date before confirming.",
+   "solution": false,
+   "kinds": []
+  },
+  {
+   "text": "A teller sees the queue of customers waiting at their branch.",
+   "solution": false,
+   "kinds": []
+  },
+  {
+   "text": "A clinic receptionist sees the waiting queue in arrival order.",
+   "solution": false,
+   "kinds": []
+  },
+  {
+   "text": "A patient sees a table of their last 12 blood pressure readings.",
+   "solution": false,
+   "kinds": []
+  },
+  {
+   "text": "A nurse completes the discharge workflow in under 3 minutes.",
+   "solution": false,
+   "kinds": []
+  },
+  {
+   "text": "A shopper buying cookies sees the allergen list before adding them to the basket.",
+   "solution": false,
+   "kinds": []
+  },
+  {
+   "text": "A seller can export their orders as a spreadsheet with one column per field shown on the order page.",
+   "solution": false,
+   "kinds": []
+  },
+  {
+   "text": "Running the tool with --json prints the result as JSON so scripts can read it.",
+   "solution": false,
+   "kinds": []
+  },
+  {
+   "text": "The deploy command exits non-zero when any step fails.",
+   "solution": false,
+   "kinds": []
+  },
+  {
+   "text": "A user can filter log lines with a regex.",
+   "solution": false,
+   "kinds": []
+  },
+  {
+   "text": "Yesterday's sales appear in the finance report by 06:00 each day.",
+   "solution": false,
+   "kinds": []
+  },
+  {
+   "text": "A record that fails validation is quarantined and the data owner is told the same day.",
+   "solution": false,
+   "kinds": []
+  },
+  {
+   "text": "Every action on the checkout page can be completed with a keyboard alone.",
+   "solution": false,
+   "kinds": []
+  },
+  {
+   "text": "A screen reader user hears the error message when a field is invalid.",
+   "solution": false,
+   "kinds": []
+  },
+  {
+   "text": "Search returns results in under 300 ms at p95 for 1 million products.",
+   "solution": false,
+   "kinds": []
+  },
+  {
+   "text": "A learner can resume a training module where they left off.",
+   "solution": false,
+   "kinds": []
+  },
+  {
+   "text": "Customer data is migrated to the EU region before 2027-01-01 per the regulatory framework.",
+   "solution": false,
+   "kinds": []
+  },
+  {
+   "text": "A customer sees the sort code and account number on the statement.",
+   "solution": false,
+   "kinds": []
+  },
+  {
+   "text": "Table 3 of the return shows the totals.",
+   "solution": false,
+   "kinds": []
+  },
+  {
+   "text": "A visitor at the public address always gets the latest released version of the page.",
+   "solution": false,
+   "kinds": []
+  },
+  {
+   "text": "The page never collects, keeps or sends anything about the visitor, and nothing on it comes from another site.",
+   "solution": false,
+   "kinds": []
+  },
+  {
+   "text": "If the public page stops working or serves an old version, the owner hears about it within a day.",
+   "solution": false,
+   "kinds": []
+  },
+  {
+   "text": "A signed-in shopper can save an in-stock item to their saved list. Needs: who the shopper is.",
+   "solution": false,
+   "kinds": []
+  },
+  {
+   "text": "Saving a 201st item is refused with \"Your saved list is full (200 items)\".",
+   "solution": false,
+   "kinds": []
+  },
+  {
+   "text": "The app works on iOS, macOS and Android, and on an iPhone SE screen.",
+   "solution": false,
+   "kinds": []
+  },
+  {
+   "text": "A merchant sees the order status change to Shipped within a minute of the courier scanning it.",
+   "solution": false,
+   "kinds": []
+  },
+  {
+   "text": "A partner calling GET /v1/rates receives the current exchange rates.",
+   "solution": false,
+   "kinds": [
+    "api"
+   ]
+  },
+  {
+   "text": "An unauthenticated call to the API gets status 401 and no data.",
+   "solution": false,
+   "kinds": [
+    "api"
+   ]
+  },
+  {
+   "text": "A partner can register a webhook and receives an event within 5 seconds of a payment settling.",
+   "solution": false,
+   "kinds": [
+    "api"
+   ]
+  },
+  {
+   "text": "The response lists each rate with `currency` and `rate`.",
+   "solution": false,
+   "kinds": [
+    "api"
+   ]
+  },
+  {
+   "text": "Store the session token in a database.",
+   "solution": true,
+   "kinds": []
+  },
+  {
+   "text": "The service writes to the orders store in Postgres.",
+   "solution": true,
+   "kinds": []
+  },
+  {
+   "text": "The frontend uses react hooks to load state.",
+   "solution": true,
+   "kinds": []
+  },
+  {
+   "text": "Persist the cart in browser storage.",
+   "solution": true,
+   "kinds": []
+  },
+  {
+   "text": "Call the payments service over gRPC.",
+   "solution": true,
+   "kinds": []
+  },
+  {
+   "text": "The handler is triggered by a Pub/Sub message.",
+   "solution": true,
+   "kinds": []
+  },
+  {
+   "text": "Write events to the event bus and an SQS queue.",
+   "solution": true,
+   "kinds": []
+  },
+  {
+   "text": "Add an index on customer_id.",
+   "solution": true,
+   "kinds": []
+  },
+  {
+   "text": "Use a feature flag in LaunchDarkly.",
+   "solution": true,
+   "kinds": []
+  },
+  {
+   "text": "The page includes a script tag pointing to the CDN.",
+   "solution": true,
+   "kinds": []
+  },
+  {
+   "text": "Cache the response in memcached for 60 seconds.",
+   "solution": true,
+   "kinds": []
+  },
+  {
+   "text": "Expose a new route /api/orders.",
+   "solution": true,
+   "kinds": []
+  },
+  {
+   "text": "The Lambda function writes to DynamoDB.",
+   "solution": true,
+   "kinds": []
+  },
+  {
+   "text": "Use the useEffect hook.",
+   "solution": true,
+   "kinds": []
+  },
+  {
+   "text": "Save to the saved_items collection in Mongo.",
+   "solution": true,
+   "kinds": []
+  },
+  {
+   "text": "The api returns the new rate.",
+   "solution": true,
+   "kinds": []
+  },
+  {
+   "text": "Database rows are soft-deleted.",
+   "solution": true,
+   "kinds": []
+  },
+  {
+   "text": "The microservice publishes to a Kafka topic.",
+   "solution": true,
+   "kinds": []
+  },
+  {
+   "text": "Deployed via GitHub Actions to Vercel.",
+   "solution": true,
+   "kinds": []
+  },
+  {
+   "text": "Use an ORM model SavedItem with a foreign key to User.",
+   "solution": true,
+   "kinds": []
+  },
+  {
+   "text": "The conversion module, imported directly in Node with no browser, returns the same results.",
+   "solution": true,
+   "kinds": []
+  },
+  {
+   "text": "The live page responds with HTTP 200 and contains `<meta name=\"build\" content=\"<sha>\">` whose sha equals the main commit.",
+   "solution": true,
+   "kinds": []
+  },
+  {
+   "text": "The page writes no cookie, local storage or session storage.",
+   "solution": true,
+   "kinds": []
+  },
+  {
+   "text": "POST /saved stores the item in the saved_items table.",
+   "solution": true,
+   "kinds": []
+  }
+ ]
+}

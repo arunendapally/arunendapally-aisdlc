@@ -26,7 +26,8 @@ const HOTFIX_BUILD = ['## Incident', '## Fix', '## Rollback']
 const SMALL_VERIFY = ['## Test results', '## Pre-review', '## Not verified']
 export const LANES = {
   full: { stages: [1, 3, 4, 5, 6], auto: [4] },
-  light: { stages: [1, 4, 5, 6], auto: [4] },
+  // The light lane has no plan.md, so its design is "## Approach" in tasks.md (requirements, not solutions).
+  light: { stages: [1, 4, 5, 6], auto: [4], headings: { 4: ['## Approach', '## Tasks'] } },
   bug: {
     stages: [4, 5], auto: [4], artefact: 'bug.md', branch: 'bug',
     headings: { 4: BUG_BUILD, 5: [...BUG_BUILD, ...SMALL_VERIFY] },

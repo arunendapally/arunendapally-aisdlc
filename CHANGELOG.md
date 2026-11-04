@@ -4,6 +4,18 @@ All notable changes to this repository. The format follows [Keep a Changelog](ht
 
 ## [Unreleased]
 
+### Requirements, not solutions
+
+The unit-converter run's PRD named a meta tag, a commit sha, a workflow, a Node module and browser storage in its requirements. The light lane has no Design stage, so the solution had nowhere else to go, and nothing checked.
+
+- **The PRD template says it:** a requirement is what a user or the business can observe, true whatever is built. `Data needed: <fields>` is now `Needs: <information, in plain words>`. The outcome metric is value to users or the business; uptime is a release probe. Each section shows a filled example in its comment instead of prose, with one running example (saved items) whose requirements, non-functional lines and scope agree. The template now has `## Intent` (the request writes the person's words there) and an optional `## Constraints` for solutions a person already chose, with who chose them. Stakeholders and Release criteria are gone (both were optional and restated the brief or the gate); Dependencies stays optional.
+- **`## Approach` in `tasks.md` is required at Build in the light lane:** it is that lane's design (what changes, where it lives, the one arguable choice). In the full lane it is optional and links `plan.md`. `tasks.md` also opens with the spec links, the baseline and the line budget, and each task gets "done when" and "traps" lines.
+- **The Plan gate warns** when a requirement or a scenario step names a mechanism: code in backticks, real markup, a file, an identifier (`saved_items`, `useEffect`), an endpoint, a status code, or named storage or technology (Postgres, React, local storage, GitHub Actions). It reads only signs that are almost never a need, so business words such as branch, queue, table or commit do not fire. In api work the endpoints, status codes and fields are the requirement, and in data work the datasets are, so those signs are skipped. It never refuses. `tests/fixtures/solution-corpus.json` measures it: no need is flagged, and at least 85% of solutions are; add a line whenever it is wrong in a real run.
+- **The product owner** writes needs, asks at most three questions, and passes solution ideas to the architect or tech lead; the tech lead writes the Approach.
+- **Fixed: the CTO's intake did not look at the folder** when told not to run commands. Looking is not running: it reads with Glob, Grep and Read, or read-only `ls`, `find` and `grep` where those tools are missing, and names each file it found.
+- Agent eval `product-owner-assumes-instead-of-asking` now accepts any unconfirmed assumption, not only A1: an assumption the request itself states is rightly confirmed.
+- Tests in `tests/solutions.test.mjs`, golden eval `requirements-not-solutions`, agent eval `product-owner-states-needs-not-solutions`.
+
 ## [0.6.0] - 2026-11-02
 
 Issues [#26](https://github.com/arunendapally/arunendapally-aisdlc/issues/26) to [#29](https://github.com/arunendapally/arunendapally-aisdlc/issues/29), the calculator run's open findings, agile change 2, the rest of the human-asks record, and agent evals that cannot touch the person's accounts.
