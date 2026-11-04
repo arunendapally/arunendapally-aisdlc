@@ -360,7 +360,7 @@ const commands = {
       const feat = path.join(dir, cfg.specsDir, feature, 'acceptance.feature')
       const scenarios = fs.existsSync(feat) ? lint(fs.readFileSync(feat, 'utf8')).scenarios.filter(s => s.ac).length : 0
       // Requirements, not solutions: a warning, never a refusal, until an eval shows it is reliable.
-      warnings.push(...solutionWarnings(prdText, fs.existsSync(feat) ? fs.readFileSync(feat, 'utf8') : ''))
+      warnings.push(...solutionWarnings(prdText, fs.existsSync(feat) ? fs.readFileSync(feat, 'utf8') : '', state.kinds ?? []))
       if (scenarios > cfg.sliceScenarios) warnings.push(`${scenarios} scenarios is more than one slice usually holds (${cfg.sliceScenarios}). Consider splitting the feature now: each slice is built and reviewed as one PR of at most ${cfg.maxPrLines[state.lane] ?? cfg.maxPrLines.full} code lines.`)
       const kinds = state.kinds ?? []
       if (kinds.includes('brownfield') || kinds.includes('data') || fs.existsSync(path.join(dir, cfg.specsDir, feature, 'facts.md'))) missing.push(...factsGateProblems(dir, state))

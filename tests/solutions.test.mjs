@@ -18,10 +18,10 @@ test('a requirement that names the mechanism is flagged, with what it named', ()
     '- R4. (must) POST /saved stores the item in the saved_items table.',
   ].join('\n')))
   assert.equal(warnings.length, 4)
-  assert.match(warnings[0], /^prd\.md R1 reads like a solution: code in backticks .*status code \(HTTP 200\).*a design word \(sha\)/)
-  assert.match(warnings[1], /^prd\.md R2 .*a design word \(module\)/)
-  assert.match(warnings[2], /^prd\.md R3 .*a design word \(cookie\)/)
-  assert.match(warnings[3], /^prd\.md R4 .*an endpoint \(POST \/\)/)
+  assert.match(warnings[0], /^prd\.md R1 reads like a solution: code in backticks .*markup .*a status code \(HTTP 200\)/)
+  assert.match(warnings[1], /^prd\.md R2 .*a named technology \(Node\)/)
+  assert.match(warnings[2], /^prd\.md R3 .*a named technology \(local storage\)/)
+  assert.match(warnings[3], /^prd\.md R4 .*an endpoint \(POST \/\).*an identifier \(saved_items\)/)
   assert.match(warnings[0], /put how in the design, or a person's choice in "## Constraints"/)
 })
 
@@ -40,7 +40,34 @@ test('a scenario step that names the mechanism is flagged by line; the feature t
   const warnings = solutionWarnings('', feature)
   assert.equal(warnings.length, 2)
   assert.match(warnings[0], /^acceptance\.feature line 5 reads like a solution: a file \(index\.html\)/)
-  assert.match(warnings[1], /^acceptance\.feature line 7 .*a design word \(table\)/)
+  assert.match(warnings[1], /^acceptance\.feature line 7 .*an identifier \(saved_items\)/)
+})
+
+// Precision first: a warning that fires on business words gets ignored. The corpus is the measure.
+test('the labelled corpus: no need is flagged, and most solutions are', () => {
+  const { cases } = JSON.parse(fs.readFileSync(new URL('./fixtures/solution-corpus.json', import.meta.url), 'utf8'))
+  const flagged = c => solutionWarnings(`## Requirements\n\n- R1. (must) ${c.text}\n`, '', c.kinds).length > 0
+  const falsePositives = cases.filter(c => !c.solution && flagged(c)).map(c => c.text)
+  const solutions = cases.filter(c => c.solution)
+  const caught = solutions.filter(flagged).length
+  assert.deepEqual(falsePositives, [])
+  assert.ok(caught / solutions.length >= 0.85, `caught ${caught} of ${solutions.length}`)
+})
+
+test('in api work the contract is the requirement; in data work the datasets are', () => {
+  const api = '## Requirements\n\n- R1. (must) A partner calling GET /v1/rates gets status 200 with `currency` and `rate`, and can register a webhook.\n'
+  assert.deepEqual(solutionWarnings(api, '', ['api']), [])
+  assert.equal(solutionWarnings(api).length, 1)
+  assert.match(solutionWarnings('## Requirements\n\n- R1. (must) A partner gets rates read from Postgres.\n', '', ['api'])[0], /Postgres/)
+  assert.deepEqual(solutionWarnings('## Requirements\n\n- R1. (must) Analysts can query yesterday\'s sales in the database by 06:00.\n', '', ['data']), [])
+})
+
+test('a wrapped requirement, a * step and an Examples row are read too; an outline placeholder is not markup', () => {
+  assert.match(solutionWarnings('## Requirements\n\n- R1. (must) A shopper can save an item\n  that is kept in the saved_items table.\n')[0], /R1 .*saved_items/)
+  const feature = 'Feature: x\n  Scenario Outline: y\n    * the shopper has <count> items\n    Then the list shows <item>\n    Examples:\n      | count | item |\n      | 1 | `blue_mug` |\n'
+  const warnings = solutionWarnings('', feature)
+  assert.equal(warnings.length, 1)
+  assert.match(warnings[0], /line 7 /)
 })
 
 test('the Plan gate warns about solution language and still asks the product lead', () => {
@@ -51,8 +78,21 @@ test('the Plan gate warns about solution language and still asks the product lea
   r.put('specs/demo/acceptance.feature', READY_FEATURE)
   const out = r.sdlc('request', 'demo')
   assert.equal(out.status, 0)
-  assert.match(out.out, /WARNING: prd\.md R1 reads like a solution: an endpoint \(POST \/\), a design word \(database\)/)
+  assert.match(out.out, /WARNING: prd\.md R1 reads like a solution: an endpoint \(POST \/\), a named technology \(database\)/)
   assert.match(out.out, /waiting on: product lead/)
+})
+
+test('the light lane needs ## Approach in tasks.md at Build; the full lane has plan.md', () => {
+  const r = makeRepo()
+  r.config({ gateCommand: 'node gate.cjs' })
+  r.put('gate.cjs', "console.log('1 passing')\n")
+  r.sdlc('init', 'demo')
+  r.setState('demo', { stage: 4, stages: { 4: { enteredAt: '2026-10-31T00:00:00Z' } } })
+  r.put('specs/demo/tasks.md', '# Tasks: demo\n\n## Tasks\n\n- [ ] T1 [R1] files: src/a.js test: AC-1 depends-on: []\n')
+  r.sdlc('gate', 'demo')
+  assert.match(r.sdlc('request', 'demo').out, /## Approach/)
+  r.put('specs/demo/tasks.md', '# Tasks: demo\n\n## Approach\n\nOne module, src/a.js.\n\n## Tasks\n\n- [ ] T1 [R1] files: src/a.js test: AC-1 depends-on: []\n')
+  assert.doesNotMatch(r.sdlc('request', 'demo').out, /## Approach/)
 })
 
 test('the PRD template says requirements, not solutions, and gives the solution a home', () => {
@@ -62,7 +102,8 @@ test('the PRD template says requirements, not solutions, and gives the solution 
   assert.match(prdTemplate, /^## Constraints$/m)
   assert.doesNotMatch(prdTemplate, /Data needed/)
   assert.match(tasksTemplate, /^## Approach$/m)
-  // The template's own examples must pass its own check.
-  const uncommented = prdTemplate.replace(/<!--|-->/g, '')
-  assert.deepEqual(solutionWarnings(uncommented), [])
+  // The templates' own examples must pass their own check.
+  const featureTemplate = fs.readFileSync(new URL('../skills/org-ai-sdlc/templates/acceptance.feature', import.meta.url), 'utf8')
+  // Its counter-examples ("Not: ...") are meant to warn, so they are left out.
+  assert.deepEqual(solutionWarnings(prdTemplate.replace(/<!--|-->/g, '').replace(/^\s*Not:.*$/gm, ''), featureTemplate), [])
 })

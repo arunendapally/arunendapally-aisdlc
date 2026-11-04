@@ -24,14 +24,13 @@
 
 <!-- At most three sentences: who has it, how often, what it costs them today, each number sourced. Example:
 Returning shoppers lose items they meant to buy later: 18% of support chats in 2026-Q3 asked to find an
-item seen before (support dashboard, Q1). Today they search again or give up.
+item seen before (support dashboard 2026-Q3, read by Sam, support lead). Today they search again or give up.
      Not: "Users want a better saving experience." (no who, no how often, no cost, no source) -->
 
 ## Users and jobs
 
 <!-- At most four: "- <user>: when <situation>, I want <motivation>, so I can <outcome>." Example:
-- Returning shopper: when I see an item I am not ready to buy, I want to keep it, so I can find it next week without searching.
-- Support agent: when a shopper asks where an item went, I want to see their saved list, so I can answer in one reply. -->
+- Returning shopper: when I see an item I am not ready to buy, I want to keep it, so I can find it next week without searching. -->
 
 ## Questions asked
 
@@ -69,6 +68,9 @@ item seen before (support dashboard, Q1). Today they search again or give up.
 - R2. (should) A saved item that sells out shows as unavailable within 5 minutes. Needs: whether each item is in stock (F2).
 - R3. (must) A shopper with 200 saved items sees the whole list within half a second. Needs: nothing new.
 - R4. (must) Saving a 201st item is refused with "Your saved list is full (200 items)". Needs: how many items are saved.
+- R5. (must) Only the signed-in shopper can see or change their saved list. Needs: who the shopper is.
+- R6. (should) An item saved more than 90 days ago leaves the saved list (Q2). Needs: when each item was saved.
+- R7. (must) A keyboard-only shopper can save an item and open the saved list. Needs: nothing new.
      Split any line joined by "and"; "fast", "easy", "secure" and "support X" are not requirements.
      Not: "POST /saved returns 201", "a saved_items table", "a meta tag carries the commit sha". Say what the
      person sees or can rely on; the design says how.
@@ -80,8 +82,8 @@ item seen before (support dashboard, Q1). Today they search again or give up.
      this feature>". Limits include input size: longest text, deepest nesting, most items, most calls a minute.
      Naming auth, payments or personal data under Security needs the full lane: write it as an R<n>. Example:
 - Performance: R3
-- Security and privacy: None, because it keeps only which items a shopper saved, behind the existing sign-in.
-- Accessibility: None, because the saved list reuses the product cards shoppers already use, unchanged.
+- Security and privacy: R5
+- Accessibility: R7
 - Limits and quotas: R4 -->
 
 - Performance:
@@ -99,7 +101,8 @@ item seen before (support dashboard, Q1). Today they search again or give up.
 
 <!-- What someone could reasonably expect that this does not do, and where it goes instead. Example:
 - Sharing a saved list: a later slice, save-share (specs/saved-items/slices.md).
-- Saved lists for guests: not planned (Q1). -->
+- Saved lists for guests: not planned (Q1).
+- Support staff seeing a shopper's saved list: a later slice, after a privacy review. -->
 
 ## Outcome metric
 
