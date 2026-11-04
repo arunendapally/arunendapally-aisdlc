@@ -192,7 +192,7 @@ export function packetText(p) {
     '',
     '## Criteria with no test',
     '',
-    ...(p.untested.length ? p.untested.map(s => `- ${s.ac} (${s.level}): ${s.name}`) : ['- None: every criterion in acceptance.feature is tested at its level.']),
+    ...(p.untested.length ? p.untested.map(s => `- ${s.ac} (${s.level}${s.due === 'release' ? ', at release: a probe proves it' : s.due === 'manual' ? ', by hand: judge whether a test was possible' : ''}): ${s.name}`) : ['- None: every criterion in acceptance.feature is tested at its level.']),
     '',
     ...(p.deletedTests.length ? ['## Deleted tests', '', ...p.deletedTests.map(f => `- \`${f}\`: say why in the PR, or restore it`), ''] : []),
     '## All files',

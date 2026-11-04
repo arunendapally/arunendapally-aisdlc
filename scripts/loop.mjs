@@ -23,6 +23,16 @@ export const sha256 = text => crypto.createHash('sha256').update(text).digest('h
 const mergeBase = (dir, cfg) => cfg.protectedBranches.map(b => git(`merge-base ${b} HEAD`, dir)).find(Boolean)
 
 // The test files that trace this feature's criteria, from the test matrix.
+// Levels the proof leaves to their own run (proofSkipLevels, finding V6): a browser suite needs tools the
+// proof command does not have. runProof and proofProblems both read the traced files through this.
+const keptLevel = (test, skip) => !skip.includes(test.match(/ \((\w+)\)$/)?.[1])
+export function provable(dir, feature, cfg = loadConfig(dir)) {
+  const skip = cfg.proofSkipLevels ?? []
+  const { rows } = tracedFiles(dir, feature)
+  const kept = rows.map(r => ({ ...r, tests: r.tests.filter(t => keptLevel(t, skip)) }))
+  return { rows: kept, files: [...new Set(kept.flatMap(r => r.tests.map(t => t.replace(/ \(\w+\)$/, ''))))] }
+}
+
 export function tracedFiles(dir, feature) {
   const rows = matrix(dir, feature).rows
   const files = [...new Set(rows.flatMap(r => r.tests.map(t => t.replace(/ \(\w+\)$/, ''))))]
@@ -100,12 +110,22 @@ const runIn = (cwd, files, cfg, report) => {
 export function runProof(dir, state, opts = {}, cfg = loadConfig(dir)) {
   const base = opts.base ?? mergeBase(dir, cfg)
   if (!base) return { ok: false, problems: ['no base commit to prove against'] }
-  const traced = opts.files ? { rows: [], files: opts.files } : tracedFiles(dir, state.feature)
+  // Levels the proof leaves to their own run (proofSkipLevels, finding V6): a browser suite needs tools
+  // the proof command does not have.
+  const skip = cfg.proofSkipLevels ?? []
+  const all = opts.files ? { rows: [], files: opts.files } : tracedFiles(dir, state.feature)
+  const traced = opts.files ? all : provable(dir, state.feature, cfg)
+  const skippedAcs = opts.files ? [] : all.rows.filter(r => r.tests.length && !r.tests.some(t => keptLevel(t, skip))).map(r => r.ac)
   const added = opts.files ? [] : newCriteria(dir, state, traced.rows, base, cfg)
   // Only a criterion a test traces can be proved; the rest are named, never listed as proved (finding V1).
   const acs = opts.files ? ['the repro'] : added.filter(r => r.tests.length).map(r => r.ac)
-  const untested = added.filter(r => !r.tests.length).map(r => r.ac)
+  // A @manual or @release criterion has no test by design: it is proved by hand or by a release probe.
+  const due = added.filter(r => !r.tests.length && r.due && !skippedAcs.includes(r.ac)).map(r => `${r.ac} (${r.due === 'release' ? 'at release' : 'by hand'})`)
+  const untested = added.filter(r => !r.tests.length && !r.due && !skippedAcs.includes(r.ac)).map(r => r.ac)
+  const skipped = added.filter(r => skippedAcs.includes(r.ac)).map(r => r.ac)
   const files = traced.files
+  // Nothing to run, because every new criterion is proved another way: say so, and pass.
+  if (!acs.length && !untested.length && (due.length || skipped.length)) return { ok: true, problems: [], base: base.slice(0, 7), files: {}, acs: [], ...(due.length ? { due } : {}), ...(skipped.length ? { skipped, skipLevels: skip } : {}), at: new Date().toISOString() }
   if (!acs.length) return { ok: false, problems: [untested.length ? `no test traces the new criteria yet (${untested.join(', ')}): write the tests first (sdlc tests)` : 'no new criteria to prove: acceptance.feature adds none on this branch'] }
   if (!files.length) return { ok: false, problems: ['no test traces any criterion yet: write the tests first (sdlc tests)'] }
   const missing = files.filter(f => !fs.existsSync(path.join(dir, f)))
@@ -144,7 +164,7 @@ export function runProof(dir, state, opts = {}, cfg = loadConfig(dir)) {
     // What "sdlc init-repo" writes is not product code either (finding V2).
     const scaffold = scaffoldFiles()
     const greenfield = listed.length > 0 && !listed.some(f => !matches(f, cfg.prLineExcludes) && !scaffold.has(f))
-    return { ok: !problems.length, problems, base: base.slice(0, 7), files: hashes, acs, ...(untested.length ? { untested } : {}), perTest: Boolean(red.cases) && !opts.files, ...(greenfield ? { greenfield } : {}), at: new Date().toISOString() }
+    return { ok: !problems.length, problems, base: base.slice(0, 7), files: hashes, acs, ...(untested.length ? { untested } : {}), ...(due.length ? { due } : {}), ...(skipped.length ? { skipped, skipLevels: skip } : {}), perTest: Boolean(red.cases) && !opts.files, ...(greenfield ? { greenfield } : {}), at: new Date().toISOString() }
   } finally {
     // Unlink the shared folder first, so removing the worktree cannot reach through it.
     for (const shared of linked) fs.unlinkSync(shared)
@@ -171,7 +191,8 @@ export function proofProblems(dir, state, artefactText, cfg = loadConfig(dir)) {
   if (!p.ok) return { problems: [`the test proof failed: ${p.problems.join('; ')}`], warning: null }
   const changed = Object.entries(p.files).filter(([f, h]) => !fs.existsSync(path.join(dir, f)) || sha256(fs.readFileSync(path.join(dir, f), 'utf8')) !== h).map(([f]) => f)
   const problems = changed.map(f => `${f} changed after the proof; a test may not change between red and green: run sdlc proof ${state.feature} again`)
-  const { files } = tracedFiles(dir, state.feature)
+  // The files the proof was meant to run: proofSkipLevels left out, as in runProof.
+  const { files } = provable(dir, state.feature, cfg)
   for (const f of files.filter(f => !p.files[f])) problems.push(`${f} traces a criterion but was not in the proof: run sdlc proof ${state.feature} again`)
   return { problems, warning: null }
 }
@@ -196,6 +217,7 @@ export function probeResult(line) {
   if (/^\s*\|[\s:|-]+\|\s*$/.test(line)) return null
   const cells = /^\s*\|/.test(line) ? line.split('|').map(c => c.trim()).filter(Boolean) : null
   const where = cells ? cells[cells.length - 1] ?? '' : line.includes(': ') ? line.slice(line.lastIndexOf(': ') + 2) : line
+  if (/\bnot ok\b/i.test(where)) return 'fail'
   const word = where.match(/\b(pass(ed)?|ok|green|fail(ed)?|red)\b/i)?.[1]
   return word ? (/^(fail(ed)?|red)$/i.test(word) ? 'fail' : 'pass') : null
 }
@@ -220,6 +242,13 @@ export function releaseProblems(dir, state, artefactText, cfg = loadConfig(dir))
     const outcome = section(artefactText, '## Outcome metric') ?? ''
     const none = /Metric:[ \t]*None, because[ \t]+\S/i.test(outcome)
     if (state.lane in cfg.outcomeWindowDays && !none && (!outcomeValue(outcome, 'Metric') || !outcomeValue(outcome, 'Owner'))) problems.push('"## Outcome metric" needs "Metric:" and "Owner:" lines (or "Metric: None, because ..."), so the outcome follow-up has an owner')
+  }
+  // A @release criterion is proved here, in every lane that releases: a probe line names it with a
+  // passing result (finding V4). One criterion per line, so the result is that criterion's.
+  const probeLines = (section(artefactText, '## Probes') ?? '').split('\n')
+  for (const r of matrix(dir, state.feature).rows.filter(r => r.due === 'release')) {
+    const line = probeLines.find(l => new RegExp(`\\b${r.ac}\\b`).test(l))
+    if (!line || probeResult(line) !== 'pass') problems.push(`${r.ac} is checked at release: name it on a probe line of its own with its result ("- ${r.ac} ${r.name}: pass")`)
   }
   problems.push(...liveProblems(dir, state, artefactText, cfg))
   return { problems, warnings: rememberWarnings(dir, state, changed, cfg) }
