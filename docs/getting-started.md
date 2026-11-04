@@ -76,6 +76,10 @@ A feature waits on you three times: the spec, the merge and the release. Agents 
 
 When a gate refuses, `sdlc request` lists every reason, for example "R2 has no scenario". Ask the agent to fix them and request again. Warnings, such as a knowledge page the change made stale, do not block.
 
+### Starting from a Spec Kit spec
+
+If the feature already has a GitHub Spec Kit `spec.md`, start the Plan gate from it instead of rewriting it: `sdlc init <slug>`, then `node <plugin>/scripts/sdlc.mjs import-speckit <slug> path/to/spec.md`. It fills the PRD's requirements (FR-001 becomes R1, keeping the Spec Kit id beside it), assumptions and open questions (including every `[NEEDS CLARIFICATION]`), the outcome metric from SC-001, and one scenario per acceptance scenario. It never overwrites a PRD someone has written. What Spec Kit does not say is left to you, and the Plan gate names each gap: which requirement each scenario proves, the non-functional requirements, the problem and users, the outcome's owner, and the person's intent.
+
 ## 4. Smaller work
 
 - **A bug:** `/ai-sdlc:bug fix-total-rounding`. One document. A failing test must reproduce it before the fix. The merge is your only gate. If it came from earlier work, the agent adds `--caused-by <feature>`.

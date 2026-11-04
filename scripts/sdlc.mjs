@@ -17,6 +17,7 @@ import { matrix, matrixText, manualProblems } from './testmatrix.mjs'
 import { factsGateProblems, assumptionProblems } from './facts.mjs'
 import { erProblems, openapiProblems, breakingChanges, undefinedFields } from './contracts.mjs'
 import { solutionWarnings } from './solutions.mjs'
+import { parseSpecKit, prdFromSpecKit, featureFromSpecKit } from './speckit.mjs'
 import { runProof, proofProblems, releaseProblems, advanceFeature, overdueOutcomes, riskTier, gateFingerprint, unreviewedChanges, contentHashes, readTriggers, addTrigger, clearTriggers, repeatedFindings } from './loop.mjs'
 
 const dir = root()
@@ -954,6 +955,24 @@ const commands = {
     fs.mkdirSync(path.dirname(file), { recursive: true })
     fs.copyFileSync(path.join(TEMPLATES, 'incident.md'), file)
     console.log(`Postmortem: ${path.relative(dir, file)}`)
+  },
+
+  // Issue #25: start the Plan gate from a Spec Kit spec.md. Fills only a PRD nobody has written yet.
+  'import-speckit'() {
+    const state = need()
+    const from = rest[0]
+    if (!from || !fs.existsSync(path.resolve(dir, from))) fail('Usage: sdlc import-speckit <feature> <path to Spec Kit spec.md>')
+    if (state.stage !== 1) fail(`${feature} is past Plan: import a Spec Kit spec only into a feature at stage 1.`)
+    const folder = path.join(dir, loadConfig(dir).specsDir, feature)
+    const prdFile = path.join(folder, 'prd.md')
+    const current = fs.existsSync(prdFile) ? fs.readFileSync(prdFile, 'utf8') : ''
+    const bare = t => t.replace(/<!--[\s\S]*?-->/g, '').replace(/^# PRD: .*$/m, '').replace(/\s+/g, ' ').trim()
+    if (current && bare(current) !== bare(fs.readFileSync(path.join(TEMPLATES, 'prd.md'), 'utf8'))) fail(`${loadConfig(dir).specsDir}/${feature}/prd.md already has content: import-speckit fills only a PRD nobody has written. Move it aside first.`)
+    const spec = parseSpecKit(fs.readFileSync(path.resolve(dir, from), 'utf8'))
+    if (!spec.requirements.length) fail(`${from} has no functional requirements (- **FR-001**: ...): is it a Spec Kit spec.md?`)
+    fs.writeFileSync(prdFile, prdFromSpecKit(spec, fs.readFileSync(path.join(TEMPLATES, 'prd.md'), 'utf8')))
+    fs.writeFileSync(path.join(folder, 'acceptance.feature'), featureFromSpecKit(spec))
+    console.log(`Imported ${spec.requirements.length} requirements, ${spec.scenarios.length} scenarios, ${spec.assumptions.length + spec.clarifications.length} assumptions and ${spec.outcomes.length ? 1 : 0} outcome from ${from}.\nStill to do before Plan: tag each scenario with the requirement it proves (@R1 ...) and its level; write the problem, users and jobs, the non-functional requirements, never-claims and scope; name the outcome's owner; and get the person's intent (sdlc ask ${feature}).`)
   },
 
   // Copy rules and GitHub templates into this repo, never overwriting what is there.
