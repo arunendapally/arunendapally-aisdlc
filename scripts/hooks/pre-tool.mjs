@@ -180,7 +180,8 @@ if (tool === 'Bash' || tool === 'PowerShell') {
   // content changes), or to run the state CLI. Redirects, $( ) and backticks make any of them a write.
   // settings.json only as a name of its own: .NET's appsettings.json is not Claude's settings.
   const guardrail = /(state\.json|\.ai-sdlc|PAUSED|BUDGET_FROZEN|(^|[^\w.-])settings(\.local)?\.json|\.github[\\/]workflows|CODEOWNERS)/i
-  const plain = t => !/[>`]|\$\(/.test(t.replace(/<<-?\s*'\w+'/g, ''))
+  // Sending stderr nowhere or to stdout writes no file (finding G1 of the unit-converter run).
+  const plain = t => !/[>`]|\$\(/.test(t.replace(/<<-?\s*'\w+'/g, '').replace(/(^|\s)2>\s*(\/dev\/null|nul|&1)(?=\s|$)/gi, ' '))
   const exempt = p => {
     if (p.unsure || !quotedOnly(p)) return false
     const t = p.text

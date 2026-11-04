@@ -249,6 +249,18 @@ test('harmless commands the guard refused on 22 to 26 Oct now pass', () => {
   assert.equal(bash('echo {} > settings.local.json'), 'deny')
 })
 
+// The unit-converter run (G1): a read-only listing with its errors silenced was refused and counted
+// toward the refusal cap. Sending stderr to /dev/null or to stdout writes no file.
+test('a read of guardrail folders may silence or merge its errors; a real redirect still cannot write', () => {
+  assert.equal(bash('ls .ai-sdlc .github/workflows 2>/dev/null'), 'allow')
+  assert.equal(bash('ls -la .ai-sdlc/ .github/workflows/ 2>&1'), 'allow')
+  assert.equal(bash('cat .ai-sdlc/config.json 2> /dev/null | head -5'), 'allow')
+  assert.equal(bash('dir .ai-sdlc 2>nul'), 'deny', 'dir is not a listed read')
+  assert.equal(bash('cat .ai-sdlc/config.json 2>/dev/null > copy.json'), 'deny', 'a stdout redirect is still a write')
+  assert.equal(bash('echo x 2>&1 > .ai-sdlc/config.json'), 'deny')
+  assert.equal(bash('ls .ai-sdlc 2>/tmp/err.log'), 'deny', 'stderr to a file is a write')
+})
+
 test('a command splits where a shell would run its parts, and nowhere else', async () => {
   const { segments } = await import('../scripts/segments.mjs')
   const texts = c => segments(c)?.map(s => s.text)

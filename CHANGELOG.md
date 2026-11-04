@@ -4,6 +4,10 @@ All notable changes to this repository. The format follows [Keep a Changelog](ht
 
 ## [Unreleased]
 
+### A read may silence its errors
+
+- **Fixed: `ls .ai-sdlc .github/workflows 2>/dev/null` was refused** as a write to a guardrail, and the refusal counted toward the cap that holds the session. Sending stderr to `/dev/null`, `nul` or stdout (`2>&1`) writes no file, so a listed read with it is allowed. A redirect to a file, of stdout or stderr, is still refused. Found in the unit-converter run (G1); test in `tests/hooks.test.mjs`.
+
 ## [0.6.0] - 2026-11-02
 
 Issues [#26](https://github.com/arunendapally/arunendapally-aisdlc/issues/26) to [#29](https://github.com/arunendapally/arunendapally-aisdlc/issues/29), the calculator run's open findings, agile change 2, the rest of the human-asks record, and agent evals that cannot touch the person's accounts.
