@@ -49,7 +49,7 @@ export function matrix(dir, feature) {
     return { ac: id, level: s.level, requirements: s.requirements, name: s.name, tests: found.map(t => `${t.file} (${t.level})`), traced: found.length > 0 }
   })
   // A file that names the criterion but is not a known test file is the likelier cause: say so.
-  const unrecognised = ac => git(`grep --untracked -l -w ${ac} -- .`, dir).split('\n').filter(f => f && !levelOf(f, map) && !f.startsWith(`${cfg.specsDir}/`))
+  const unrecognised = ac => git(`grep --untracked -l -w ${ac} -- .`, dir).split('\n').filter(f => f && !levelOf(f, map) && !f.startsWith(`${cfg.specsDir}/`) && !f.endsWith('.md'))
   const problems = rows.filter(r => !r.traced).map(r => {
     const near = unrecognised(r.ac)
     return near.length
