@@ -8,7 +8,7 @@
      One fact per line, one line each, nothing after the commit:
      - F1: [governing] <statement>. Source: path/to/file.ts:42. Verified: <short commit>.
      Statement: "<what the code does>, so <what that means for this feature>". Example:
-     - F1: [governing] SavedList.add() writes one row per shopper and item with a unique key, so saving twice keeps one entry (AC-2). Source: src/lists/repo.ts:42-48. Verified: 1a2b3c4.
+     - F1: [governing] BasketRepo.add() keeps one row per shopper and item with a unique key, so the saved list can take the same shape and saving twice keeps one entry (AC-2). Source: src/basket/repo.ts:42-48. Verified: 1a2b3c4.
      - F2: cart-service consumes stock.changed events, published within one minute of a change, so R2 can listen instead of polling. Source: src/stock/events.ts:17. Verified: 1a2b3c4.
      Not: "F3: The system handles lists." (no behaviour, no consequence)
 

@@ -1,12 +1,12 @@
 # DB design: <feature>
 
-<!-- Data work only (kind data), light and full lanes. Owner: dba agent. Gate: a human DBA with the gate of each stage below, asked with "sdlc ask <feature>".
+<!-- Data work only (kind data), light and full lanes. Owner: dba agent. Gate: each section is checked at the stage below; a DBA joins the Design, Verify and Release gates, asked with "sdlc ask <feature>".
      The data contract, as openapi.yaml is the API contract: it shows the DELTA (what this change adds,
      alters or drops), not the whole schema. Each section is due at a gate, so fill them in order:
      - Plan: Data impact.
      - Design (full lane) or Build (light lane): Data model, Migration plan (expand-contract).
      - Build: Rehearsal, Down migration.  - Release: Backout.
-     A section with only a comment in it is empty, and the gate refuses it. Keep every "## " heading
+     A required section with only a comment in it is empty, and the gate refuses it. Keep every "## " heading
      exactly as written; never start a line with "# " or "## ", even inside a code block.
      Or: None, because <a reason about this change>, where a section does not apply.
      Tie every claim to its source (a migration file, file:line, a fact F3, a query plan, a measured row
@@ -27,7 +27,7 @@ Retention: 90 days (prd.md Q2); deleted with the shopper account (src/accounts/e
 
 ## Data model
 
-<!-- The delta as a Mermaid erDiagram, linted at the gate:
+<!-- The delta as a Mermaid erDiagram. The gate warns when the "%% changed:" line, or the attributes of an entity it names, are missing; the column marks are for the reviewer:
      - The "%% changed:" line names every entity this change adds, alters or drops.
      - Draw each of those with its attributes, and the neighbours they relate to (no attributes needed).
      - Mark each changed column with an attribute comment: "added", "altered: <from> to <to>" or

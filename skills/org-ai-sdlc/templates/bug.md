@@ -3,7 +3,7 @@
      the gate green after, under the line limit (tasks.md Budget), and no change to dependency manifests,
      migrations, .github, infra or terraform (those make it a feature). Write Repro and Expected and actual
      before any fix.
-     A section with only a comment in it is empty, and the gate refuses it. Keep every "## " heading
+     A required section with only a comment in it is empty, and the gate refuses it. Keep every "## " heading
      exactly as written; never start a line with "# " or "## " inside a section.
      Every line states a fact with its source: a test, a command run on this commit, a file:line or a link;
      end one you did not check with [unconfirmed]. -->

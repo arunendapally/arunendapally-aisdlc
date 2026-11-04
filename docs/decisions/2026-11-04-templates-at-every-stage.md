@@ -40,7 +40,7 @@ Five experts drafted (product owner, architect, tech lead, QA, SRE); five scepti
 - adr.md: MADR "Confirmed by:" as the Decision's last line; the repo kit copy is now the same file.
 - architecture-overview.md: L1 C4Context example matching the table; "required by this process, not checked by the gate".
 - db-design.md: new. The delta ER (columns marked "added", "altered: <from> to <to>", "dropped"), expand-contract steps with lock time and undo, Rehearsal at Build, Backout for Release.
-- tasks.md: header in the common shape, one home for every lane's line limit, depends-on rule as coded, repos syntax, down migration pointed to db-design.md.
+- tasks.md: header in the common shape, one home for every lane's line limit, depends-on rule as coded, repos syntax, data work's rehearsal and down migration pointed to db-design.md.
 - task.md, bug.md, hotfix.md, pr.md: one Pre-review instruction block, byte-identical in the four, with the accurate risk floor; each lane's own example (lodash, a saved-items bug, checkout-timeouts, saved items).
 - review.md: header in the common shape; saved-items rows.
 - release.md: steps that repeated the gate cut, rehearsal and backout point to db-design.md, Decision says no check reads it, window stated once (outcomeWindowDays); 95 to 84 lines.
@@ -56,7 +56,7 @@ Across all 17: one header shape (stage or lane, Owner, Gate); one empty-section 
 - **Spec Kit [P] markers and phases.** Not adopted. depends-on already encodes order and parallelism (scripts/sdlc.mjs:65-76); a second marker can disagree with it.
 - **Y-statement in the ADR.** Not adopted. The title states the decision and the Decision's first line names the option; a Y-statement would repeat both.
 - **C4 Level 3 and Level 4.** L3 only when a component is added, removed or rewired; no L4, with a sequenceDiagram (a C4 dynamic view) only where ordering, retries or concurrency decide correctness.
-- **Backout placement.** The data backout, rehearsal and down migration live once, in db-design.md. release.md and tasks.md point to it. The gate wiring landed with the templates: the gate asks for each section in db-design.md at its stage (tests/db-design.test.mjs).
+- **Backout placement.** The data backout, rehearsal and down migration live once, in db-design.md. release.md and tasks.md point to it (a data feature started before this change keeps the old homes, so its approvals hold). The gate wiring landed with the templates: the gate asks for each section in db-design.md at its stage (tests/db-design.test.mjs).
 - **db-design.md against "no new document where a section will do".** A new file won, because the data sections are due at four different gates and today land in four different documents (prd, plan, tasks, release; scripts/lib.mjs:57-60). One file the dba owns, read like openapi.yaml, replaces four scattered sections; plan.md keeps "## Data model" as a required one-line pointer so undeclared data work still shows.
 - **Marker.** The consistency sceptic proposed "[unverified]" beside the PRD's "[unconfirmed]". The owner's brief asked for one marker, so "[unconfirmed]" is used everywhere. Only prd.md "## Assumptions" is parsed for it (scripts/facts.mjs:88, scripts/sdlc.mjs:485); elsewhere it is for the reader.
 - **"None, because" in facts.md.** The one exception to the house wording, until later change 3 scopes the check: in Not found it would pass a data feature with no facts.
@@ -109,9 +109,9 @@ Every gate approval; merge, apply and deploy; declaring a hotfix; running a down
 
 ## How it was checked
 
-In a scratch copy of the repo (scratchpad/final-check) with the 17 templates installed, pr.md also at templates/repo/.github/pull_request_template.md and .github/pull_request_template.md, adr.md also at templates/repo/docs/adr/0000-template.md:
+In a scratch copy of the repo (scratchpad/final-check) with the templates installed (15 rewritten here; prd.md and tasks.md landed in #40), pr.md also at templates/repo/.github/pull_request_template.md and .github/pull_request_template.md, adr.md also at templates/repo/docs/adr/0000-template.md:
 
-- `npm test`: 181 pass, 0 fail (one failure on the first run: tests/gate-messages.test.mjs:15 pins facts.md's shape line; restored).
+- `npm test`: 181 pass in the council's scratch copy; on the merged branch, 209 pass, including tests/db-design.test.mjs (sections due by stage, fingerprints, features started before db-design.md, the ADR sync).
 - Blank refused, example passes: prd.md through `sdlc request` (blank: 9 empty sections, 4 Non-functional lines, no R ids; filled: reaches the product lead); facts.md for data work with the template's Not found wording is refused for having no facts; plan.md all 8 required sections empty, examples fill them; adr.md blank fails 4 sections and 0 options, filled passes; architecture-overview.md placeholder row refused; db-design.md blank empty and no ER, filled passes erProblems; tasks.md blank 0 tasks, filled T1, T2 with depends-on, no "repos:" on a task line, no field-shaped quoted names; pr, task, bug and hotfix blank fail CI on every section, filled pass CI and the Pre-review lines; review.md blank 0 rows, example 4 rows none malformed; release.md blank refused 4 ways, filled passes with the right follow-up; knowledge-page.md blank invalid, filled 0 invalid 0 stale, both parse as YAML; incident.md example rows pass, a row without Becomes warns.
 - The three Mermaid examples render with @mermaid-js/mermaid-cli.
 - No em dash in any of the 17 files or this record.

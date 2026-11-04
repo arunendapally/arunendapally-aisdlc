@@ -5,7 +5,7 @@
      Written before any code. A required section with only a comment in it is empty, and the gate refuses it.
      Never start a line with "# " or "## " inside a section. Link the PRD and plan; do not restate them.
      Kind work adds its Build section here (Characterisation tests, Benchmark before); the gate names the
-     one missing (data work: Down migration). -->
+     one missing. Data work keeps its rehearsal and down migration in db-design.md. -->
 
 Spec: specs/<feature>/prd.md, specs/<feature>/acceptance.feature, specs/<feature>/plan.md (full lane only)
 Baseline: <n> passing, from the first "sdlc gate <feature>" on <sha>, before any change

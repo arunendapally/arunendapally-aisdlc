@@ -1,7 +1,7 @@
 <!-- Task lane. Owner: builder agent; the pre-reviewer agent writes Pre-review. Gate: a CODEOWNER engineer, asked with "sdlc ask <feature>"; under autonomy it passes on its checks.
      No new behaviour: a dependency bump, config, a refactor, docs, tooling. If a user could notice the
      change, stop: it is a bug or a feature. This file is the PR body; the line limit is in tasks.md Budget.
-     A section with only a comment in it is empty, and the gate refuses it. Keep every "## " heading
+     A required section with only a comment in it is empty, and the gate refuses it. Keep every "## " heading
      exactly as written; never start a line with "# " or "## " inside a section.
      Every line states a fact with its source: a test, a command run on this commit, a file:line or a link;
      end one you did not check with [unconfirmed]. -->

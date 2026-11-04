@@ -1,7 +1,7 @@
 # Plan: <feature>
 
 <!-- Stage 3 Design, full lane only. Owner: architect agent. Gate: the architect and product lead, asked with "sdlc ask <feature>"; under autonomy it passes on its checks.
-     A section with only a comment in it is empty, and the gate refuses it. Keep every "## " heading
+     A required section with only a comment in it is empty, and the gate refuses it. Keep every "## " heading
      exactly as written; never start a line with "# " or "## ", even inside a code block.
      Or: None, because <a reason about this change>, where a section does not apply.
      Tie every claim to its source (file:line, a fact F3, an R or AC id, an ADR); end one you could not
@@ -9,8 +9,8 @@
 
 ## Summary
 
-<!-- For the approver, who reads this first. Five lines, then one row per requirement in prd.md: a
-     requirement with no row has no design. Example:
+<!-- For the approver, who reads this first. Five lines, then one row per requirement the design
+     touches (the example shows four of seven); a requirement the design must change with no row has no design. Example:
 Builds: a saved list per signed-in shopper, marked sold out from stock events.
 Reuses: cart-service and its Postgres database; adds one listener, no new service.
 Biggest risk: a missed stock.changed event leaves a sold-out item shown as available (see Error handling).
@@ -20,7 +20,7 @@ Open: none (or each open question, with who answers it).
 |---|---|
 | R1 save an in-stock item | cart-service (cart-api), src/lists/save.ts |
 | R2 sold-out mark within 5 min | cart-service (stock-listener), src/stock/events.ts |
-| R3 list in 300 ms at p95 | cart-db index on shopper id, src/lists/repo.ts |
+| R3 whole list in under half a second | cart-db index on shopper id, src/lists/repo.ts |
 | R4 refuse a 201st item | cart-api, src/lists/save.ts |
 -->
 
@@ -107,7 +107,7 @@ session, never from the request; tests/lists/api.test.ts "another shopper's list
      torn down), and the budgets. See templates/testing/README.md. Example:
 - AC-1: api, Postgres in a container, seeded per test and rolled back.
 - AC-2: unit, factories.ts. AC-3: e2e, one synthetic shopper and item.
-- Budget: GET /saved-items p95 under 300 ms for 200 items at 50 requests a second (R3). -->
+- Budget: GET /saved-items p95 under 500 ms for 200 items at 50 requests a second (R3). -->
 
 ## Run it
 

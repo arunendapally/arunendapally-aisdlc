@@ -58,9 +58,11 @@ export const KINDS = {
   // Data work keeps one document the DBA owns, db-design.md, the data contract as openapi.yaml is the
   // API's. Its sections are due stage by stage and stay due, so the light lane, which has no Design
   // stage, is asked for the data model and migration plan at Build.
+  // A feature started before db-design.md (no state.dataDoc) keeps the old homes, so its approvals hold.
   data: {
     artefact: 'db-design.md',
     headings: { 1: ['## Data impact'], 3: ['## Data model', '## Migration plan (expand-contract)'], 4: ['## Rehearsal', '## Down migration'], 6: ['## Backout'] },
+    legacy: { 1: ['## Data impact'], 3: ['## Migration plan (expand-contract)', '## Rehearsal'], 4: ['## Down migration'], 6: ['## Backout'] },
     owners: { 3: 'DBA', 5: 'DBA', 6: 'DBA' },
   },
 }
@@ -76,7 +78,9 @@ export function destructiveMigrations(dir, cfg = loadConfig(dir)) {
 // A gate the trust ledger promoted runs on checks, unless the error budget is frozen.
 export function stageSpec(state, stage = state.stage, trusted = []) {
   const lane = LANES[state.lane] ?? LANES.full
+  // A data feature started before db-design.md keeps its sections in the stage documents (legacy).
   const kinds = (state.kinds ?? []).map(k => KINDS[k]).filter(Boolean)
+    .map(k => (k.artefact && k.legacy && !state.dataDoc ? { ...k, artefact: undefined, headings: k.legacy } : k))
   // A kind with its own document checks every section due up to this stage, in that document.
   const docs = {}
   for (const k of kinds.filter(k => k.artefact)) {

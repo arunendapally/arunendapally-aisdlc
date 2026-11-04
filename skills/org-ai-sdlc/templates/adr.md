@@ -6,7 +6,7 @@ Date: <YYYY-MM-DD>
 <!-- Stage 3 Design. Owner: architect agent. Gate: with plan.md, the architect and product lead, asked with "sdlc ask <feature>".
      One ADR per new datastore, dependency, service or breaking contract; name it in plan.md
      "## Decisions" as "- ADR-NNNN: <one line>". Keep it to one screen.
-     A section with only a comment in it is empty, and the gate refuses it. Keep every "## " heading
+     A required section with only a comment in it is empty, and the gate refuses it. Keep every "## " heading
      exactly as written. The gate checks: the status line above, at the start of its line; Context,
      Options, Decision, Consequences and Review filled; at least two options.
      The status stays proposed until a person approves the Design gate, then becomes accepted. When a

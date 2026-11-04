@@ -43,3 +43,35 @@ test('the two ADR templates stay the same file', () => {
   const read = p => fs.readFileSync(new URL(p, import.meta.url), 'utf8')
   assert.equal(read('../templates/repo/docs/adr/0000-template.md'), read('../skills/org-ai-sdlc/templates/adr.md'))
 })
+
+// Pre-review F1 and F2: approvals given before db-design.md must hold after the upgrade.
+test('a feature with no db-design.md fingerprints exactly as before, so its approvals hold', async () => {
+  const crypto = await import('node:crypto')
+  const sha = t => crypto.createHash('sha256').update(t).digest('hex').slice(0, 16)
+  const r = makeRepo()
+  r.sdlc('init', 'demo', '--full')
+  r.put('specs/demo/plan.md', '## Decisions\n\nNone, because no ADR.\n')
+  const before = gateFingerprint(r.repo, r.state('demo'), 3)
+  assert.equal(before, sha(fs.readFileSync(`${r.repo}/specs/demo/plan.md`, 'utf8')).slice(0, before.length))
+})
+
+test('a data feature started before db-design.md keeps its sections where they were', () => {
+  const r = makeRepo()
+  r.sdlc('init', 'demo', '--full')
+  r.setState('demo', { kinds: ['data'] }) // as a 0.6.0 feature: data, and no dataDoc stamp
+  const state = r.state('demo')
+  assert.deepEqual(stageSpec(state, 1).docs, {})
+  assert.ok(stageSpec(state, 1).headings.includes('## Data impact'), 'Data impact stays in prd.md')
+  assert.ok(stageSpec(state, 3).headings.includes('## Rehearsal'), 'Rehearsal stays in plan.md')
+  assert.ok(stageSpec(state, 6).headings.includes('## Backout'), 'Backout stays in release.md')
+  r.sdlc('kind', 'demo', 'data')
+  assert.equal(r.state('demo').dataDoc, undefined, 'adding a kind it already has does not move its sections')
+})
+
+test('the light lane has no Design stage, so Build warns about a missing ER diagram', () => {
+  const r = makeRepo()
+  r.sdlc('init', 'demo', '--kind', 'data')
+  r.setState('demo', { stage: 4, stages: { 4: { enteredAt: '2026-10-31T00:00:00Z' } } })
+  r.fill('specs/demo/db-design.md', ['## Data impact', '## Data model', '## Migration plan (expand-contract)', '## Rehearsal', '## Down migration'])
+  assert.match(r.sdlc('request', 'demo').out, /WARNING: ER diagram: db-design\.md "## Data model" has no Mermaid erDiagram/)
+})

@@ -3,7 +3,7 @@
 <!-- Stage 6 Release. Owner: sre agent. Gate: the release owner, asked with "sdlc ask <feature>"; under autonomy it passes on its checks.
      The sre writes this before the deploy and finishes it after the probes. Humans merge, apply and deploy;
      under autonomy "sdlc merge" lands the reviewed commit.
-     A section with only a comment in it is empty, and the gate refuses it. Keep every "## " heading
+     A required section with only a comment in it is empty, and the gate refuses it. Keep every "## " heading
      exactly as written. Or: None, because <reason>, where a section does not apply.
      Tie every claim to its source (a probe row, a command and its output, a date); end anything you did
      not see yourself with [unconfirmed]. Link the PRD, plan and db-design.md; do not repeat them. -->

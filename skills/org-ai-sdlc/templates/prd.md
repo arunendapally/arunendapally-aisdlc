@@ -7,7 +7,7 @@
      it is design. No code, files, modules, APIs, tables, fields, frameworks, hosting or deploy mechanics:
      those go in the design (plan.md, openapi.yaml, or "## Approach" in tasks.md in the light lane). A
      solution a person has already chosen goes in "## Constraints", with who chose it.
-     A section with only a comment in it is empty, and the gate refuses it. Keep every "## " heading
+     A required section with only a comment in it is empty, and the gate refuses it. Keep every "## " heading
      exactly as written; never start a line with "# " or "## " inside a section.
      Or: None, because <a reason about this feature>, where a section does not apply. Every claim names its
      source (a person, a Q<n>, a fact F<n>) or is an assumption marked [unconfirmed]. Write ids plain

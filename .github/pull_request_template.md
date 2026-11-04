@@ -1,5 +1,5 @@
 <!-- Stage 5 Verify. Owner: pre-reviewer and engineer agents. Gate: a CODEOWNER engineer, asked with "sdlc ask <feature>"; under autonomy it passes on its checks.
-     This file is the PR body. A section with only a comment in it is empty, and the gate refuses it.
+     This file is the PR body. A required section with only a comment in it is empty, and the gate refuses it.
      Keep every "## " heading exactly as written; never start a line with "# " or "## " inside a section,
      even a shell comment in a code block. Or: None, because <reason>, where a section does not apply.
      Every line states a fact with its source: a test, a command run on this commit, a file:line or a link;
@@ -13,7 +13,7 @@
 <!-- Two or three sentences: what a user or caller can do now that they could not before, and why. Then the
      spec and what is left out. Example:
 Shoppers can save an item for later; a saved item that sells out shows as sold out instead of vanishing.
-Spec: specs/saved-items/prd.md (R1 to R4). Not in this PR: sharing a saved list (save-share, next slice). -->
+Spec: specs/saved-items/prd.md (R1 to R7). Not in this PR: sharing a saved list (save-share, next slice). -->
 
 ## Test results
 
@@ -21,7 +21,7 @@ Spec: specs/saved-items/prd.md (R1 to R4). Not in this PR: sharing a saved list 
      names the test and the reason. Example:
 Suite: 412 passed, 0 failed, 0 skipped (baseline 405)
 Proof: sdlc proof saved-items green on the branch, red on the base, 3 test files
-Criteria: 5 of 5 traced at their level (specs/saved-items/test-matrix.md)
+Criteria: 3 of 3 traced at their level (specs/saved-items/test-matrix.md)
 New tests: tests/lists/save.test.ts (AC-1, AC-2), e2e/saved.spec.ts (AC-3)
 Removed, skipped or quarantined: none -->
 

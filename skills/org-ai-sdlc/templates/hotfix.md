@@ -1,7 +1,7 @@
 <!-- Hotfix lane, declared only by a person. Owner: builder agent; the sre agent writes Probes and Follow-up. Gate: the on-call engineer (CODEOWNER), asked with "sdlc ask <feature>"; then the incident commander at Release.
      This file is the PR body. Review deadline 1 h; line limit in tasks.md Budget. Incident, Fix and
      Rollback come before the PR; Probes and Follow-up come after the deploy from main.
-     A section with only a comment in it is empty, and the gate refuses it. Keep every "## " heading
+     A required section with only a comment in it is empty, and the gate refuses it. Keep every "## " heading
      exactly as written; never start a line with "# " or "## " inside a section.
      Every line states a fact with its source: a test, a command run on this commit, a file:line or a link;
      end one you did not check with [unconfirmed]. -->

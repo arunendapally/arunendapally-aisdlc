@@ -4,6 +4,18 @@ All notable changes to this repository. The format follows [Keep a Changelog](ht
 
 ## [Unreleased]
 
+### Templates at every stage, and db-design.md as the data contract
+
+A council of five experts drafted each stage's templates, five sceptics tested the drafts against the parsers and against each other, and research on PRDs, Gherkin, C4, design docs, ADRs, release plans and postmortems fed both. The record: `docs/decisions/2026-11-04-templates-at-every-stage.md`.
+
+- **Every template shows a filled example in its comments instead of prose,** keeps one running story per lane (saved items for features, checkout timeouts for the hotfix and its postmortem, a lodash bump for a task), marks unchecked claims `[unconfirmed]`, and says which of its sections the gate checks.
+- **Bugs the old templates had:** a blank `release.md` passed the outcome check and recorded "<the PRD's outcome metric>" as the metric; every new knowledge page failed `sdlc knowledge check` on a sample link; the bug, task and hotfix bodies lacked `Lenses run:` and `Revert:`, which Verify and CI require; every task-lane PR failed CI for want of `## Summary`; the hotfix's visible `Live: <sha>` made an unprobed Probes section look filled; the ADR's untouched Status line passed; the overview's placeholder row passed Design; `plan.md`'s own ER example failed its lint; the risk table in the PR body was wrong (`.github/` is high; copy inside code is medium).
+- **C4:** Level 1 (System Context) in Mermaid in `architecture-overview.md`; Level 2 in `plan.md` when a container is added or changed, Level 3 only when a component is added, removed or rewired, and no Level 4 (a sequence diagram only where ordering, retries or concurrency decide correctness).
+- **`db-design.md`, the data contract the DBA owns,** as `openapi.yaml` is the API's: data impact at Plan, the ER diagram of the change and the expand-contract plan at Design (at Build in the light lane, which never asked for them before), rehearsal and down migration at Build, backout at Release. Plan and Design approvals cover their own sections; filling the later ones does not lapse them. `plan.md` "## Data model" says "See db-design.md.". A data feature started before this change keeps its sections where they were, so its approvals hold.
+- **The ADR has a "Confirmed by:" line** (the check that fails if the code breaks the decision), and its `## Review` is questions and answers, not a link. The repo's ADR template is the same file, and a test keeps it so.
+- **The postmortem keeps the trigger apart from the root cause,** asks why each check missed it, and records where we got lucky; each miss becomes a dated action with an owner. **The release** opens with a three-line Decision, lists its order as a checklist, and records the rollback's command, test date, duration and what it leaves behind.
+- Tests in `tests/db-design.test.mjs`.
+
 ### Every test file runs
 
 - **`npm test` runs every `tests/*.test.mjs`,** by a quoted glob that node expands, instead of a hand-kept list. Merging two branches that each added a file to the list dropped one of them silently; now a new test file runs without being listed.
