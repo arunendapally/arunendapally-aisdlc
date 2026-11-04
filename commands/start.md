@@ -29,4 +29,4 @@ Kinds add only what the work needs, and stack: `brownfield` (facts pinned to the
    - Run `node "${CLAUDE_PLUGIN_ROOT}/scripts/sdlc.mjs" init <slug> [--full] [--kind <kinds>]` and commit `specs/<slug>/`, so other sessions and CI see the same state. Commit it after every gate decision too.
    - Get the person's intent before anything is drafted: `/ai-sdlc:plan <slug>` asks it as three questions with the question tool. Never ask a person to type or paste a command; use `sdlc ask` and the question tool.
    - Hand off to `/ai-sdlc:plan <slug>`.
-5. Say the route and why in one line each, then start it. If two routes fit, take the one with more human gates and say so.
+5. Say the route and why in one line each, as the exact command with its flags (for example `init loyalty-points --full --kind data`), and who reviews beyond the usual owners (data work: the DBA, on the design and the PR). Then start it. If two routes fit, take the one with more human gates and say so.
