@@ -426,11 +426,11 @@ const commands = {
       state.ledgerIds = [...new Set([...(state.ledgerIds ?? []), ...findings.map(f => f.id)])]
       writeState(dir, state)
       if (fs.existsSync(path.join(folder, 'acceptance.feature'))) missing.push(...matrix(dir, feature).problems.map(p => `test matrix: ${p}`))
-      if (pre && !/Risk:\s*(low|medium|high)\b/i.test(pre)) missing.push('the pre-review gives no "Risk: low|medium|high"')
-      if (pre && !/Open findings:\s*0\b/i.test(pre)) missing.push('the pre-review still has open findings ("Open findings: 0" is required)')
+      if (pre && !/Risk:[ \t]*(low|medium|high)\b/i.test(pre)) missing.push('the pre-review gives no "Risk: low|medium|high"')
+      if (pre && !/Open findings:[ \t]*0\b/i.test(pre)) missing.push('the pre-review still has open findings ("Open findings: 0" is required)')
       // A ledger with no rows reads the same as a skipped review, so the pre-review says what ran (F10).
-      if (pre && !/Lenses run:\s*\S/i.test(pre)) missing.push('the pre-review does not say which lenses ran ("Lenses run: ...")')
-      if (pre && !/Revert:\s*\S/i.test(pre)) missing.push('the pre-review does not say how to undo this ("Revert: <command or flag>")')
+      if (pre && !/Lenses run:[ \t]*\S/i.test(pre)) missing.push('the pre-review does not say which lenses ran ("Lenses run: ...")')
+      if (pre && !/Revert:[ \t]*\S/i.test(pre)) missing.push('the pre-review does not say how to undo this ("Revert: <command or flag>")')
       const proof = proofProblems(dir, state, fs.existsSync(file) ? fs.readFileSync(file, 'utf8') : '', cfg)
       if (proof.warning) warnings.push(proof.warning)
       missing.push(...proof.problems)

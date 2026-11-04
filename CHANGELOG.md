@@ -4,6 +4,17 @@ All notable changes to this repository. The format follows [Keep a Changelog](ht
 
 ## [Unreleased]
 
+### Checks that passed on what nobody wrote
+
+From the council on templates (`docs/decisions/2026-11-04-templates-at-every-stage.md`, later changes 1 to 3).
+
+- **A value must be on its own line.** `Metric:`, `Owner:`, `Risk:`, `Open findings:`, `Lenses run:` and `Revert:` read across a line break, so an empty one passed on the next line's text, and the outcome follow-up recorded "Owner: Priya" as the metric. A `<placeholder>` left in `Metric:` or `Owner:` is not a value either.
+- **A failed probe stops the release.** "## Probes" passed on any result word, "fail" included. A probe's result is the last result word on its line, so "a failed payment is retried: pass" passed and "checkout health: FAILED" did not.
+- **A rollback is tested on the date it ran.** "Not tested yet, planned 2026-11-05" passed; now the date must follow "Tested:", and a "Tested:" line that says not, planned, will or to be does not count.
+- **Data work needs a fact.** "None, because" anywhere in `facts.md` (under Not found, say) passed a data feature with no facts. It now counts only under "## Facts", and data work, like brownfield work, needs at least one fact.
+- Considered, not done: running the full-lane check on a "None, because" security reason. A pattern cannot tell "no personal data is stored" from a reason that touches it, and the first is a deliberate light-lane answer (`tests/nonfunctional.test.mjs`). The PRD template shows a security need written as a requirement instead.
+- Tests in `tests/harden.test.mjs`.
+
 ### Every test file runs
 
 - **`npm test` runs every `tests/*.test.mjs`,** by a quoted glob that node expands, instead of a hand-kept list. Merging two branches that each added a file to the list dropped one of them silently; now a new test file runs without being listed.

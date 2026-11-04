@@ -176,6 +176,12 @@ export function proofProblems(dir, state, artefactText, cfg = loadConfig(dir)) {
   return { problems, warning: null }
 }
 
+// The value on a "Metric:" or "Owner:" line, on that line only, and never a "<placeholder>" (later change 1).
+const outcomeValue = (text, label) => {
+  const value = text.match(new RegExp(`${label}:[ \\t]*(.*)`, 'i'))?.[1]?.trim()
+  return value && !/^<[^>]*>$/.test(value) ? value : null
+}
+
 // Release: is it safe to ship (problems block), and is what we know still true (warnings)?
 export function releaseProblems(dir, state, artefactText, cfg = loadConfig(dir)) {
   const problems = []
@@ -186,12 +192,18 @@ export function releaseProblems(dir, state, artefactText, cfg = loadConfig(dir))
   // production, so its incident commander judges these.
   if (['full', 'light'].includes(state.lane)) {
     const rollback = section(artefactText, '## Rollback (tested)') ?? ''
-    if (!/\btested\b[^\n]*\d{4}-\d{2}-\d{2}/i.test(rollback)) problems.push('the rollback has no "Tested: <date>, <how>" line: test the rollback before release')
+    // The date the rollback ran, on a "Tested:" line, never a planned one (later change 2).
+    if (!/\bTested:[ \t]*\d{4}-\d{2}-\d{2}\b/i.test(rollback) || /\bTested:[^\n]*\b(not|planned|will|to be)\b/i.test(rollback)) problems.push('the rollback has no "Tested: <date>, <how>" line: test the rollback before release')
     const probes = section(artefactText, '## Probes') ?? ''
     if (!/\b(pass(ed)?|ok|green|fail(ed)?|red)\b/i.test(probes)) problems.push('"## Probes" records no result (pass or fail for each probe)')
+    // A probe's result is the last result word on its line: "a failed payment is retried: pass" passed.
+    for (const line of probes.split('\n')) {
+      const results = [...line.matchAll(/\b(pass(ed)?|ok|green|fail(ed)?|red)\b/gi)]
+      if (results.length && /^(fail(ed)?|red)$/i.test(results[results.length - 1][1])) problems.push(`a probe failed: ${line.replace(/\s+/g, ' ').trim().slice(0, 120)}. Fix it or roll back; a release with a failed probe is not done`)
+    }
     const outcome = section(artefactText, '## Outcome metric') ?? ''
-    const none = /Metric:\s*None, because\s+\S/i.test(outcome)
-    if (state.lane in cfg.outcomeWindowDays && !none && (!/Metric:\s*\S/i.test(outcome) || !/Owner:\s*\S/i.test(outcome))) problems.push('"## Outcome metric" needs "Metric:" and "Owner:" lines (or "Metric: None, because ..."), so the outcome follow-up has an owner')
+    const none = /Metric:[ \t]*None, because[ \t]+\S/i.test(outcome)
+    if (state.lane in cfg.outcomeWindowDays && !none && (!outcomeValue(outcome, 'Metric') || !outcomeValue(outcome, 'Owner'))) problems.push('"## Outcome metric" needs "Metric:" and "Owner:" lines (or "Metric: None, because ..."), so the outcome follow-up has an owner')
   }
   problems.push(...liveProblems(dir, state, artefactText, cfg))
   return { problems, warnings: rememberWarnings(dir, state, changed, cfg) }
@@ -278,9 +290,9 @@ export function rememberWarnings(dir, state, changed, cfg = loadConfig(dir)) {
 export function outcomeFollowUp(state, artefactText, cfg) {
   const days = cfg.outcomeWindowDays[state.lane]
   const outcome = section(artefactText, '## Outcome metric') ?? ''
-  const metric = outcome.match(/Metric:\s*(.+)/i)?.[1]?.trim()
+  const metric = outcomeValue(outcome, 'Metric')
   if (!days || !metric || /^None, because/i.test(metric)) return null
-  const owner = outcome.match(/Owner:\s*(.+)/i)?.[1]?.trim()
+  const owner = outcomeValue(outcome, 'Owner')
   const readOn = outcome.match(/Read on:\s*(\d{4}-\d{2}-\d{2})/i)?.[1]
   const due = readOn ? new Date(`${readOn}T00:00:00Z`).toISOString() : new Date(Date.now() + days * 864e5).toISOString()
   return { metric, owner, due, status: 'open', openedAt: new Date().toISOString() }
