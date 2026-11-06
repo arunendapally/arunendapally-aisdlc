@@ -7,7 +7,7 @@ import { fileURLToPath } from 'node:url'
 import { spawnSync } from 'node:child_process'
 import { STAGES, LANES, root, git, loadConfig, readState, writeState, listFeatures, missingHeadings, isFrozen, destructiveMigrations,
   stageSpec, section, matches, changedFiles, changedLines, createFeature, copyTemplate, TEMPLATES, overdueGates, overduePostmortems,
-  KINDS, trustedGates, promotable, readTrust, writeTrust, lessonPaid, lessonProblem, lessonsOwed, audit, withIntent, INTENT_PARTS, autonomy } from './lib.mjs'
+  KINDS, trustedGates, promotable, readTrust, writeTrust, lessonPaid, lessonProblem, lessonsOwed, audit, withIntent, INTENT_PARTS, autonomy, BRANCH_AUTO, branchAutoBlock } from './lib.mjs'
 import { check, conformance, OKF_VERSION, relevant, writeIndex } from './knowledge.mjs'
 import { collect, analyze, report, approvalSignals, approvalLines } from './retro.mjs'
 import { lint, requirementsFrom } from './gherkin.mjs'
@@ -301,7 +301,8 @@ const commands = {
     if ([4, 5].includes(state.stage)) onBranch(state)
     // With autonomy granted by a person, every gate passes on its checks, recorded as granted by them.
     const granted = autonomy(dir)
-    const next = n => (granted ? `Request gate ${n} again: it passes on its checks under autonomy.` : `Request gate ${n} again so a person approves the new version.`)
+    const onOwnBranch = state.branch && git('rev-parse --abbrev-ref HEAD', dir) === state.branch
+    const next = n => (granted ? `Request gate ${n} again: it passes on its checks under autonomy.` : BRANCH_AUTO.includes(n) && onOwnBranch ? `Request gate ${n} again: it passes on its checks on this branch.` : `Request gate ${n} again so a person approves the new version.`)
     // A spec or plan edited after it was approved has not been seen by a person: back to that stage,
     // not on to ship. The approvals after it went with the old version, so they go too.
     const drifted = (state.dataDoc
@@ -319,7 +320,15 @@ const commands = {
       audit(dir, { event: back === 1 ? 'spec-drift' : 'plan-drift', feature })
       fail(`${what[0].toUpperCase()}${what.slice(1)} has changed since gate ${back} was approved, so ${feature} goes back to stage ${back} (${name}). ${next(back)} Tests already written stay.`)
     }
-    const spec = granted ? { ...stageSpec(state, state.stage, trustedGates(dir)), isAuto: true, owner: `autonomy granted by ${granted.by}` } : stageSpec(state, state.stage, trustedGates(dir))
+    let spec = granted ? { ...stageSpec(state, state.stage, trustedGates(dir)), isAuto: true, owner: `autonomy granted by ${granted.by}` } : stageSpec(state, state.stage, trustedGates(dir))
+    // ADR-0007: after autonomy and earned trust, the feature branch rule; keptBy says why a person decides.
+    let keptBy = null
+    if (!spec.isAuto && BRANCH_AUTO.includes(state.stage)) {
+      const prdFile = path.join(dir, cfg.specsDir, feature, 'prd.md')
+      const risky = state.stage === 3 && fs.existsSync(prdFile) ? nonFunctionalProblems(fs.readFileSync(prdFile, 'utf8')).risky : null
+      keptBy = branchAutoBlock(dir, state, cfg, risky)
+      if (!keptBy) spec = { ...spec, isAuto: true, owner: 'feature branch' }
+    }
     const missing = missingHeadings(dir, state)
     const warnings = []
     // A spec or design approved before comes back as the next revision, and says what changed and why.
@@ -511,13 +520,14 @@ const commands = {
       // The fingerprint lets spec or plan drift send the work back even when no person approved it.
       state.gates[state.stage] = { status: 'approved', by: `checks: ${earned}`, requestedAt: now, approvedAt: now, auto: true, fingerprint: gateFingerprint(dir, state, state.stage, cfg) }
       if ([1, 3].includes(state.stage)) state.revisions = { ...state.revisions, [state.stage]: (state.revisions?.[state.stage] ?? 0) + 1 }
+      audit(dir, { event: 'auto', feature, stage: state.stage, revision: state.revisions?.[state.stage] ?? null, by: `checks: ${earned}` })
       return console.log(`Gate ${state.stage} (${spec.name}) passed on checks (${earned}) in the ${state.lane} lane. ${advanceFeature(dir, state)}`)
     }
     // The approval covers what was checked: the gate lapses if that changes before a human approves.
     state.gates[state.stage] = { status: 'waiting', requestedAt: now, fingerprint: gateFingerprint(dir, state, state.stage, cfg) }
     writeState(dir, state)
     const sla = cfg.reviewSlaHours[state.lane] ?? cfg.reviewSlaHours.full
-    console.log(`Gate ${state.stage} (${spec.name}) is waiting on: ${spec.owner}. Review deadline: ${sla}h.\nArtefact: ${cfg.specsDir}/${feature}/${spec.artefact}\nAsk the owner: run "sdlc ask ${feature}" and put its question to them with the question tool. Never ask them to type a command.`)
+    console.log(`Gate ${state.stage} (${spec.name}) is waiting on: ${spec.owner}. Review deadline: ${sla}h.${keptBy ? ` A person keeps this gate: ${keptBy}.` : ''}\nArtefact: ${cfg.specsDir}/${feature}/${spec.artefact}\nAsk the owner: run "sdlc ask ${feature}" and put its question to them with the question tool. Never ask them to type a command.`)
     // What the person judges it against, from what the scripts hold, never the agent's account of itself.
     const doc = f => (fs.existsSync(path.join(dir, cfg.specsDir, feature, f)) ? fs.readFileSync(path.join(dir, cfg.specsDir, feature, f), 'utf8') : '')
     if (state.intent) console.log(`\nYour intent:\n${INTENT_PARTS.map(([k, label]) => `- ${label}: ${state.intent[k]}`).join('\n')}`)

@@ -7,6 +7,8 @@ import { fileURLToPath } from 'node:url'
 
 export const plugin = path.join(path.dirname(fileURLToPath(import.meta.url)), '..')
 
+const PERSON_GATES = { 1: ['Test Human'], 3: ['Test Human'] }
+
 export function makeRepo(branch = 'feature/demo') {
   const repo = fs.mkdtempSync(path.join(os.tmpdir(), 'ai-sdlc-'))
   const g = (...a) => execFileSync('git', a, { cwd: repo, stdio: 'ignore' })
@@ -52,7 +54,9 @@ export function makeRepo(branch = 'feature/demo') {
       fs.mkdirSync(path.dirname(path.join(repo, file)), { recursive: true })
       fs.writeFileSync(path.join(repo, file), text)
     },
-    config: cfg => api.put('.ai-sdlc/config.json', JSON.stringify(cfg)),
+    // ADR-0007: on the feature branch Plan and Design pass on checks unless gateOwners names a person, so
+    // tests keep the person's path by naming the test person; tests of the branch rule pass gateOwners: {}.
+    config: cfg => api.put('.ai-sdlc/config.json', JSON.stringify({ gateOwners: PERSON_GATES, ...cfg })),
     // Fill a document's sections with content, in the given order.
     fill: (file, headings, extra = '') => api.put(file, headings.map(h => `${h}\n\nFilled.\n`).join('\n') + extra),
     // A bare "origin" holding main, so release checks have a remote to look at.
@@ -75,6 +79,7 @@ export function makeRepo(branch = 'feature/demo') {
       return api.git('rev-parse', 'origin/main')
     },
   }
+  api.config({})
   return api
 }
 

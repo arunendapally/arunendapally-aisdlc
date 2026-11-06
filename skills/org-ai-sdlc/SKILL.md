@@ -38,6 +38,7 @@ Build passes on checks in every lane. Templates are in `templates/`; write "None
 ## Moving work
 
 - `sdlc.mjs request <slug>` runs the stage's checks. A gate that passes on checks moves on by itself; any other waits for its named human owner.
+- **Feature branch (ADR-0007):** requested on the feature's own branch, Plan and Design pass on their checks, since the PR review follows. A person keeps the gate when gateOwners names one, after they sent it back, while the error budget is frozen, and at Design for data work or a risky Security and privacy line; the wait says which. Verify and Release always keep their people. The review packet lists every gate passed on checks.
 - A feature starts from the person's intent, typed by them: `sdlc intent <slug> change: ...; smallest: ...; drop if: ...`. The PRD waits for it; never draft, suggest or reword it.
 - Only a human records a decision by typing `sdlc approve <slug> <stage>`, `sdlc reject <slug> <stage> <reason>` or `sdlc close <slug> <reason>` (retire work that will not ship). The approval moves the feature on. Never claim a gate is passed. Approval needs a request first.
 - **Ask, never make people type commands.** When a gate waits or the intent is missing, run `sdlc.mjs ask <slug>` and put its question to the person with the question tool (AskUserQuestion). Their click is recorded with the same checks as a typed command; never fill in the answer. Typed `sdlc ...` commands remain a fallback.

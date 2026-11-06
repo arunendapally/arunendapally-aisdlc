@@ -16,4 +16,4 @@ Stage 3 for `$ARGUMENTS` (the light lane skips it).
 
 **Goal:** every requirement maps to a plan element, every ADR it names exists with its review, every breaking contract is declared.
 
-**Gate:** `node "${CLAUDE_PLUGIN_ROOT}/scripts/sdlc.mjs" request $ARGUMENTS`, then run `node "${CLAUDE_PLUGIN_ROOT}/scripts/sdlc.mjs" ask $ARGUMENTS` and put its question to the architect or product lead with the question tool: Approve, or Send back with a reason.
+**Gate:** `node "${CLAUDE_PLUGIN_ROOT}/scripts/sdlc.mjs" request $ARGUMENTS`, then run `node "${CLAUDE_PLUGIN_ROOT}/scripts/sdlc.mjs" ask $ARGUMENTS` and put its question to the architect or product lead with the question tool: Approve, or Send back with a reason. On the feature's own branch the request usually passes on its checks instead (ADR-0007); then there is no question to ask.

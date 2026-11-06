@@ -4,6 +4,8 @@ All notable changes to this repository. The format follows [Keep a Changelog](ht
 
 ## [Unreleased]
 
+- **A feature branch runs on its checks until the PR** (ADR-0007). Requested on the feature's own branch, Plan and Design pass on their checks; the PR review stays the human gate, and Verify and Release keep their people. A person keeps Plan or Design when gateOwners names one, after a send-back, on a frozen budget, and at Design for data or risky security work. Every pass on checks is audited as `auto`, and the review packet lists them. Tests in `tests/branch-autonomy.test.mjs`.
+
 ## [0.7.1] - 2026-11-06
 
 - **Bypass mode means no guard stops the session** (ADR-0006). In Claude Code's bypassPermissions mode the pre-tool guard lets every call through and audits what it would have refused as `bypassed`; only a human pause still stops the session. Every other mode keeps every guard. Tests in `tests/bypass.test.mjs`.

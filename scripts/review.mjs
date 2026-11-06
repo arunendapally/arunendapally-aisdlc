@@ -154,8 +154,16 @@ export function packet(dir, state) {
   const last = state.lastPacketHead && git(`cat-file -t ${state.lastPacketHead}`, dir) === 'commit' ? state.lastPacketHead : null
   const sinceLast = last ? git(`diff --name-only ${last}`, dir).split('\n').filter(f => f && !f.startsWith(`${cfg.specsDir}/`)) : null
 
-  return { feature: state.feature, lane: state.lane, head: git('rev-parse --short HEAD', dir), files: rows, code: code.length, tests: tests.length, deletedTests, untested, lenses, newDeps, oversized, codeLines, criteria, last, sinceLast }
+  // ADR-0007: every gate no person saw, and every drift that sent the work back, from the audit log.
+  const auditFile = path.join(dir, '.ai-sdlc', 'audit.jsonl')
+  const autoGates = (fs.existsSync(auditFile) ? fs.readFileSync(auditFile, 'utf8').split('\n') : []).filter(Boolean)
+    .map(l => { try { return JSON.parse(l) } catch { return {} } })
+    .filter(e => e.feature === state.feature && ['auto', 'spec-drift', 'plan-drift'].includes(e.event))
+
+  return { feature: state.feature, lane: state.lane, head: git('rev-parse --short HEAD', dir), files: rows, autoGates, code: code.length, tests: tests.length, deletedTests, untested, lenses, newDeps, oversized, codeLines, criteria, last, sinceLast }
 }
+
+const STAGE_NAMES = { 1: 'Plan', 3: 'Design', 4: 'Build', 5: 'Verify', 6: 'Release' }
 
 export function packetText(p) {
   const lines = [
@@ -170,6 +178,14 @@ export function packetText(p) {
       'Re-review only these. Do not repeat a finding already in review.md; if a fixed bug has siblings, flag the class once.',
       '',
       ...(p.sinceLast.length ? p.sinceLast.map(f => `- \`${f}\``) : ['- Nothing outside the specs.']),
+      '',
+    ] : []),
+    ...(p.autoGates?.length ? [
+      '## Gates passed on checks',
+      '',
+      'No person approved these before the PR; judge the spec and design here.',
+      '',
+      ...p.autoGates.map(e => (e.event === 'auto' ? `- ${STAGE_NAMES[e.stage] ?? `Gate ${e.stage}`}: passed on checks, ${e.at}${e.revision ? ` (v${e.revision})` : ''}` : `- ${e.event}: ${e.at}`)),
       '',
     ] : []),
     '## Look here first',
