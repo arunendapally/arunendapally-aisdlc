@@ -1,7 +1,7 @@
 {
   "feature": "branch-autonomy",
   "lane": "full",
-  "stage": 4,
+  "stage": 5,
   "branch": "feature/branch-autonomy",
   "createdAt": "2026-11-06T05:56:55.367Z",
   "stages": {
@@ -14,7 +14,11 @@
       "leftAt": "2026-11-06T07:57:52.940Z"
     },
     "4": {
-      "enteredAt": "2026-11-06T07:57:52.940Z"
+      "enteredAt": "2026-11-06T07:57:52.940Z",
+      "leftAt": "2026-11-06T08:51:17.509Z"
+    },
+    "5": {
+      "enteredAt": "2026-11-06T08:51:17.509Z"
     }
   },
   "gates": {
@@ -31,6 +35,14 @@
       "fingerprint": "3cfa8dd61834a623",
       "by": "Arun Endapally",
       "approvedAt": "2026-11-06T07:57:52.934Z"
+    },
+    "4": {
+      "status": "approved",
+      "by": "checks: checks (gate green, small diff)",
+      "requestedAt": "2026-11-06T08:51:17.129Z",
+      "approvedAt": "2026-11-06T08:51:17.129Z",
+      "auto": true,
+      "fingerprint": "95fe14bb6bdd6094"
     }
   },
   "retries": {},
@@ -38,7 +50,7 @@
     "brownfield"
   ],
   "capability": "gates-and-names",
-  "updatedAt": "2026-11-06T08:05:11.117Z",
+  "updatedAt": "2026-11-06T08:51:17.509Z",
   "intent": {
     "change": "Branch runs on its own",
     "smallest": "Gates pass on checks",
@@ -53,13 +65,14 @@
   "gateRuns": {
     "4": {
       "ok": true,
-      "count": 229,
-      "at": "2026-11-06T08:05:10.871Z",
+      "count": 240,
+      "at": "2026-11-06T08:51:15.377Z",
       "runs": 1,
       "runtime": "v24.19.0"
     }
   },
-  "baseline": 229,
+  "baseline": 240,
   "baselineRuntime": "v24.19.0",
-  "proofBase": "c6b642df93e343271f99bf195e46ef68d394f9fb"
+  "proofBase": "c6b642df93e343271f99bf195e46ef68d394f9fb",
+  "sizeChecked": 63
 }
