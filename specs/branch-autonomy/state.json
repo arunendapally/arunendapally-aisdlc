@@ -9,11 +9,24 @@
       "enteredAt": "2026-11-06T05:56:55.367Z"
     }
   },
-  "gates": {},
+  "gates": {
+    "1": {
+      "status": "waiting",
+      "requestedAt": "2026-11-06T06:51:53.481Z",
+      "fingerprint": "ff16211af6881f43"
+    }
+  },
   "retries": {},
   "kinds": [
     "brownfield"
   ],
   "capability": "gates-and-names",
-  "updatedAt": "2026-11-06T05:56:55.368Z"
+  "updatedAt": "2026-11-06T06:51:53.484Z",
+  "intent": {
+    "change": "Branch runs on its own",
+    "smallest": "Gates pass on checks",
+    "dropIf": "Bad PRs reach review",
+    "by": "Arun Endapally",
+    "at": "2026-11-06T06:51:47.825Z"
+  }
 }

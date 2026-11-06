@@ -4,6 +4,8 @@ Capability: gates-and-names (specs/gates-and-names/slices.md)
 
 ## Intent
 
+<!-- Typed by Arun Endapally on 2026-11-06. Only a person changes it: sdlc intent <feature> change: ...; smallest: ...; drop if: ... -->
+
 - Change: Branch runs on its own
 - Smallest: Gates pass on checks
 - Drop if: Bad PRs reach review
