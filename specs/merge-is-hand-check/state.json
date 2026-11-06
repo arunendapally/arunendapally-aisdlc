@@ -40,7 +40,7 @@
     "brownfield"
   ],
   "capability": "gates-and-names",
-  "updatedAt": "2026-11-06T09:58:33.244Z",
+  "updatedAt": "2026-11-06T14:22:25.532Z",
   "revisions": {
     "1": 1
   },
@@ -56,5 +56,7 @@
   "baseline": 231,
   "baselineRuntime": "v24.19.0",
   "proofBase": "c6b642df93e343271f99bf195e46ef68d394f9fb",
-  "sizeChecked": 34
+  "sizeChecked": 34,
+  "lastPacketHead": "deae28f",
+  "ledgerIds": []
 }
