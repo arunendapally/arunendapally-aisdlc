@@ -1,19 +1,25 @@
 {
   "feature": "branch-autonomy",
   "lane": "full",
-  "stage": 1,
+  "stage": 3,
   "branch": "feature/branch-autonomy",
   "createdAt": "2026-11-06T05:56:55.367Z",
   "stages": {
     "1": {
-      "enteredAt": "2026-11-06T05:56:55.367Z"
+      "enteredAt": "2026-11-06T05:56:55.367Z",
+      "leftAt": "2026-11-06T07:32:16.757Z"
+    },
+    "3": {
+      "enteredAt": "2026-11-06T07:32:16.757Z"
     }
   },
   "gates": {
     "1": {
-      "status": "waiting",
+      "status": "approved",
       "requestedAt": "2026-11-06T06:51:53.481Z",
-      "fingerprint": "ff16211af6881f43"
+      "fingerprint": "ff16211af6881f43",
+      "by": "Arun Endapally",
+      "approvedAt": "2026-11-06T07:32:16.750Z"
     }
   },
   "retries": {},
@@ -21,12 +27,15 @@
     "brownfield"
   ],
   "capability": "gates-and-names",
-  "updatedAt": "2026-11-06T06:51:53.484Z",
+  "updatedAt": "2026-11-06T07:32:16.757Z",
   "intent": {
     "change": "Branch runs on its own",
     "smallest": "Gates pass on checks",
     "dropIf": "Bad PRs reach review",
     "by": "Arun Endapally",
     "at": "2026-11-06T06:51:47.825Z"
+  },
+  "revisions": {
+    "1": 1
   }
 }
