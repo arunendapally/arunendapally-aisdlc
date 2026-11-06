@@ -12,12 +12,12 @@ You are the `cto`. Work: $ARGUMENTS
 
 | If it is | Route | Human gates |
 |---|---|---|
-| Production is broken now | Ask the on-call human to type `sdlc hotfix <slug> <what is broken>`, then `/ai-sdlc:hotfix <slug>`. Agents cannot declare it | merge, release |
-| Wrong behaviour that exists today, fixable without dependency, schema or infra changes | `/ai-sdlc:bug <slug>` (add `--kind perf` for slowness) | merge |
-| A small change users would not notice: dependency bump, config, refactor, docs, tooling | `/ai-sdlc:task <slug>` | merge |
+| Production is broken now | Ask the on-call human to type `sdlc hotfix <slug> <what is broken>`, then `/ai-sdlc:hotfix <slug>`. Agents cannot declare it | none, it ends at a PR |
+| Wrong behaviour that exists today, fixable without dependency, schema or infra changes | `/ai-sdlc:bug <slug>` (add `--kind perf` for slowness) | none, it ends at a PR |
+| A small change users would not notice: dependency bump, config, refactor, docs, tooling | `/ai-sdlc:task <slug>` | none, it ends at a PR |
 | A question about how the system works, or someone needs to become an SME | `/ai-sdlc:learn <topic>` | none, it writes knowledge only |
-| A migration that alters or drops existing data, a high-risk path (auth, payments, infra), or a new datastore, dependency or service | a feature in the **full** lane (`init <slug> --full`) | spec, design, merge, release |
-| Any other new behaviour | a feature in the **light** lane (the default) | spec, merge, release |
+| A migration that alters or drops existing data, a high-risk path (auth, payments, infra), or a new datastore, dependency or service | a feature in the **full** lane (`init <slug> --full`) | spec, design |
+| Any other new behaviour | a feature in the **light** lane (the default) | spec |
 | A big capability | Slice it first into thin vertical increments, each under the PR line limit. Record them in `specs/<capability>/slices.md` from the `slices.md` template: the outcome, then one line per slice with its slug, what it delivers, what it depends on and its status. Then start one feature per slice with `init <slug> --capability <capability>` | per slice |
 | Not worth doing, a duplicate, or not ours | Say so, with the reason, and stop | none |
 

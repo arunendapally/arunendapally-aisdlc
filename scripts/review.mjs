@@ -158,6 +158,8 @@ export function packet(dir, state) {
 }
 
 export function packetText(p) {
+  const untested = p.untested.filter(s => s.due !== 'release')
+  const afterDeploy = p.untested.filter(s => s.due === 'release')
   const lines = [
     `<!-- built at ${p.head} -->`,
     `# Review packet: ${p.feature} (${p.lane} lane)`,
@@ -192,8 +194,10 @@ export function packetText(p) {
     '',
     '## Criteria with no test',
     '',
-    ...(p.untested.length ? p.untested.map(s => `- ${s.ac} (${s.level}${s.due === 'release' ? ', at release: a probe proves it' : s.due === 'manual' ? ', by hand: judge whether a test was possible' : ''}): ${s.name}`) : ['- None: every criterion in acceptance.feature is tested at its level.']),
+    ...(untested.length ? untested.map(s => `- ${s.ac} (${s.level}${s.due === 'manual' ? ', by hand: judge whether a test was possible' : ''}): ${s.name}`) : ['- None: every criterion in acceptance.feature is tested at its level.']),
     '',
+    // ADR-0008: only the deployed build can show a @release criterion, and the deploy is the org's.
+    ...(afterDeploy.length ? ['## Check after deploy', '', ...afterDeploy.map(s => `- ${s.ac} (${s.level}): ${s.name}`), ''] : []),
     ...(p.deletedTests.length ? ['## Deleted tests', '', ...p.deletedTests.map(f => `- \`${f}\`: say why in the PR, or restore it`), ''] : []),
     '## All files',
     '',

@@ -13,37 +13,38 @@ export const STAGES = {
     headings: ['## Decisions', '## Data model', '## Contracts', '## Threat model', '## Error handling', '## Data and tenancy', '## Test plan', '## Run it'] },
   4: { name: 'Build', artefact: 'tasks.md', owner: 'checks (gate green, small diff)',
     headings: ['## Tasks'] },
-  5: { name: 'Verify', artefact: 'pr.md', owner: 'CODEOWNER engineer',
+  5: { name: 'Verify', artefact: 'pr.md', owner: 'checks (gate green, review clean)',
     headings: ['## Summary', '## Test results', '## Pre-review', '## Not verified'] },
   6: { name: 'Release', artefact: 'release.md', owner: 'release owner',
     headings: ['## Rollout', '## Rollback (tested)', '## Probes'] },
 }
 
 // Which stages each lane runs. Bug and hotfix lanes keep one document for the whole run,
-// which is also the PR body. Build passes on checks in every lane.
+// which is also the PR body. ADR-0008: every lane ends at Verify, and Build and Verify pass on checks;
+// who approves and merges the PR is the org's rule, not the plugin's.
 const BUG_BUILD = ['## Repro', '## Expected and actual', '## Root cause', '## Fix']
 const HOTFIX_BUILD = ['## Incident', '## Fix', '## Rollback']
 const SMALL_VERIFY = ['## Test results', '## Pre-review', '## Not verified']
 export const LANES = {
-  full: { stages: [1, 3, 4, 5, 6], auto: [4] },
+  full: { stages: [1, 3, 4, 5], auto: [4, 5] },
   // The light lane has no plan.md, so its design is "## Approach" in tasks.md (requirements, not solutions).
-  light: { stages: [1, 4, 5, 6], auto: [4], headings: { 4: ['## Approach', '## Tasks'] } },
+  light: { stages: [1, 4, 5], auto: [4, 5], headings: { 4: ['## Approach', '## Tasks'] } },
   bug: {
-    stages: [4, 5], auto: [4], artefact: 'bug.md', branch: 'bug',
+    stages: [4, 5], auto: [4, 5], artefact: 'bug.md', branch: 'bug',
     headings: { 4: BUG_BUILD, 5: [...BUG_BUILD, ...SMALL_VERIFY] },
-    owners: { 4: 'checks (repro red, gate green, small diff)', 5: 'CODEOWNER engineer' },
+    owners: { 4: 'checks (repro red, gate green, small diff)' },
   },
   hotfix: {
-    stages: [4, 5, 6], auto: [4], artefact: 'hotfix.md', branch: 'hotfix',
+    stages: [4, 5], auto: [4, 5], artefact: 'hotfix.md', branch: 'hotfix',
     headings: { 4: HOTFIX_BUILD, 5: [...HOTFIX_BUILD, ...SMALL_VERIFY], 6: [...HOTFIX_BUILD, ...SMALL_VERIFY, '## Probes', '## Follow-up'] },
-    owners: { 4: 'checks (gate green, small diff)', 5: 'on-call engineer (CODEOWNER)', 6: 'incident commander' },
+    owners: { 4: 'checks (gate green, small diff)' },
   },
 }
 
 LANES.task = {
-  stages: [4, 5], auto: [4], artefact: 'task.md', branch: 'task',
+  stages: [4, 5], auto: [4, 5], artefact: 'task.md', branch: 'task',
   headings: { 4: ['## Change', '## Why', '## Behaviour change'], 5: ['## Change', '## Why', '## Behaviour change', ...SMALL_VERIFY] },
-  owners: { 4: 'checks (gate green, small diff)', 5: 'CODEOWNER engineer' },
+  owners: { 4: 'checks (gate green, small diff)' },
 }
 
 // What kind of work it is adds sections (and owners) to whatever lane it runs in.
@@ -63,7 +64,7 @@ export const KINDS = {
     artefact: 'db-design.md',
     headings: { 1: ['## Data impact'], 3: ['## Data model', '## Migration plan (expand-contract)'], 4: ['## Rehearsal', '## Down migration'], 6: ['## Backout'] },
     legacy: { 1: ['## Data impact'], 3: ['## Migration plan (expand-contract)', '## Rehearsal'], 4: ['## Down migration'], 6: ['## Backout'] },
-    owners: { 3: 'DBA', 5: 'DBA', 6: 'DBA' },
+    owners: { 3: 'DBA' },
   },
 }
 
@@ -475,7 +476,8 @@ export function promotable(dir) {
 // The next stage this feature's lane runs, or undefined when the run is complete.
 export function nextStage(state) {
   const stages = (LANES[state.lane] ?? LANES.full).stages
-  return stages[stages.indexOf(state.stage) + 1]
+  // A stage the lane no longer runs (Release, before ADR-0008) is the last one, never a way back to the first.
+  return stages.includes(state.stage) ? stages[stages.indexOf(state.stage) + 1] : undefined
 }
 
 // Minimal glob: ** spans directories, * stays inside one segment.
