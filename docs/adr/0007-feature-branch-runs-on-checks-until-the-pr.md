@@ -1,6 +1,6 @@
 # ADR-0007: Plan and Design pass on checks on the feature's own branch; the PR review stays the human gate
 
-Status: proposed
+Status: accepted
 Date: 2026-11-06
 
 ## Context

@@ -1,7 +1,7 @@
 {
   "feature": "branch-autonomy",
   "lane": "full",
-  "stage": 3,
+  "stage": 4,
   "branch": "feature/branch-autonomy",
   "createdAt": "2026-11-06T05:56:55.367Z",
   "stages": {
@@ -10,7 +10,11 @@
       "leftAt": "2026-11-06T07:52:16.187Z"
     },
     "3": {
-      "enteredAt": "2026-11-06T07:52:16.187Z"
+      "enteredAt": "2026-11-06T07:52:16.187Z",
+      "leftAt": "2026-11-06T07:57:52.940Z"
+    },
+    "4": {
+      "enteredAt": "2026-11-06T07:57:52.940Z"
     }
   },
   "gates": {
@@ -22,9 +26,11 @@
       "approvedAt": "2026-11-06T07:52:16.181Z"
     },
     "3": {
-      "status": "waiting",
+      "status": "approved",
       "requestedAt": "2026-11-06T07:52:21.246Z",
-      "fingerprint": "3cfa8dd61834a623"
+      "fingerprint": "3cfa8dd61834a623",
+      "by": "Arun Endapally",
+      "approvedAt": "2026-11-06T07:57:52.934Z"
     }
   },
   "retries": {},
@@ -32,7 +38,7 @@
     "brownfield"
   ],
   "capability": "gates-and-names",
-  "updatedAt": "2026-11-06T07:52:21.248Z",
+  "updatedAt": "2026-11-06T07:57:52.940Z",
   "intent": {
     "change": "Branch runs on its own",
     "smallest": "Gates pass on checks",
@@ -41,6 +47,7 @@
     "at": "2026-11-06T06:51:47.825Z"
   },
   "revisions": {
-    "1": 2
+    "1": 2,
+    "3": 1
   }
 }
