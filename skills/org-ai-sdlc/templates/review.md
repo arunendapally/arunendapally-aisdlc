@@ -1,6 +1,6 @@
 # Review: <feature>
 
-<!-- Stage 5 Verify. Owner: pre-reviewer agent. Gate: with pr.md; the gate reads every row and refuses an open blocker, major or minor.
+<!-- Verify. Owner: pre-reviewer agent. Gate: with pr.md; the gate reads every row and refuses an open blocker, major or minor.
      The findings ledger: one table row per finding, from the pre-reviewer, every lens and every human.
      Replace <feature> above. No findings is a valid ledger; the PR's "Lenses run:" line says what was looked at.
 

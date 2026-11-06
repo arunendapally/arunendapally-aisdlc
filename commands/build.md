@@ -1,11 +1,15 @@
 ---
-description: Stage 4 Build. Tests first, then the builder implements batches the tech lead reviews; the gate passes on checks, with no human wait.
+description: Build. Tests first, then the builder implements batches the tech lead reviews; the gate passes on checks, with no human wait.
 argument-hint: <feature-slug>
 ---
 
-Stage 4 for `$ARGUMENTS`. You are the `tech-lead`.
+Build for `$ARGUMENTS`. You are the `tech-lead`.
 
-1. Before any change, run `node "${CLAUDE_PLUGIN_ROOT}/scripts/sdlc.mjs" gate $ARGUMENTS`: its first run in Build records the baseline. In a new repo nothing passes yet, so that run is red with 0 passing: the baseline is 0, and the first test you write must fail before its code exists. Write `specs/$ARGUMENTS/tasks.md`: first `## Approach` (in the light lane it is the design, and Build refuses without it; in the full lane it links `plan.md`), then tasks, each with its files, the criterion it proves, the tasks it waits for (`depends-on: [T1]`, or `depends-on: []`) and the traps from `standards/traps.md` that apply.
+**Input:** the approved spec and, in the full lane, `design.md`.
+**Processing:** tasks first, then tests that fail, then the code, batch by batch, each diff reviewed and the full gate green.
+**Output:** `tasks.md` and the tested change on the feature branch, passed on checks.
+
+1. Before any change, run `node "${CLAUDE_PLUGIN_ROOT}/scripts/sdlc.mjs" gate $ARGUMENTS`: its first run in Build records the baseline. In a new repo nothing passes yet, so that run is red with 0 passing: the baseline is 0, and the first test you write must fail before its code exists. Write `specs/$ARGUMENTS/tasks.md`: first `## Approach` (in the light lane it is the design, and Build refuses without it; in the full lane it links `design.md`), then tasks, each with its files, the criterion it proves, the tasks it waits for (`depends-on: [T1]`, or `depends-on: []`) and the traps from `standards/traps.md` that apply.
 2. **Tests first.** The `qa-engineer` writes a test per criterion, named after it (`AC-1 ...`) in a file that names the feature, with its own data setup and teardown. `node "${CLAUDE_PLUGIN_ROOT}/scripts/sdlc.mjs" tests $ARGUMENTS` lists any criterion with no test.
 3. Hand batches to the `builder` in the feature worktree, never on a protected branch. Review every diff against `standards/code-review-checklist.md`. Release the next batch only when the gate is green at or above the baseline.
 4. A spec gap: write the options with a recommendation, ask the `architect` or `product-owner`, and write the ruling back into the spec. Never guess.

@@ -57,7 +57,7 @@ Start anything with `/ai-sdlc:start <what you want>`. The CTO reads the code and
 | brownfield | the current system in the PRD, facts pinned to the code, characterisation tests before changing behaviour |
 | perf | a performance budget, a benchmark before, the same benchmark after |
 | api | the API changes in the PRD and an OpenAPI contract; breaking changes must be declared |
-| data | facts, and `db-design.md`, the data contract the DBA owns: data impact at Plan, the ER diagram of the change and an expand-contract plan at Design (at Build in the light lane), a rehearsal and a down migration at Build, a backout at Release; the DBA on the PR |
+| data | facts, and `db-design.md`, the data contract the DBA owns: data impact at Define, the ER diagram of the change and an expand-contract plan at Design (at Build in the light lane), a rehearsal and a down migration at Build, a backout at Release; the DBA on the PR |
 
 A change to migrations or SQL that is not marked as data work cannot pass its gate. Agents may add a kind but never remove one.
 
@@ -67,15 +67,15 @@ A change to migrations or SQL that is not marked as data work cannot pass its ga
 
 | Lane | Stages | Documents | Human gates | PR limit | Review deadline |
 |---|---|---|---|---|---|
-| light | Plan, Build, Verify, Release | prd + acceptance.feature, tasks, pr + review, release | 3: spec, merge, release | 300 lines | 8h |
-| full | Plan, Design, Build, Verify, Release | as light, plus plan and ADRs | 4: spec, design, merge, release | 400 | 24h |
+| light | Define, Build, Verify, Release | prd + acceptance.feature, tasks, pr + review, release | 3: spec, merge, release | 300 lines | 8h |
+| full | Define, Design, Build, Verify, Release | as light, plus design and ADRs | 4: spec, design, merge, release | 400 | 24h |
 | bug | Build, Verify | `bug.md` (also the PR body) | 1: merge | 200 | 8h |
 | task | Build, Verify | `task.md` (also the PR body) | 1: merge | 200 | 8h |
 | hotfix | Build, Verify, Release | `hotfix.md` (also the PR body) | 2: merge, release | 100 | 1h |
 
 - Features start in the light lane. Triage starts one in the full lane (`init <slug> --full`) for a migration that alters or drops data, a high-risk path, or a new datastore, dependency or service. Only a human moves a feature to light, or declares a hotfix.
 - In the light lane, Build refuses a destructive migration or a high-risk path. A human types `sdlc lane <feature> full`, and the feature goes back to Design.
-- A spec changed after Plan was approved goes back to Plan, and a plan changed after Design goes back to Design: every later request compares `prd.md` and `acceptance.feature` (and `plan.md`) with what the person approved and, if they differ, returns the feature to that stage for a new approval. Agents can always send work back; only a person moves it forward.
+- A spec changed after Define was approved goes back to Define, and a design changed after Design goes back to Design: every later request compares `prd.md` and `acceptance.feature` (and `design.md`) with what the person approved and, if they differ, returns the feature to that stage for a new approval. Agents can always send work back; only a person moves it forward.
 - Every stage reads the same spec because a feature is one folder, `specs/<slug>/`, on one branch, recorded in its `state.json`. The commands that judge the branch's diff (`gate`, `proof`, `review`, and a Build or Verify request) refuse on any other branch.
 - Build passes on checks in every lane: the gate is green at or above the baseline, the diff is under the limit, and for a bug the repro failed first.
 - A bug fix cannot touch dependencies, schema, CI or infrastructure; the hook refuses. A hotfix can, with the on-call engineer's yes.
@@ -93,8 +93,8 @@ What each stage expects, what happens in it, who leads and who decides, and what
 | Stage | Input | What happens | Leads (agents) | Decides (human) | Output |
 |---|---|---|---|---|---|
 | **Start** | A request in plain words, or an issue or ticket link | Reads the code and the knowledge base, triages in five lines (what, who, how urgent, how big, how risky), picks the lane and kinds | `cto` | Nobody, except that only a human declares a hotfix | A lane and kinds, the `feature/<slug>` branch and worktree, and `specs/<slug>/` with `state.json` |
-| **1 Plan** | The request and triage, the answers to the questions asked, and for brownfield or data work the facts pinned to the code | Asks the questions that would change the spec, records assumptions, writes numbered requirements, and turns every requirement into a Gherkin scenario. The gate checks that each requirement has one | `product-owner`, `qa-engineer` (`architect` for facts) | Product lead approves the spec | `prd.md`, `acceptance.feature` and, when needed, `facts.md`, approved together |
-| **3 Design** (full lane) | The approved PRD and scenarios, and the facts | Records each decision as an ADR with two options, cross-questioned by a reviewer from another discipline; covers the data model, contracts (breaking changes declared), threat model, test plan and how it runs | `architect`, `design-reviewer` (`dba`, `sre`, `safe-ai-sdlc-expert` where they apply) | Architect and product lead approve the design | `plan.md`, ADRs in `docs/adr/` and, for api work, `openapi.yaml` with `swagger.html` |
+| **1 Define** | The request and triage, the answers to the questions asked, and for brownfield or data work the facts pinned to the code | Asks the questions that would change the spec, records assumptions, writes numbered requirements, and turns every requirement into a Gherkin scenario. The gate checks that each requirement has one | `product-owner`, `qa-engineer` (`architect` for facts) | Product lead approves the spec | `prd.md`, `acceptance.feature` and, when needed, `facts.md`, approved together |
+| **3 Design** (full lane) | The approved PRD and scenarios, and the facts | Records each decision as an ADR with two options, cross-questioned by a reviewer from another discipline; covers the data model, contracts (breaking changes declared), threat model, test plan and how it runs | `architect`, `design-reviewer` (`dba`, `sre`, `safe-ai-sdlc-expert` where they apply) | Architect and product lead approve the design | `design.md`, ADRs in `docs/adr/` and, for api work, `openapi.yaml` with `swagger.html` |
 | **4 Build** | The approved spec (and the plan in the full lane), the standards and traps | Breaks the work into tasks; each slice runs test, implement, gate, retry, with the retries capped and the gate never below its baseline | `tech-lead`, `builder` | Nobody: it passes on its checks | `tasks.md` ticked off, code and tests, the gate green, the diff under the lane's limit |
 | **5 Verify** | The branch, its tests and the spec | Proves the new tests fail on the base code and pass on the branch, then the pre-reviewer reviews the PR through expert lenses and scores the risk | `pre-reviewer`, `qa-engineer` | A CODEOWNER engineer approves and merges | The PR (summary, test results, pre-review, not verified), the review packet and test matrix, merged to `main` |
 | **6 Release** | The merged change on `main` | Checks the change is live (`Live: <sha>`), the rollback was tested and every probe has a result | `sre` | The release owner approves the release | `release.md` (rollout, tested rollback, probes, outcome metric), and the feature closed |
@@ -155,7 +155,7 @@ Decided in [ADR-0002](adr/0002-loop-spine.md), and made lighter by [ADR-0003](ad
 - **Remember, on staleness, as warnings.** Release warns about each of these, and an agent fixes what it lists before the human review:
   - a knowledge page whose sources the change touched is stale (C4 files count as sources)
   - a fact in `facts.md` about a file the change touched is stale
-  - a decision says it supersedes an ADR (in `plan.md` or a changed ADR) and that ADR is not marked `Status: superseded`
+  - a decision says it supersedes an ADR (in `design.md` or a changed ADR) and that ADR is not marked `Status: superseded`
   - a changed postmortem has an action without a link to the trap, test, check or PRD it became, an owner and a due date
 
   There is no rule that traps or the changelog must change.
@@ -173,7 +173,7 @@ Decided in [ADR-0004](adr/0004-gates-that-catch-real-failures.md), after the fee
 | F2. Context spent before the source of truth | The pre-tool hook refuses a full read of a large file and gives the sliced call. Brownfield and data facts need a `[governing]` fact pinned to implementation code. |
 | F3. A branch deploy erased by the next merge | Release refuses unless the reviewed change is on `origin/main` and `Live: <sha>`, read from the running system, contains it and the previous release. A preview deploy from an unpushed branch asks first. |
 
-**Lessons owed.** A bug filed with `--caused-by`, or a hotfix, owes a trap in `standards/traps.md` that names it under `Source` and is guarded by a check. The bug cannot merge, and the postmortem stays open, until it is paid. This is how Release and incidents feed Plan by mechanism rather than by instruction.
+**Lessons owed.** A bug filed with `--caused-by`, or a hotfix, owes a trap in `standards/traps.md` that names it under `Source` and is guarded by a check. The bug cannot merge, and the postmortem stays open, until it is paid. This is how Release and incidents feed Define by mechanism rather than by instruction.
 
 ---
 
@@ -216,9 +216,9 @@ Sections 5 to 7 make each repo better. This loop makes the plugin better, for ev
 
 Each gate refuses work that guesses, skips a question or hides risk, so what reaches a human is already checked.
 
-**Requirements (Plan, one gate).**
+**Requirements (Define, one gate).**
 - The product owner asks the questions that would change the PRD before drafting, and records them with the answers in `## Questions asked`. Every belief without a source is an assumption marked `[confirmed]` or `[unconfirmed]`; every unconfirmed one must be in Open questions.
-- The PRD (`prd.md`) carries the person's intent, the problem, users and jobs, constraints a person already chose (optional), numbered testable requirements (R1, R2 ...) that state needs and never solutions, non-functional requirements (each a requirement or "None, because ..."), never-claims, scope, an outcome metric of value to users and open questions. Dependencies are optional. How it is built goes in the design: `plan.md` in the full lane, `## Approach` in `tasks.md` in the light lane. The Plan gate warns when a requirement or a scenario step names a mechanism (code, markup, files, identifiers, endpoints, named storage or technology), except the contract in api work and the datasets in data work.
+- The PRD (`prd.md`) carries the person's intent, the problem, users and jobs, constraints a person already chose (optional), numbered testable requirements (R1, R2 ...) that state needs and never solutions, non-functional requirements (each a requirement or "None, because ..."), never-claims, scope, an outcome metric of value to users and open questions. Dependencies are optional. How it is built goes in the design: `design.md` in the full lane, `## Approach` in `tasks.md` in the light lane. The Define gate warns when a requirement or a scenario step names a mechanism (code, markup, files, identifiers, endpoints, named storage or technology), except the contract in api work and the datasets in data work.
 - `acceptance.feature` holds every acceptance criterion as Gherkin, approved with the PRD. The gate enforces an `@AC-n` and the `@Rn` it proves on every scenario, and a scenario for every PRD requirement. Narrative, one When, step order, a level tag, Outlines and selectors are advice: the linter warns.
 - For brownfield and data work, `facts.md` pins what is true about the current system to `file:line` at a commit. A fact whose source changed is stale; a requirement citing an undefined fact is refused.
 

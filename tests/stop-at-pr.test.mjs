@@ -114,7 +114,7 @@ test('stop-at-pr: a commit after Verify passed is flagged in status and reopens 
   r.git('commit', '-q', '-m', 'after Verify')
   assert.match(r.sdlc('status').out, /demo: complete \(light lane\), CHANGED AFTER VERIFY: request Verify again/)
   const reopened = r.sdlc('request', 'demo')
-  assert.match(reopened.out, /src\/late\.js changed after Verify reviewed [0-9a-f]{7}, so demo is back at stage 5 \(Verify\)/)
+  assert.match(reopened.out, /src\/late\.js changed after Verify reviewed [0-9a-f]{7}, so demo is back at Verify/)
   assert.match(reopened.out, /the full gate has not passed at this stage/, 'the new code needs the gate again')
   assert.equal(r.state('demo').closedAt, undefined)
   r.sdlc('gate', 'demo')

@@ -7,7 +7,7 @@ import { fileURLToPath } from 'node:url'
 import { spawnSync } from 'node:child_process'
 import { STAGES, root, git, loadConfig, readState, writeState, listFeatures, missingHeadings, isFrozen, destructiveMigrations,
   stageSpec, section, matches, changedFiles, changedLines, createFeature, copyTemplate, TEMPLATES, overdueGates, overduePostmortems,
-  KINDS, trustedGates, promotable, readTrust, writeTrust, lessonPaid, lessonProblem, lessonsOwed, audit, withIntent, INTENT_PARTS, autonomy } from './lib.mjs'
+  KINDS, trustedGates, promotable, readTrust, writeTrust, lessonPaid, lessonProblem, lessonsOwed, audit, withIntent, INTENT_PARTS, autonomy, designDoc } from './lib.mjs'
 import { check, conformance, OKF_VERSION, relevant, writeIndex } from './knowledge.mjs'
 import { collect, analyze, report, approvalSignals, approvalLines } from './retro.mjs'
 import { lint, requirementsFrom } from './gherkin.mjs'
@@ -192,20 +192,21 @@ const openapiBreaks = state => {
 const contractProblems = state => {
   const kinds = state.kinds ?? []
   const folder = path.join(dir, loadConfig(dir).specsDir, state.feature)
-  const plan = path.join(folder, 'plan.md')
+  const design = designDoc(dir, state)
+  const plan = path.join(folder, design)
   const planText = fs.existsSync(plan) ? fs.readFileSync(plan, 'utf8') : ''
   const db = path.join(folder, 'db-design.md')
   const problems = []
   const warnings = []
   // The ER diagram is in db-design.md, or in plan.md for a data feature started before it.
-  if (kinds.includes('data')) warnings.push(...erProblems(state.dataDoc ? (fs.existsSync(db) ? fs.readFileSync(db, 'utf8') : '') : planText, state.dataDoc ? 'db-design.md' : 'plan.md').map(p => `ER diagram: ${p}`))
+  if (kinds.includes('data')) warnings.push(...erProblems(state.dataDoc ? (fs.existsSync(db) ? fs.readFileSync(db, 'utf8') : '') : planText, state.dataDoc ? 'db-design.md' : design).map(p => `ER diagram: ${p}`))
   if (kinds.includes('api')) {
     const file = openapiFile(state)
     if (!fs.existsSync(file)) problems.push(`no ${path.relative(dir, file).split(path.sep).join('/')}: API work needs its OpenAPI contract (sdlc api ${state.feature})`)
     else {
       warnings.push(...openapiProblems(fs.readFileSync(file, 'utf8')).map(p => `openapi.yaml: ${p}`))
       const contracts = (section(planText, '## Contracts') ?? '').toLowerCase()
-      for (const b of openapiBreaks(state)) if (!contracts.includes('breaking') || !contracts.includes(b.replace(/^removed /, '').split(' no longer')[0].toLowerCase())) problems.push(`openapi.yaml breaks clients (${b}): declare it as breaking in plan.md "## Contracts", with the version bump and migration path`)
+      for (const b of openapiBreaks(state)) if (!contracts.includes('breaking') || !contracts.includes(b.replace(/^removed /, '').split(' no longer')[0].toLowerCase())) problems.push(`openapi.yaml breaks clients (${b}): declare it as breaking in ${design} "## Contracts", with the version bump and migration path`)
     }
   }
   return { problems, warnings }
@@ -252,7 +253,7 @@ const commands = {
     // The script writes the line: the PRD itself waits for the person's intent.
     if (capability) fs.writeFileSync(path.join(dir, prd), fs.readFileSync(path.join(dir, prd), 'utf8').replace(/^(# PRD: .*\n)/, `$1\nCapability: ${capability} (${slices})\n`))
     scaffoldKinds(state)
-    console.log(`Created ${feature} at stage 1 (Plan), ${lane} lane${kindNote()}. Write ${prd} and ${feat}; one approval covers both.`)
+    console.log(`Created ${feature} at Define, ${lane} lane${kindNote()}. Write ${prd} and ${feat}; one approval covers both.`)
   },
 
   // A small change with no new behaviour to specify (a dependency bump, config, a refactor, docs).
@@ -262,7 +263,7 @@ const commands = {
     if (kinds().includes('data')) fail('Data work is a feature, so the DBA reviews it. Use: sdlc init <slug> --kind data')
     createFeature(dir, { feature, lane: 'task', branch: flag('branch'), extra: { kinds: kinds() } })
     const doc = copyTemplate(dir, feature, 'task.md')
-    console.log(`Created task ${feature} at stage 4 (Build)${kindNote()}. Document: ${doc}`)
+    console.log(`Created task ${feature} at Build${kindNote()}. Document: ${doc}`)
   },
 
   // Add a kind to work already started. Kinds only add sections and owners, so agents may add them
@@ -289,7 +290,7 @@ const commands = {
     if (causedBy && !readState(dir, causedBy)) fail(`No feature "${causedBy}" to charge this bug to.`)
     createFeature(dir, { feature, lane: 'bug', branch: flag('branch'), extra: { kinds: kinds(), ...(causedBy ? { causedBy, lessonOwed: true } : {}) } })
     const doc = copyTemplate(dir, feature, 'bug.md')
-    console.log(`Created bug ${feature} at stage 4 (Build). Write the repro test first and run "sdlc gate ${feature}": it must fail before the fix. Document: ${doc}`)
+    console.log(`Created bug ${feature} at Build. Write the repro test first and run "sdlc gate ${feature}": it must fail before the fix. Document: ${doc}`)
     if (causedBy) console.log(chargeEscape(causedBy, feature))
   },
 
@@ -309,16 +310,16 @@ const commands = {
       delete state.stages[5]?.leftAt
       writeState(dir, state)
       audit(dir, { event: 'reopen', feature, files: moved.slice(0, 20) })
-      console.log(`${moved.slice(0, 5).join(', ')} changed after Verify reviewed ${state.reviewedSha.slice(0, 7)}, so ${feature} is back at stage 5 (Verify).`)
+      console.log(`${moved.slice(0, 5).join(', ')} changed after Verify reviewed ${state.reviewedSha.slice(0, 7)}, so ${feature} is back at Verify.`)
     }
     // With autonomy granted by a person, every gate passes on its checks, recorded as granted by them.
     const granted = autonomy(dir)
-    const next = n => (granted ? `Request gate ${n} again: it passes on its checks under autonomy.` : `Request gate ${n} again so a person approves the new version.`)
+    const next = n => (granted ? `Request the ${STAGES[n].name} gate again: it passes on its checks under autonomy.` : `Request the ${STAGES[n].name} gate again so a person approves the new version.`)
     // A spec or plan edited after it was approved has not been seen by a person: back to that stage,
     // not on to ship. The approvals after it went with the old version, so they go too.
     const drifted = (state.dataDoc
-      ? [[1, 'Plan', 'the spec (prd.md, acceptance.feature, or db-design.md "## Data impact")'], [3, 'Design', 'the design (plan.md, or db-design.md "## Data model" or "## Migration plan (expand-contract)")']]
-      : [[1, 'Plan', 'the spec (prd.md or acceptance.feature)'], [3, 'Design', 'the plan (plan.md)']])
+      ? [[1, 'Define', 'the spec (prd.md, acceptance.feature, or db-design.md "## Data impact")'], [3, 'Design', `the design (${designDoc(dir, state)}, or db-design.md "## Data model" or "## Migration plan (expand-contract)")`]]
+      : [[1, 'Define', 'the spec (prd.md or acceptance.feature)'], [3, 'Design', `the design (${designDoc(dir, state)})`]])
       .find(([s]) => state.stage > s && state.gates[s]?.status === 'approved' && state.gates[s].fingerprint && state.gates[s].fingerprint !== gateFingerprint(dir, state, s, cfg))
     if (drifted) {
       const [back, name, what] = drifted
@@ -329,21 +330,22 @@ const commands = {
       state.stages[back] = { enteredAt: now }
       writeState(dir, state)
       audit(dir, { event: back === 1 ? 'spec-drift' : 'plan-drift', feature })
-      fail(`${what[0].toUpperCase()}${what.slice(1)} has changed since gate ${back} was approved, so ${feature} goes back to stage ${back} (${name}). ${next(back)} Tests already written stay.`)
+      fail(`${what[0].toUpperCase()}${what.slice(1)} has changed since ${name} was approved, so ${feature} goes back to ${name}. ${next(back)} Tests already written stay.`)
     }
     const spec = granted ? { ...stageSpec(state, state.stage, trustedGates(dir)), isAuto: true, owner: `autonomy granted by ${granted.by}` } : stageSpec(state, state.stage, trustedGates(dir))
+    if (spec.artefact === 'design.md') spec.artefact = designDoc(dir, state)
     const missing = missingHeadings(dir, state)
     const warnings = []
     // A spec or design approved before comes back as the next revision, and says what changed and why.
     const revision = state.revisions?.[state.stage] ?? 0
     if ([1, 3].includes(state.stage) && revision) {
-      const doc = state.stage === 1 ? 'prd.md' : 'plan.md'
+      const doc = state.stage === 1 ? 'prd.md' : designDoc(dir, state)
       const text = fs.existsSync(path.join(dir, cfg.specsDir, feature, doc)) ? fs.readFileSync(path.join(dir, cfg.specsDir, feature, doc), 'utf8') : ''
       if (!section(text, `## Changes since v${revision}`)) missing.push(`${doc} was approved as v${revision}: add "## Changes since v${revision}" saying what changed and why (the change request), so v${revision + 1} can be approved`)
     }
     if ([4, 5].includes(state.stage) && !(state.kinds ?? []).includes('data')) {
       const schema = changedFiles(dir, cfg).filter(f => matches(f.file, ['**/migrations/**', '**/*.sql', '**/schema.prisma'])).map(f => f.file)
-      if (schema.length) missing.push(`${schema.join(', ')} change the schema: this is data work. Run "sdlc kind ${feature} data" (its pre-review runs the data lens); it starts db-design.md, and its "## Data impact" is part of the spec, so filling it sends the spec back to Plan for approval`)
+      if (schema.length) missing.push(`${schema.join(', ')} change the schema: this is data work. Run "sdlc kind ${feature} data" (its pre-review runs the data lens); it starts db-design.md, and its "## Data impact" is part of the spec, so filling it sends the spec back to Define for approval`)
     }
     // The light lane is for additive, low-risk work: altering or dropping data, or a high-risk path,
     // needs the Design gate of the full lane.
@@ -366,7 +368,7 @@ const commands = {
         writeState(dir, state)
         audit(dir, { event: 'lane', feature, lane: 'full', by: `autonomy granted by ${granted.by}` })
         const why = destructive.length ? `${destructive.join(', ')} alter or drop existing data` : risky.length ? `${risky.slice(0, 5).join(', ')} are high-risk paths` : spans
-        fail(`${why}, so ${feature} moves to the full lane and goes back to stage 3 (Design): write plan.md, then request gate 3.`)
+        fail(`${why}, so ${feature} moves to the full lane and goes back to Design: write design.md, then request its gate.`)
       }
       if (destructive.length) missing.push(`${destructive.join(', ')} alter or drop existing data, which needs the full lane: ask a human to type "sdlc lane ${feature} full"`)
       if (risky.length) missing.push(`${risky.slice(0, 5).join(', ')} are high-risk paths, which need the full lane: ask a human to type "sdlc lane ${feature} full"`)
@@ -394,7 +396,7 @@ const commands = {
         Object.assign(state, { lane: 'full', laneSetBy: `autonomy granted by ${granted.by}` })
         writeState(dir, state)
         audit(dir, { event: 'lane', feature, lane: 'full', by: `autonomy granted by ${granted.by}` })
-        console.log(`Security and privacy touches ${nfr.risky}, so ${feature} moves to the full lane: Design follows Plan.`)
+        console.log(`Security and privacy touches ${nfr.risky}, so ${feature} moves to the full lane: Design follows Define.`)
       } else if (nfr.risky && state.lane === 'light') missing.push(`Security and privacy touches ${nfr.risky}, which needs the full lane: ask a human to type "sdlc lane ${feature} full"`)
       missing.push(...acceptanceProblems(state))
       // Slice before building, not after: the PR line limit otherwise fires at the end of Build.
@@ -443,7 +445,7 @@ const commands = {
     }
     if (state.stage === 5) {
       // Review has to converge (ADR-0005): past the round cap, step back instead of another round.
-      if ((state.reviewRounds ?? 0) >= cfg.reviewRoundCap) fail(`Gate 5 has been refused ${state.reviewRounds} times. Stop fixing finding by finding: step back, rethink the approach, and ask a human. They reset it by typing: sdlc reject ${feature} 5 rethink: <the new approach>`)
+      if ((state.reviewRounds ?? 0) >= cfg.reviewRoundCap) fail(`Verify has been refused ${state.reviewRounds} times. Stop fixing finding by finding: step back, rethink the approach, and ask a human. They reset it by typing: sdlc reject ${feature} 5 rethink: <the new approach>`)
       const folder = path.join(dir, cfg.specsDir, feature)
       const file = path.join(folder, spec.artefact)
       const pre = (fs.existsSync(file) && section(fs.readFileSync(file, 'utf8'), '## Pre-review')) || ''
@@ -495,7 +497,7 @@ const commands = {
       missing.push(...release.problems)
       warnings.push(...release.warnings)
       const unreviewed = unreviewedChanges(dir, state, cfg)
-      if (unreviewed.length) missing.push(`${unreviewed.slice(0, 5).join(', ')} changed after Verify reviewed ${state.reviewedSha.slice(0, 7)}: that code never reached a reviewer. Request gate 5 again`)
+      if (unreviewed.length) missing.push(`${unreviewed.slice(0, 5).join(', ')} changed after Verify reviewed ${state.reviewedSha.slice(0, 7)}: that code never reached a reviewer. Request Verify again`)
     }
     for (const w of warnings) console.log(`WARNING: ${w}`)
     if (state.stage === 5) {
@@ -508,11 +510,11 @@ const commands = {
     if (missing.length) {
       state.lastRefusal = { stage: state.stage, at: new Date().toISOString(), reasons: missing.slice(0, 5) }
       writeState(dir, state)
-      fail(`Gate ${state.stage} cannot be requested:\n- ${missing.join('\n- ')}${granted ? '\nUnder autonomy no one approves around a check: fix each reason above and request again. A check you believe is wrong is a finding for the plugin (record it for the retro), never a reason to work around it.' : ''}`)
+      fail(`${spec.name} cannot be requested:\n- ${missing.join('\n- ')}${granted ? '\nUnder autonomy no one approves around a check: fix each reason above and request again. A check you believe is wrong is a finding for the plugin (record it for the retro), never a reason to work around it.' : ''}`)
     }
     delete state.lastRefusal
     const gate = state.gates[state.stage]
-    if (gate?.status === 'approved') fail(`Gate ${state.stage} is already approved. Run: sdlc advance ${feature}`)
+    if (gate?.status === 'approved') fail(`${spec.name} is already approved. Run: sdlc advance ${feature}`)
     const now = new Date().toISOString()
     // The commit the reviewer sees is the one Release must find on the remote's main (ADR-0004).
     if (state.stage === 5) {
@@ -526,13 +528,13 @@ const commands = {
       // The fingerprint lets spec or plan drift send the work back even when no person approved it.
       state.gates[state.stage] = { status: 'approved', by: `checks: ${earned}`, requestedAt: now, approvedAt: now, auto: true, fingerprint: gateFingerprint(dir, state, state.stage, cfg) }
       if ([1, 3].includes(state.stage)) state.revisions = { ...state.revisions, [state.stage]: (state.revisions?.[state.stage] ?? 0) + 1 }
-      return console.log(`Gate ${state.stage} (${spec.name}) passed on checks (${earned}) in the ${state.lane} lane. ${advanceFeature(dir, state)}`)
+      return console.log(`${spec.name} passed on checks (${earned}) in the ${state.lane} lane. ${advanceFeature(dir, state)}`)
     }
     // The approval covers what was checked: the gate lapses if that changes before a human approves.
     state.gates[state.stage] = { status: 'waiting', requestedAt: now, fingerprint: gateFingerprint(dir, state, state.stage, cfg) }
     writeState(dir, state)
     const sla = cfg.reviewSlaHours[state.lane] ?? cfg.reviewSlaHours.full
-    console.log(`Gate ${state.stage} (${spec.name}) is waiting on: ${spec.owner}. Review deadline: ${sla}h.\nArtefact: ${cfg.specsDir}/${feature}/${spec.artefact}\nAsk the owner: run "sdlc ask ${feature}" and put its question to them with the question tool. Never ask them to type a command.`)
+    console.log(`${spec.name} is waiting on: ${spec.owner}. Review deadline: ${sla}h.\nArtefact: ${cfg.specsDir}/${feature}/${spec.artefact}\nAsk the owner: run "sdlc ask ${feature}" and put its question to them with the question tool. Never ask them to type a command.`)
     // What the person judges it against, from what the scripts hold, never the agent's account of itself.
     const doc = f => (fs.existsSync(path.join(dir, cfg.specsDir, feature, f)) ? fs.readFileSync(path.join(dir, cfg.specsDir, feature, f), 'utf8') : '')
     if (state.intent) console.log(`\nYour intent:\n${INTENT_PARTS.map(([k, label]) => `- ${label}: ${state.intent[k]}`).join('\n')}`)
@@ -551,6 +553,7 @@ const commands = {
     const gate = state.gates[state.stage]
     if (gate?.status === 'waiting') {
       const spec = stageSpec(state, state.stage)
+      if (spec.artefact === 'design.md') spec.artefact = designDoc(dir, state)
       const intent = state.intent ? ` Your intent: ${state.intent.change}.` : ''
       // A spec or design approved before is asked as its next revision, with what changed.
       const revision = state.revisions?.[state.stage] ?? 0
@@ -559,7 +562,7 @@ const commands = {
       const name = revision ? `${spec.name} v${revision + 1}` : spec.name
       return console.log(JSON.stringify({
         questions: [{
-          header: `Gate ${state.stage}`,
+          header: spec.name,
           question: `Approve ${name} for ${feature}?${changed ? ` Changed since v${revision}: ${changed.trim()}` : ''} It covers ${[spec.artefact, ...Object.keys(spec.docs ?? {})].map(f => `${loadConfig(dir).specsDir}/${feature}/${f}`).join(' and ')}.${intent} [gate ${feature} ${state.stage} ${(gate.fingerprint ?? '').slice(0, 8)}]`,
           multiSelect: false,
           options: [
@@ -588,7 +591,7 @@ const commands = {
   advance() {
     const state = need()
     if (state.closedAt) fail(`${feature} is complete.`)
-    if (state.gates[state.stage]?.status !== 'approved') fail(`Gate ${state.stage} is not approved. Nothing moved.`)
+    if (state.gates[state.stage]?.status !== 'approved') fail(`${STAGES[state.stage].name} is not approved. Nothing moved.`)
     console.log(advanceFeature(dir, state))
   },
 
@@ -694,7 +697,7 @@ const commands = {
         const s = readState(dir, slug)
         const after = line.match(/Depends on:\s*([^.]+)/i)?.[1].trim()
         const waits = after && !/^none$/i.test(after) ? `, depends on ${after}` : ''
-        const where = s ? (s.closedAt ? `complete (${s.lane} lane)` : `stage ${s.stage} ${STAGES[s.stage].name} (${s.lane} lane)`) : `not started (${line.match(/Status:\s*([^.\n]+)/i)?.[1].trim() ?? 'no status'})`
+        const where = s ? (s.closedAt ? `complete (${s.lane} lane)` : `${STAGES[s.stage].name} (${s.lane} lane)`) : `not started (${line.match(/Status:\s*([^.\n]+)/i)?.[1].trim() ?? 'no status'})`
         console.log(`  ${slug}: ${where}${waits}`)
       }
     }
@@ -708,7 +711,7 @@ const commands = {
         const due = noPostmortem.includes(s.feature) ? `, POSTMORTEM OVERDUE (due ${s.postmortemDue.slice(0, 10)}${noProof})` : ''
         const open = s.outcome?.status === 'open' ? `, OUTCOME ${lateOutcomes.includes(s.feature) ? 'OVERDUE' : 'DUE'} ${s.outcome.due.slice(0, 10)} (${s.outcome.owner})` : ''
         const outcome = open || (s.outcome ? `, outcome ${s.outcome.status}` : '')
-        const how = s.closedReason ? `closed at stage ${s.stage} by ${s.closedBy}: ${s.closedReason}` : 'complete'
+        const how = s.closedReason ? `closed at ${STAGES[s.stage].name} by ${s.closedBy}: ${s.closedReason}` : 'complete'
         // Only on the feature's own branch: elsewhere HEAD holds other work.
         const moved = !s.closedReason && s.branch === git('rev-parse --abbrev-ref HEAD', dir) && unreviewedChanges(dir, s).length ? ', CHANGED AFTER VERIFY: request Verify again' : ''
         console.log(`${s.feature}: ${how} (${s.lane} lane)${moved}${due}${outcome}`)
@@ -719,7 +722,7 @@ const commands = {
       const deadline = late ? ` OVERDUE (deadline ${late.limit}h): escalate to a backup reviewer` : ''
       const wait = gate?.status === 'waiting' ? `, waiting on ${stageSpec(s).owner} for ${hours(gate.requestedAt)}h${deadline}` : ''
       const revisions = Object.entries(s.revisions ?? {}).map(([n, v]) => `${STAGES[n].name} v${v}`).join(', ')
-      console.log(`${s.feature}: stage ${s.stage} ${STAGES[s.stage].name} (${s.lane} lane)${s.spike ? ', SPIKE' : ''}, gate ${gate?.status ?? 'not requested'}${wait}${revisions ? ` [${revisions}]` : ''}`)
+      console.log(`${s.feature}: ${STAGES[s.stage].name} (${s.lane} lane)${s.spike ? ', SPIKE' : ''}, gate ${gate?.status ?? 'not requested'}${wait}${revisions ? ` [${revisions}]` : ''}`)
       if (s.lastRefusal?.stage === s.stage) console.log(`  last request refused ${hours(s.lastRefusal.at)}h ago: ${s.lastRefusal.reasons.join('; ')}`)
     }
     for (const t of readTriggers(dir)) console.log(`RETRO DUE: ${t.reason}. Run: sdlc retro`)
@@ -838,7 +841,7 @@ const commands = {
     for (const b of breaks) console.log(`BREAKING: ${b}`)
     console.log(`View it in Swagger: open ${where}/swagger.html (the contract is embedded; run "sdlc api ${feature}" again after editing openapi.yaml), or serve the folder to read the live file: npx --yes http-server ${where} -p 8080`)
     if (problems.length) fail(problems.map(p => `openapi.yaml: ${p}`).join('\n'))
-    console.log(`openapi.yaml is well formed${breaks.length ? `; ${breaks.length} breaking change${breaks.length > 1 ? 's' : ''} to declare in plan.md` : ''}.`)
+    console.log(`openapi.yaml is well formed${breaks.length ? `; ${breaks.length} breaking change${breaks.length > 1 ? 's' : ''} to declare in the design` : ''}.`)
   },
 
   // One work packet per repo (issue #26): its tasks, the scenarios they prove and the tasks it waits on in
@@ -963,7 +966,7 @@ const commands = {
     const state = need()
     const from = rest[0]
     if (!from || !fs.existsSync(path.resolve(dir, from))) fail('Usage: sdlc import-speckit <feature> <path to Spec Kit spec.md>')
-    if (state.stage !== 1) fail(`${feature} is past Plan: import a Spec Kit spec only into a feature at stage 1.`)
+    if (state.stage !== 1) fail(`${feature} is past Define: import a Spec Kit spec only into a feature at Define.`)
     const folder = path.join(dir, loadConfig(dir).specsDir, feature)
     const prdFile = path.join(folder, 'prd.md')
     const current = fs.existsSync(prdFile) ? fs.readFileSync(prdFile, 'utf8') : ''
@@ -973,7 +976,7 @@ const commands = {
     if (!spec.requirements.length) fail(`${from} has no functional requirements (- **FR-001**: ...): is it a Spec Kit spec.md?`)
     fs.writeFileSync(prdFile, prdFromSpecKit(spec, fs.readFileSync(path.join(TEMPLATES, 'prd.md'), 'utf8')))
     fs.writeFileSync(path.join(folder, 'acceptance.feature'), featureFromSpecKit(spec))
-    console.log(`Imported ${spec.requirements.length} requirements, ${spec.scenarios.length} scenarios, ${spec.assumptions.length + spec.clarifications.length} assumptions and ${spec.outcomes.length ? 1 : 0} outcome from ${from}.\nStill to do before Plan: tag each scenario with the requirement it proves (@R1 ...) and its level; write the problem, users and jobs, the non-functional requirements, never-claims and scope; name the outcome's owner; and get the person's intent (sdlc ask ${feature}).`)
+    console.log(`Imported ${spec.requirements.length} requirements, ${spec.scenarios.length} scenarios, ${spec.assumptions.length + spec.clarifications.length} assumptions and ${spec.outcomes.length ? 1 : 0} outcome from ${from}.\nStill to do before Define: tag each scenario with the requirement it proves (@R1 ...) and its level; write the problem, users and jobs, the non-functional requirements, never-claims and scope; name the outcome's owner; and get the person's intent (sdlc ask ${feature}).`)
   },
 
   // Copy rules and GitHub templates into this repo, never overwriting what is there.

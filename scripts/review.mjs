@@ -6,7 +6,7 @@
 //   retro learns from what only humans found.
 import fs from 'node:fs'
 import path from 'node:path'
-import { git, loadConfig, matches, changedFiles } from './lib.mjs'
+import { git, loadConfig, matches, changedFiles, designDoc } from './lib.mjs'
 import { matrix, levels, levelOf } from './testmatrix.mjs'
 
 // A test file is one the test matrix gives a level, or anything in a test folder (helpers, fixtures).
@@ -78,7 +78,7 @@ export function packet(dir, state) {
   const base = cfg.protectedBranches.map(b => git(`merge-base ${b} HEAD`, dir)).find(Boolean)
   const allChanged = changedFiles(dir, cfg)
   // The ER diagram lives in db-design.md (the data contract); a plan.md change still counts for old features.
-  const planChanged = allChanged.some(f => f.file === `${cfg.specsDir}/${state.feature}/${state.dataDoc ? 'db-design.md' : 'plan.md'}`)
+  const planChanged = allChanged.some(f => f.file === `${cfg.specsDir}/${state.feature}/${state.dataDoc ? 'db-design.md' : designDoc(dir, state)}`)
   const files = allChanged.filter(f => !f.file.startsWith('.ai-sdlc/') && (!f.file.startsWith(`${cfg.specsDir}/`) || CONTRACT.test(f.file)))
   const added = base ? addedLines(dir, base) : {}
   const testLevels = levels(dir)

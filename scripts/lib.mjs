@@ -7,9 +7,9 @@ import { fileURLToPath } from 'node:url'
 // ADR-0003: one spec gate (the PRD plus acceptance.feature), Design only in the full lane, Build on
 // checks in every lane. Stage numbers keep their old meaning; there is no stage 2 any more.
 export const STAGES = {
-  1: { name: 'Plan', artefact: 'prd.md', owner: 'product lead',
+  1: { name: 'Define', artefact: 'prd.md', owner: 'product lead',
     headings: ['## Problem', '## Users and jobs', '## Questions asked', '## Assumptions', '## Requirements', '## Non-functional requirements', '## Never', '## Out of scope', '## Outcome metric', '## Open questions'] },
-  3: { name: 'Design', artefact: 'plan.md', owner: 'architect + product lead',
+  3: { name: 'Design', artefact: 'design.md', owner: 'architect + product lead',
     headings: ['## Decisions', '## Data model', '## Contracts', '## Threat model', '## Error handling', '## Data and tenancy', '## Test plan', '## Run it'] },
   4: { name: 'Build', artefact: 'tasks.md', owner: 'checks (gate green, small diff)',
     headings: ['## Tasks'] },
@@ -27,7 +27,7 @@ const HOTFIX_BUILD = ['## Incident', '## Fix', '## Rollback']
 const SMALL_VERIFY = ['## Test results', '## Pre-review', '## Not verified']
 export const LANES = {
   full: { stages: [1, 3, 4, 5], auto: [4, 5] },
-  // The light lane has no plan.md, so its design is "## Approach" in tasks.md (requirements, not solutions).
+  // The light lane has no design.md, so its design is "## Approach" in tasks.md (requirements, not solutions).
   light: { stages: [1, 4, 5], auto: [4, 5], headings: { 4: ['## Approach', '## Tasks'] } },
   bug: {
     stages: [4, 5], auto: [4, 5], artefact: 'bug.md', branch: 'bug',
@@ -269,11 +269,12 @@ const HINTS = {
 // not count; write "None, because ..." when a section does not apply).
 export function missingHeadings(dir, state, stage = state.stage) {
   const { artefact, headings, docs } = stageSpec(state, stage)
+  const main = artefact === 'design.md' ? designDoc(dir, state) : artefact
   const problems = []
-  for (const [doc, due] of [[artefact, headings], ...Object.entries(docs ?? {})]) {
+  for (const [doc, due] of [[main, headings], ...Object.entries(docs ?? {})]) {
     const file = path.join(dir, loadConfig(dir).specsDir, state.feature, doc)
     if (!fs.existsSync(file)) {
-      problems.push(doc === artefact ? `${doc} does not exist` : `${doc} does not exist: start it from the template with "sdlc kind ${state.feature} data"`)
+      problems.push(doc === main ? `${doc} does not exist` : `${doc} does not exist: start it from the template with "sdlc kind ${state.feature} data"`)
       continue
     }
     const text = fs.readFileSync(file, 'utf8')
@@ -405,6 +406,12 @@ export function overduePostmortems(dir, now = Date.now()) {
 }
 
 export const TEMPLATES = path.join(path.dirname(fileURLToPath(import.meta.url)), '..', 'skills', 'org-ai-sdlc', 'templates')
+
+// The design is design.md; a feature whose design was already in plan.md keeps it (stage-names R4).
+export function designDoc(dir, state) {
+  const folder = path.join(dir, loadConfig(dir).specsDir, state.feature)
+  return !fs.existsSync(path.join(folder, 'design.md')) && fs.existsSync(path.join(folder, 'plan.md')) ? 'plan.md' : 'design.md'
+}
 
 // Copy an artefact template into the feature folder; returns its repo-relative path.
 export function copyTemplate(dir, feature, name) {
