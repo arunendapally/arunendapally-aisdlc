@@ -14,7 +14,13 @@ Removed, skipped or quarantined: none
 
 ## Pre-review
 
-Pending: the pre-reviewer writes this section.
+Risk: medium, because it is code with tests that fail on the base, no data, contract or auth change; it does touch the artefact-order guard (scripts/hooks/pre-tool.mjs:242) and every Design check through designDoc
+Open findings: 2 (F1 major, F2 minor; specs/stage-names/review.md)
+Look here first: scripts/lib.mjs:411 (designDoc picks plan.md only when design.md is absent; judge whether a feature holding both files should warn), scripts/sdlc.mjs:256 (the init message still names Plan, F1), scripts/hooks/user-prompt.mjs:215 (whether the approval reply may lead with "gate 1" under A1, F2)
+Lenses run: correctness, simplicity, tests
+Revert: git revert of the merge commit; no data to back out (stage numbers in state.json are unchanged, a feature that wrote design.md would need it renamed to plan.md)
+Checked mechanically: checklist items 1, 2, 13, 22; R4: every plan.md reader now goes through designDoc (missingHeadings, Design fingerprint, supersede check, plan drift, revision check, contracts and ER, design-review board, review packet, gate and ask artefact), no other literal plan.md reader left in scripts/; AC-1, AC-2, AC-3, AC-5 fail on feature/stop-at-pr and AC-4 passes there as a characterisation test; full suite 245 of 245 green; no live reference to commands/plan.md or /ai-sdlc:plan
+Could not check: a live session on this code (the installed 0.7.1 CLI ran the gates); the evals; the stop-at-pr files, reviewed in #54
 
 ## Not verified
 
