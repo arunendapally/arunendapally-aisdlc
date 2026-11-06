@@ -350,6 +350,7 @@ export function changedLines(dir, cfg = loadConfig(dir)) {
 }
 
 // The files "sdlc init-repo" copies from templates/repo, as repo paths: the scaffold, not product code.
+const KIT = path.join(path.dirname(fileURLToPath(import.meta.url)), '..', 'templates', 'repo')
 let scaffoldCache
 export function scaffoldFiles() {
   if (scaffoldCache) return scaffoldCache
@@ -366,9 +367,7 @@ export function scaffoldFiles() {
 }
 
 // A kit file exactly as the plugin ships it is the plugin's code, not the change under review; edited, it counts.
-const kitText = file => fs.readFileSync(file, 'utf8').replace(/
-/g, '
-')
+const kitText = file => fs.readFileSync(file, 'utf8').replace(/\r\n/g, '\n')
 function unmodifiedKit(dir, file) {
   return scaffoldFiles().has(file) && fs.existsSync(path.join(dir, file)) && kitText(path.join(dir, file)) === kitText(path.join(KIT, file))
 }
