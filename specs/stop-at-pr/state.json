@@ -15,5 +15,12 @@
     "brownfield"
   ],
   "capability": "gates-and-names",
-  "updatedAt": "2026-11-06T14:31:43.774Z"
+  "updatedAt": "2026-11-06T14:32:18.412Z",
+  "lastRefusal": {
+    "stage": 1,
+    "at": "2026-11-06T14:32:18.411Z",
+    "reasons": [
+      "no intent from a person yet. Run \"sdlc ask stop-at-pr\" and ask its three questions with the question tool"
+    ]
+  }
 }
