@@ -174,6 +174,18 @@ export function runProof(dir, state, opts = {}, cfg = loadConfig(dir)) {
   }
 }
 
+// The proved test files an agent may not change (test-lock): those of a passing proof, none once the
+// spec changed after it (gate 1 lapsed, re-approved or edited), less a criterion's files whose conflict
+// a person settled as "change the test" after it.
+export function lockedFiles(dir, state, cfg = loadConfig(dir)) {
+  const p = state.proof
+  if (!p?.ok || !p.files || state.closedAt) return []
+  const g = state.gates?.[1]
+  if (['full', 'light'].includes(state.lane) && (g?.status !== 'approved' || g.approvedAt > p.at || (g.fingerprint && g.fingerprint !== gateFingerprint(dir, state, 1, cfg)))) return []
+  const freed = Object.values(state.conflicts ?? {}).filter(c => c.decision === 'change' && c.settledAt > p.at).flatMap(c => c.files)
+  return Object.keys(p.files).filter(f => !freed.includes(f))
+}
+
 // What the Verify gate requires of the proof. Without a proofCommand it only warns, and the PR must
 // say the proof did not run.
 export function proofProblems(dir, state, artefactText, cfg = loadConfig(dir)) {

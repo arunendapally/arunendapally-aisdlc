@@ -1,19 +1,47 @@
 {
   "feature": "test-lock",
   "lane": "light",
-  "stage": 1,
+  "stage": 4,
   "branch": "feature/test-lock",
   "createdAt": "2026-11-06T16:50:57.835Z",
   "stages": {
     "1": {
-      "enteredAt": "2026-11-06T16:50:57.835Z"
+      "enteredAt": "2026-11-06T16:50:57.835Z",
+      "leftAt": "2026-11-06T16:51:35.335Z"
+    },
+    "4": {
+      "enteredAt": "2026-11-06T16:51:35.335Z"
     }
   },
-  "gates": {},
+  "gates": {
+    "1": {
+      "status": "approved",
+      "by": "checks: autonomy granted by Arun Endapally",
+      "requestedAt": "2026-11-06T16:51:35.332Z",
+      "approvedAt": "2026-11-06T16:51:35.332Z",
+      "auto": true,
+      "fingerprint": "27fa8b685ef9dd1f"
+    }
+  },
   "retries": {},
   "kinds": [
     "brownfield"
   ],
   "capability": "gates-and-names",
-  "updatedAt": "2026-11-06T16:50:57.836Z"
+  "updatedAt": "2026-11-06T16:58:10.407Z",
+  "revisions": {
+    "1": 1
+  },
+  "gateRuns": {
+    "4": {
+      "ok": true,
+      "count": 229,
+      "at": "2026-11-06T16:58:10.119Z",
+      "runs": 1,
+      "runtime": "v24.19.0"
+    }
+  },
+  "baseline": 229,
+  "baselineRuntime": "v24.19.0",
+  "proofBase": "c6b642df93e343271f99bf195e46ef68d394f9fb"
 }

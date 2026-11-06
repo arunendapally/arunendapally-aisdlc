@@ -39,6 +39,12 @@ for (const q of questions) {
   record(answer(q) === 'Approve' ? `sdlc approve ${feature} ${stage}` : `sdlc reject ${feature} ${stage} ${plain(answer(q) === 'Send back' ? 'sent back from the question, no reason given' : answer(q))}`)
 }
 
+for (const q of questions) {
+  const conflict = q.question?.match(/\[conflict ([a-z0-9-]+) (AC-\d+)\]$/)
+  const choice = { 'Change the test': 'change', 'Keep the test': 'keep' }[answer(q)]
+  if (conflict && choice) record(`sdlc settle ${conflict[1]} ${conflict[2]} ${choice}`)
+}
+
 const intent = questions.filter(q => /\[intent [a-z0-9-]+\]$/.test(q.question ?? ''))
 if (intent.length) {
   const feature = intent[0].question.match(/\[intent ([a-z0-9-]+)\]$/)[1]
