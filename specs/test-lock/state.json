@@ -1,0 +1,19 @@
+{
+  "feature": "test-lock",
+  "lane": "light",
+  "stage": 1,
+  "branch": "feature/test-lock",
+  "createdAt": "2026-11-06T16:50:57.835Z",
+  "stages": {
+    "1": {
+      "enteredAt": "2026-11-06T16:50:57.835Z"
+    }
+  },
+  "gates": {},
+  "retries": {},
+  "kinds": [
+    "brownfield"
+  ],
+  "capability": "gates-and-names",
+  "updatedAt": "2026-11-06T16:50:57.836Z"
+}
