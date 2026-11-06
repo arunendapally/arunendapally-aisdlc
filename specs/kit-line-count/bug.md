@@ -37,6 +37,14 @@ Removed, skipped or quarantined: none
 
 ## Pre-review
 
+Risk: medium, because it changes which lines the gate's PR size check counts (scripts/lib.mjs:349); content equality means only an exact copy of the shipped kit goes uncounted, and no high-risk path changes
+Open findings: 0 (F3, a nit, is wontfix: the edited kit file is new on the branch, so it counts in full)
+Look here first: templates/repo/.github/scripts/check-pr-size.mjs:16 (CI in a product repo still counts the whole kit, so the init-repo PR passes "sdlc gate" and fails CI; is the size-exception label an acceptable answer, or does this need a feature to fix CI?), scripts/lib.mjs:372 (is skipping an unmodified kit file right for the security-sensitive kit files too: CODEOWNERS, rulesets/main.json, .ai-sdlc/autonomy.json? Only the size count changes; changedFiles still feeds the forbidden and high-risk path checks)
+Lenses run: correctness, simplicity, tests
+Revert: git revert of the merge commit; no data to back out
+Checked mechanically: checklist 1, 2, 3, 9, 13, 14, 21, 22, 24 to 26; the repro fails on the base c6b642d (435 counted, 0 expected); removing the CRLF normalisation at scripts/lib.mjs:370 fails the test (15 counted), re-run by the pre-reviewer; a deleted or edited kit file still counts; init-repo never overwrites an existing file (scripts/sdlc.mjs:986), so no product file is replaced by a kit copy; scaffoldFiles moved verbatim and stays covered by the V2 proof test (tests/proof-accuracy.test.mjs:53), which clears the packet signal on scripts/loop.mjs; no new dependency; no secrets
+Could not check: the full suite on 6cc35d9 (only the size tests were run here; 230 passing is the builder's figure); a plugin checkout whose templates have CRLF endings, where the CRLF test would pass even without the normalisation
+
 ## Not verified
 
 The CI size check in a product repo still counts the kit; a reviewer can add the "size-exception" label on that one PR. [unconfirmed]
