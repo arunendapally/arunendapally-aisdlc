@@ -227,7 +227,7 @@ Each gate refuses work that guesses, skips a question or hides risk, so what rea
 - A breaking API change against the base branch must be declared in `## Contracts`. The ER diagram and the OpenAPI style checks only warn. `sdlc api` puts a Swagger viewer beside the contract.
 
 **Testing.**
-- Tests come first in Build. `sdlc tests` builds the test matrix: each criterion and the tests that name it in a file that names the feature. The Verify gate refuses a criterion with no test, except an `@e2e` scenario tagged `@release` (a release probe line names it with a passing result) or `@manual` (the PR records `Checked by hand: AC-n, <who>, <date>, <how>, pass`); the review packet lists those apart for the person at the merge. The level is a hint.
+- Tests come first in Build. `sdlc tests` builds the test matrix: each criterion and the tests that name it in a file that names the feature. The Verify gate refuses a criterion with no test, except an `@e2e` scenario tagged `@release` (a release probe line names it with a passing result) or `@manual` (the review packet lists it under "Check by hand before merging"; the person who merges checks it, and the merge is the record). The level is a hint.
 - `sdlc proof` shows each new criterion's tests pass here and fail on the base code (section 6a). It replaces the old mutation table and "show each test failing" prose.
 - The `qa-engineer` writes the tests from scaffolds for unit (factories), subsystem (Testcontainers, rolled-back transactions), API (Postman with Setup and Teardown folders, run by Newman) and E2E (Playwright fixtures that seed through the API and clean up even on failure).
 - Optional: `gateRepeats` exposes flaky tests; `dataCheckCommand` fails the gate when tests leave data behind.

@@ -2,7 +2,7 @@
 // test fails the Verify gate; the scenario's level is a hint, since levels are guessed from paths.
 import fs from 'node:fs'
 import path from 'node:path'
-import { git, loadConfig, matches, section } from './lib.mjs'
+import { git, loadConfig, matches } from './lib.mjs'
 import { lint } from './gherkin.mjs'
 
 // Where each level's tests live by default. A repo can add its own globs in config "testLevels".
@@ -69,23 +69,3 @@ export function matrixText({ rows, problems }) {
   return [...lines, '', ...(problems.length ? problems.map(p => `- ${p}`) : untested.length ? untested : ['Every criterion has a test.'])].join('\n')
 }
 
-// A @manual criterion with no test is checked by a person, and the PR body records it:
-// "Checked by hand: AC-2, AC-7, <who>, <YYYY-MM-DD>, <how>, pass". The date is not in the future, no
-// "<placeholder>" is left, and the result is pass. The agent can write this line too; the person at the
-// merge reads it, so the packet lists these criteria apart (finding V5).
-export function manualProblems(dir, feature, prText) {
-  const today = new Date().toISOString().slice(0, 10)
-  const lines = (section(prText, '## Test results') ?? '').split('\n')
-    .map(l => l.replace(/\*\*/g, '').match(/Checked by hand:[ \t]*(.*)$/i)?.[1]).filter(Boolean)
-  const proved = new Set()
-  for (const l of lines) {
-    const date = l.match(/\b(\d{4}-\d{2}-\d{2})(?!\d)/)?.[1]
-    if (!date || date > today || /<[^>]*>/.test(l) || !/\bpass(ed)?\b/i.test(l) || /\bfail(ed)?\b|\bnot ok\b/i.test(l)) continue
-    const parts = l.split(',').map(x => x.trim())
-    const ids = parts.filter(x => /^AC-\d+$/i.test(x)).map(x => x.toUpperCase())
-    const who = parts[ids.length]
-    if (ids.length && who && parts.length >= ids.length + 4) ids.forEach(id => proved.add(id))
-  }
-  return matrix(dir, feature).rows.filter(r => r.due === 'manual' && !r.traced && !proved.has(r.ac))
-    .map(r => `${r.ac} is checked by hand: add "Checked by hand: ${r.ac}, <who>, <YYYY-MM-DD>, <how>, pass" under "## Test results", dated no later than today`)
-}

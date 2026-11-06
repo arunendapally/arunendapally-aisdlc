@@ -14,7 +14,7 @@
 #   one level tag, the lowest that proves it:
 #     @unit no I/O | @subsystem real database or queue | @api through the API | @e2e a journey in the UI
 #   an @e2e scenario with no test may add @release (a release probe names it with its result) or @manual
-#   (the PR records "Checked by hand: AC-n, <who>, <date>, <how>, pass"); a committed test is better than either
+#   (the person who merges checks it; the review packet lists it); a committed test is better than either
 # The scenario name says the rule; do not repeat the requirement text. More than 7 scenarios: split the feature.
 
 Feature: Save items for later

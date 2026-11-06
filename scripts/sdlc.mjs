@@ -13,7 +13,7 @@ import { collect, analyze, report, approvalSignals, approvalLines } from './retr
 import { lint, requirementsFrom } from './gherkin.mjs'
 import { packet, packetText, parseLedger, ledgerProblems } from './review.mjs'
 import { boardProblems } from './design-review.mjs'
-import { matrix, matrixText, manualProblems } from './testmatrix.mjs'
+import { matrix, matrixText } from './testmatrix.mjs'
 import { factsGateProblems, assumptionProblems } from './facts.mjs'
 import { erProblems, openapiProblems, breakingChanges, undefinedFields } from './contracts.mjs'
 import { solutionWarnings } from './solutions.mjs'
@@ -458,8 +458,6 @@ const commands = {
       writeState(dir, state)
       if (fs.existsSync(path.join(folder, 'acceptance.feature'))) {
         missing.push(...matrix(dir, feature).problems.map(p => `test matrix: ${p}`))
-        const prFile = path.join(folder, spec.artefact)
-        missing.push(...manualProblems(dir, feature, fs.existsSync(prFile) ? fs.readFileSync(prFile, 'utf8') : '').map(p => `test matrix: ${p}`))
         // A lane with no Release has no probe to prove a @release criterion.
         if (!LANES[state.lane]?.stages.includes(6)) missing.push(...matrix(dir, feature).rows.filter(r => r.due === 'release').map(r => `test matrix: ${r.ac} is tagged @release, but the ${state.lane} lane has no Release to probe it: write a test`))
       }

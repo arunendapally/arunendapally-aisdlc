@@ -4,7 +4,8 @@
 import { test } from 'node:test'
 import assert from 'node:assert/strict'
 import { makeRepo } from './helpers.mjs'
-import { matrix, manualProblems } from '../scripts/testmatrix.mjs'
+import { matrix } from '../scripts/testmatrix.mjs'
+import { packetText } from '../scripts/review.mjs'
 import { releaseProblems, proofProblems } from '../scripts/loop.mjs'
 import { lint } from '../scripts/gherkin.mjs'
 import { loadConfig } from '../scripts/lib.mjs'
@@ -39,14 +40,26 @@ test('V4: Release refuses until a probe names each @release criterion with a pas
   assert.match(hotfix, /AC-3 is checked at release/, 'a hotfix releases too')
 })
 
-test('V5: a @manual criterion needs a "Checked by hand" line with who, when and how in the PR body', () => {
+// merge-is-hand-check: the merge is the hand check, so the PR body carries no "Checked by hand" line.
+test('merge-is-hand-check AC-1: a @manual criterion needs no "Checked by hand" line at Verify', async () => {
   const r = setup()
-  const pr = line => `## Summary\n\nx\n\n## Test results\n\nSuite: 1 passed\n${line}\n\n## Pre-review\n\nRisk: medium\n\n## Not verified\n\nx\n`
-  const refused = line => manualProblems(r.repo, 'demo', pr(line)).length > 0
-  assert.match(manualProblems(r.repo, 'demo', pr('')).join('\n'), /AC-2 is checked by hand: add "Checked by hand: AC-2, <who>, <YYYY-MM-DD>, <how>, pass" under "## Test results"/)
-  for (const l of ['Checked by hand: AC-2', 'Checked by hand: AC-2, Arun, 2999-01-01, Safari, pass', 'Checked by hand: AC-2, <who>, 2026-11-04, <how>, pass', 'Checked by hand: AC-2, Arun, 2026-11-04, Safari, failed in Safari', 'Checked by hand: AC-2, Arun, 2026-11-04, keyboard only']) assert.ok(refused(l), l)
-  for (const l of ['Checked by hand: AC-2, Arun, 2026-11-04, Chromium and Safari keyboard only, pass', '**Checked by hand:** AC-2, Arun, 2026-11-04, iPhone 13, pass', 'Checked by hand: AC-1, AC-2, Arun, 2026-11-04, Safari, pass']) assert.ok(!refused(l), l)
+  const tm = await import('../scripts/testmatrix.mjs')
+  assert.equal(tm.manualProblems, undefined, 'Verify has no check for the line')
   assert.ok(!matrix(r.repo, 'demo').problems.some(p => /AC-2/.test(p)))
+})
+
+test('merge-is-hand-check AC-2: the packet lists the criteria a person checks before merging', () => {
+  const rows = [{ ac: 'AC-2', level: 'e2e', name: 'Usable by keyboard', due: 'manual' }, { ac: 'AC-3', level: 'e2e', name: 'Live', due: 'release' }]
+  const text = packetText({ feature: 'demo', lane: 'light', head: 'abc1234', files: [], code: 0, tests: 0, deletedTests: [], untested: rows, lenses: [], newDeps: [], oversized: null, codeLines: 0, criteria: 3, last: null, sinceLast: null })
+  assert.match(text, /## Check by hand before merging\n\nYour merge records that you checked these\..*\n\n- AC-2 Usable by keyboard/)
+  assert.doesNotMatch(text.split('## Check by hand before merging')[0], /AC-2/, 'not repeated under criteria with no test')
+  assert.match(text, /AC-3 \(e2e, at release/)
+})
+
+test('merge-is-hand-check AC-3: an untested criterion that is not @manual is still refused', () => {
+  const r = setup()
+  r.put('specs/demo/acceptance.feature', FEATURE.replace(' @manual', ''))
+  assert.ok(matrix(r.repo, 'demo').problems.some(p => /AC-2/.test(p)))
 })
 
 test('V6: the proof skips the levels proofSkipLevels names, and says so', () => {

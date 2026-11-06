@@ -192,8 +192,10 @@ export function packetText(p) {
     '',
     '## Criteria with no test',
     '',
-    ...(p.untested.length ? p.untested.map(s => `- ${s.ac} (${s.level}${s.due === 'release' ? ', at release: a probe proves it' : s.due === 'manual' ? ', by hand: judge whether a test was possible' : ''}): ${s.name}`) : ['- None: every criterion in acceptance.feature is tested at its level.']),
+    ...(p.untested.some(s => s.due !== 'manual') ? p.untested.filter(s => s.due !== 'manual').map(s => `- ${s.ac} (${s.level}${s.due === 'release' ? ', at release: a probe proves it' : ''}): ${s.name}`) : ['- None: every criterion in acceptance.feature is tested at its level, or checked by hand below.']),
     '',
+    // The merge is the hand check: no line in the PR body records it (merge-is-hand-check).
+    ...(p.untested.some(s => s.due === 'manual') ? ['## Check by hand before merging', '', 'Your merge records that you checked these. Judge too whether a test was possible.', '', ...p.untested.filter(s => s.due === 'manual').map(s => `- ${s.ac} ${s.name} (${s.level})`), ''] : []),
     ...(p.deletedTests.length ? ['## Deleted tests', '', ...p.deletedTests.map(f => `- \`${f}\`: say why in the PR, or restore it`), ''] : []),
     '## All files',
     '',
