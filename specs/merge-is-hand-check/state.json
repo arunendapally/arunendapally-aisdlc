@@ -1,19 +1,35 @@
 {
   "feature": "merge-is-hand-check",
   "lane": "light",
-  "stage": 1,
+  "stage": 4,
   "branch": "feature/merge-is-hand-check",
   "createdAt": "2026-11-06T09:33:57.943Z",
   "stages": {
     "1": {
-      "enteredAt": "2026-11-06T09:33:57.943Z"
+      "enteredAt": "2026-11-06T09:33:57.943Z",
+      "leftAt": "2026-11-06T09:34:39.867Z"
+    },
+    "4": {
+      "enteredAt": "2026-11-06T09:34:39.867Z"
     }
   },
-  "gates": {},
+  "gates": {
+    "1": {
+      "status": "approved",
+      "by": "checks: autonomy granted by Arun Endapally",
+      "requestedAt": "2026-11-06T09:34:39.861Z",
+      "approvedAt": "2026-11-06T09:34:39.861Z",
+      "auto": true,
+      "fingerprint": "ed30ad451b617a40"
+    }
+  },
   "retries": {},
   "kinds": [
     "brownfield"
   ],
   "capability": "gates-and-names",
-  "updatedAt": "2026-11-06T09:33:57.952Z"
+  "updatedAt": "2026-11-06T09:34:39.867Z",
+  "revisions": {
+    "1": 1
+  }
 }
