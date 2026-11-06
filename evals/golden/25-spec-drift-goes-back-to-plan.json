@@ -55,7 +55,7 @@
         "demo"
       ],
       "ok": false,
-      "out": "goes back to stage 1",
+      "out": "goes back to Define",
       "why": "an agent edited the approved spec during Build"
     },
     {
