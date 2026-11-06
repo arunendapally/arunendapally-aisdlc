@@ -1,11 +1,11 @@
 ## Summary
 
 Stages now have names a person reads: the stage that writes the PRD and acceptance criteria is Define (command /ai-sdlc:define), the technical design is written in design.md (a feature with plan.md keeps working), messages and status lead with the stage name, and each stage command states its input, processing and output. Arun asked for named stages, not stage 1, 2, 3.
-Spec: specs/stage-names/prd.md (R1 to R5). Stacked on #54 (stop-at-pr); review that first. Not in this PR: the Plan stage and its roadmap (plan-roadmap) and Definition of done checklists (definition-of-done).
+Spec: specs/stage-names/prd.md (R1 to R5). Not in this PR: the Plan stage and its roadmap (plan-roadmap) and Definition of done checklists (definition-of-done).
 
 ## Test results
 
-Suite: 245 passed, 0 failed, 0 skipped (baseline 240 on feature/stop-at-pr), sdlc gate on this commit
+Suite: 246 passed, 0 failed, 0 skipped (baseline 240 on main after #54), sdlc gate on this commit
 Evals: 30/30 golden tasks pass, sdlc gate on this commit
 Proof: not run, no proofCommand; AC-1, AC-2, AC-3 and AC-5 failed on the base code before the change; AC-4 pins existing plan.md behaviour and failed when the fallback was broken on purpose
 Criteria: 5 of 5 traced (tests/stage-names.test.mjs)
@@ -15,7 +15,7 @@ Removed, skipped or quarantined: none
 ## Pre-review
 
 Risk: medium, because it is code with tests that fail on the base, no data, contract or auth change; it does touch the artefact-order guard (scripts/hooks/pre-tool.mjs:242) and every Design check through designDoc
-Open findings: 2 (F1 major, F2 minor; specs/stage-names/review.md)
+Open findings: 0 (F1 and F2 fixed in 389d42c)
 Look here first: scripts/lib.mjs:411 (designDoc picks plan.md only when design.md is absent; judge whether a feature holding both files should warn), scripts/sdlc.mjs:256 (the init message still names Plan, F1), scripts/hooks/user-prompt.mjs:215 (whether the approval reply may lead with "gate 1" under A1, F2)
 Lenses run: correctness, simplicity, tests
 Revert: git revert of the merge commit; no data to back out (stage numbers in state.json are unchanged, a feature that wrote design.md would need it renamed to plan.md)
