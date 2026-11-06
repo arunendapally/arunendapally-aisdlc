@@ -32,6 +32,20 @@ test('stage-names AC-1: a passed gate names the stage and the next one', () => {
   assert.doesNotMatch(out, /stage 4/)
 })
 
+test('stage-names AC-1: the first message and a person\'s approval name the stage', () => {
+  const r = makeRepo()
+  const created = r.sdlc('init', 'demo').out
+  assert.match(created, /Created demo at Define/)
+  assert.doesNotMatch(created, /Plan|stage 1/)
+  r.say('sdlc intent demo change: a; smallest: b; drop if: c')
+  r.put('specs/demo/prd.md', READY_PRD)
+  r.put('specs/demo/acceptance.feature', READY_FEATURE)
+  assert.equal(r.sdlc('request', 'demo').status, 0)
+  const approved = r.say('sdlc approve demo 1')
+  assert.match(approved, /Test Human approved Define for demo\. demo is now at Build\./)
+  assert.doesNotMatch(approved, /gate 1|stage 4/)
+})
+
 test('stage-names AC-2: the stage that writes the PRD is Define', () => {
   const writesPrd = Object.values(STAGES).find(s => s.artefact === 'prd.md')
   assert.equal(writesPrd.name, 'Define')

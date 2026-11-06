@@ -98,7 +98,7 @@ test('the gate chain: one human approval of the spec, then the feature moves on 
   assert.equal(state().gates['1'].status, 'waiting')
 
   assert.match(say('sdlc approve demo 4'), /not 4/)
-  assert.match(say('sdlc approve demo 1'), /Test Human approved gate 1 .*now at Build/)
+  assert.match(say('sdlc approve demo 1'), /Test Human approved Define .*now at Build/)
   assert.equal(state().gates['1'].by, 'Test Human')
   assert.equal(state().stage, 4, 'the light lane has no Design stage')
   assert.equal(write('src/app.ts'), 'allow')

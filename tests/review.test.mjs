@@ -43,7 +43,7 @@ test('an approval covers what the request checked: a later change lapses it', ()
   assert.match(lapsed, /what it checked has changed since the request, so it has lapsed/)
   assert.equal(r.state('demo').gates['1'].status, 'lapsed')
   assert.match(r.sdlc('request', 'demo').out, /waiting on/)
-  assert.match(r.say('sdlc approve demo 1'), /approved gate 1/, 'requested again, the approval stands')
+  assert.match(r.say('sdlc approve demo 1'), /approved Define/, 'requested again, the approval stands')
 })
 
 test('a commit with the same change does not lapse an approval; a spec edit lapses the spec gate', () => {
@@ -51,7 +51,7 @@ test('a commit with the same change does not lapse an approval; a spec edit laps
   r.sdlc('request', 'demo')
   r.git('add', 'specs/demo/prd.md', 'specs/demo/acceptance.feature')
   r.git('commit', '-q', '-m', 'commit what was reviewed')
-  assert.match(r.say('sdlc approve demo 1'), /approved gate 1/)
+  assert.match(r.say('sdlc approve demo 1'), /approved Define/)
 
   const s = makeRepo()
   s.sdlc('init', 'demo')
@@ -72,7 +72,7 @@ test('a spec changed after Plan was approved sends the feature back to Plan', ()
   r.put('specs/demo/prd.md', READY_PRD)
   r.put('specs/demo/acceptance.feature', READY_FEATURE)
   r.sdlc('request', 'demo')
-  assert.match(r.say('sdlc approve demo 1'), /approved gate 1/)
+  assert.match(r.say('sdlc approve demo 1'), /approved Define/)
   assert.equal(r.state('demo').stage, 4)
   assert.doesNotMatch(r.sdlc('request', 'demo').out, /has changed since gate/, 'an unchanged spec stays where it is')
 
@@ -90,7 +90,7 @@ test('a spec changed after Plan was approved sends the feature back to Plan', ()
   assert.match(r.sdlc('request', 'demo').out, /approved as v1: add "## Changes since v1"/)
   r.put('specs/demo/prd.md', READY_PRD.replace('Save an item', 'Save and share an item') + '\n## Changes since v1\n\nSharing added.\n')
   assert.match(r.sdlc('request', 'demo').out, /waiting on/)
-  assert.match(r.say('sdlc approve demo 1'), /approved gate 1/)
+  assert.match(r.say('sdlc approve demo 1'), /approved Define/)
   assert.equal(r.state('demo').stage, 4)
 })
 
@@ -101,7 +101,7 @@ test('a plan changed after Design was approved sends the feature back to Design,
   const PLAN = ['## Data model', '## Contracts', '## Threat model', '## Error handling', '## Data and tenancy', '## Test plan', '## Run it']
   r.fill('specs/demo/plan.md', PLAN, '\n## Decisions\n\nNone, because no ADR.\n')
   assert.match(r.sdlc('request', 'demo').out, /waiting on/)
-  assert.match(r.say('sdlc approve demo 3'), /approved gate 3/)
+  assert.match(r.say('sdlc approve demo 3'), /approved Design/)
   assert.equal(r.state('demo').stage, 4)
 
   r.fill('specs/demo/plan.md', PLAN, '\n## Decisions\n\nNone, because no ADR. Also cache the totals.\n')
@@ -238,7 +238,7 @@ test('sdlc close: only a person retires work, with a reason, and never while a l
   r.sdlc('init', 'spike-idea')
   assert.equal(r.bash('echo sdlc close spike-idea dropped'), 'deny', 'agents cannot close work')
   assert.match(r.say('sdlc close spike-idea'), /needs a reason/)
-  assert.match(r.say('sdlc close spike-idea superseded by saved-items'), /closed spike-idea at stage 1: \\"superseded by saved-items/)
+  assert.match(r.say('sdlc close spike-idea superseded by saved-items'), /closed spike-idea at Define: \\"superseded by saved-items/)
   const s = r.state('spike-idea')
   assert.ok(s.closedAt)
   assert.equal(s.closedBy, 'Test Human')

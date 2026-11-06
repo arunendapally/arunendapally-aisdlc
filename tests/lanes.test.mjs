@@ -192,7 +192,7 @@ test('review deadlines: an overdue gate is flagged in status and at session star
   r.sdlc('init', 'demo', '--full')
   r.setState('demo', { gates: { 1: { status: 'waiting', requestedAt: hoursAgo(30) } } })
   assert.match(r.sdlc('status').out, /OVERDUE \(deadline 24h\)/)
-  assert.match(r.hook('session-start', {}), /OVERDUE: demo gate 1/)
+  assert.match(r.hook('session-start', {}), /OVERDUE: demo Define/)
   r.setState('demo', { gates: { 1: { status: 'waiting', requestedAt: hoursAgo(2) } } })
   assert.doesNotMatch(r.sdlc('status').out, /OVERDUE/)
 })

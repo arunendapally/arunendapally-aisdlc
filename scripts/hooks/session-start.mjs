@@ -11,7 +11,7 @@ for (const s of listFeatures(dir).filter(s => !s.closedAt)) {
   const gate = s.gates[s.stage]?.status ?? 'not requested'
   lines.push(`- ${s.feature}: ${STAGES[s.stage].name}, ${s.lane} lane, branch ${s.branch}, gate ${gate} (owner: ${stageSpec(s).owner})`)
 }
-for (const o of overdueGates(dir)) lines.push(`OVERDUE: ${o.feature} gate ${o.stage} has waited ${o.hours}h (deadline ${o.limit}h) on ${o.owner}. Tell the human and suggest a backup reviewer.`)
+for (const o of overdueGates(dir)) lines.push(`OVERDUE: ${o.feature} ${STAGES[o.stage].name} has waited ${o.hours}h (deadline ${o.limit}h) on ${o.owner}. Tell the human and suggest a backup reviewer.`)
 for (const s of overduePostmortems(dir)) lines.push(`POSTMORTEM OVERDUE: hotfix ${s.feature} shipped without one. Run /ai-sdlc:incident ${s.feature}.`)
 for (const s of overdueOutcomes(dir)) lines.push(`OUTCOME OVERDUE: ${s.feature} shipped and "${s.outcome.metric}" was due to be read by ${s.outcome.due.slice(0, 10)} (owner: ${s.outcome.owner}). Ask them, then record it: sdlc outcome ${s.feature} met|missed|breach.`)
 for (const s of lessonsOwed(dir)) lines.push(`LESSON OWED: ${s.feature} (${s.lane}) needs a trap in standards/traps.md with "- **Source:** ${s.feature}" and a guard that is a check.`)

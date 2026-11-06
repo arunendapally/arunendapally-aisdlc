@@ -253,7 +253,7 @@ const commands = {
     // The script writes the line: the PRD itself waits for the person's intent.
     if (capability) fs.writeFileSync(path.join(dir, prd), fs.readFileSync(path.join(dir, prd), 'utf8').replace(/^(# PRD: .*\n)/, `$1\nCapability: ${capability} (${slices})\n`))
     scaffoldKinds(state)
-    console.log(`Created ${feature} at stage 1 (Plan), ${lane} lane${kindNote()}. Write ${prd} and ${feat}; one approval covers both.`)
+    console.log(`Created ${feature} at Define, ${lane} lane${kindNote()}. Write ${prd} and ${feat}; one approval covers both.`)
   },
 
   // A small change with no new behaviour to specify (a dependency bump, config, a refactor, docs).
@@ -263,7 +263,7 @@ const commands = {
     if (kinds().includes('data')) fail('Data work is a feature, so the DBA reviews it. Use: sdlc init <slug> --kind data')
     createFeature(dir, { feature, lane: 'task', branch: flag('branch'), extra: { kinds: kinds() } })
     const doc = copyTemplate(dir, feature, 'task.md')
-    console.log(`Created task ${feature} at stage 4 (Build)${kindNote()}. Document: ${doc}`)
+    console.log(`Created task ${feature} at Build${kindNote()}. Document: ${doc}`)
   },
 
   // Add a kind to work already started. Kinds only add sections and owners, so agents may add them
@@ -290,7 +290,7 @@ const commands = {
     if (causedBy && !readState(dir, causedBy)) fail(`No feature "${causedBy}" to charge this bug to.`)
     createFeature(dir, { feature, lane: 'bug', branch: flag('branch'), extra: { kinds: kinds(), ...(causedBy ? { causedBy, lessonOwed: true } : {}) } })
     const doc = copyTemplate(dir, feature, 'bug.md')
-    console.log(`Created bug ${feature} at stage 4 (Build). Write the repro test first and run "sdlc gate ${feature}": it must fail before the fix. Document: ${doc}`)
+    console.log(`Created bug ${feature} at Build. Write the repro test first and run "sdlc gate ${feature}": it must fail before the fix. Document: ${doc}`)
     if (causedBy) console.log(chargeEscape(causedBy, feature))
   },
 
@@ -345,7 +345,7 @@ const commands = {
     }
     if ([4, 5].includes(state.stage) && !(state.kinds ?? []).includes('data')) {
       const schema = changedFiles(dir, cfg).filter(f => matches(f.file, ['**/migrations/**', '**/*.sql', '**/schema.prisma'])).map(f => f.file)
-      if (schema.length) missing.push(`${schema.join(', ')} change the schema: this is data work. Run "sdlc kind ${feature} data" (its pre-review runs the data lens); it starts db-design.md, and its "## Data impact" is part of the spec, so filling it sends the spec back to Plan for approval`)
+      if (schema.length) missing.push(`${schema.join(', ')} change the schema: this is data work. Run "sdlc kind ${feature} data" (its pre-review runs the data lens); it starts db-design.md, and its "## Data impact" is part of the spec, so filling it sends the spec back to Define for approval`)
     }
     // The light lane is for additive, low-risk work: altering or dropping data, or a high-risk path,
     // needs the Design gate of the full lane.
@@ -396,7 +396,7 @@ const commands = {
         Object.assign(state, { lane: 'full', laneSetBy: `autonomy granted by ${granted.by}` })
         writeState(dir, state)
         audit(dir, { event: 'lane', feature, lane: 'full', by: `autonomy granted by ${granted.by}` })
-        console.log(`Security and privacy touches ${nfr.risky}, so ${feature} moves to the full lane: Design follows Plan.`)
+        console.log(`Security and privacy touches ${nfr.risky}, so ${feature} moves to the full lane: Design follows Define.`)
       } else if (nfr.risky && state.lane === 'light') missing.push(`Security and privacy touches ${nfr.risky}, which needs the full lane: ask a human to type "sdlc lane ${feature} full"`)
       missing.push(...acceptanceProblems(state))
       // Slice before building, not after: the PR line limit otherwise fires at the end of Build.
@@ -445,7 +445,7 @@ const commands = {
     }
     if (state.stage === 5) {
       // Review has to converge (ADR-0005): past the round cap, step back instead of another round.
-      if ((state.reviewRounds ?? 0) >= cfg.reviewRoundCap) fail(`Gate 5 has been refused ${state.reviewRounds} times. Stop fixing finding by finding: step back, rethink the approach, and ask a human. They reset it by typing: sdlc reject ${feature} 5 rethink: <the new approach>`)
+      if ((state.reviewRounds ?? 0) >= cfg.reviewRoundCap) fail(`Verify has been refused ${state.reviewRounds} times. Stop fixing finding by finding: step back, rethink the approach, and ask a human. They reset it by typing: sdlc reject ${feature} 5 rethink: <the new approach>`)
       const folder = path.join(dir, cfg.specsDir, feature)
       const file = path.join(folder, spec.artefact)
       const pre = (fs.existsSync(file) && section(fs.readFileSync(file, 'utf8'), '## Pre-review')) || ''
@@ -497,7 +497,7 @@ const commands = {
       missing.push(...release.problems)
       warnings.push(...release.warnings)
       const unreviewed = unreviewedChanges(dir, state, cfg)
-      if (unreviewed.length) missing.push(`${unreviewed.slice(0, 5).join(', ')} changed after Verify reviewed ${state.reviewedSha.slice(0, 7)}: that code never reached a reviewer. Request gate 5 again`)
+      if (unreviewed.length) missing.push(`${unreviewed.slice(0, 5).join(', ')} changed after Verify reviewed ${state.reviewedSha.slice(0, 7)}: that code never reached a reviewer. Request Verify again`)
     }
     for (const w of warnings) console.log(`WARNING: ${w}`)
     if (state.stage === 5) {
@@ -562,7 +562,7 @@ const commands = {
       const name = revision ? `${spec.name} v${revision + 1}` : spec.name
       return console.log(JSON.stringify({
         questions: [{
-          header: `Gate ${state.stage}`,
+          header: spec.name,
           question: `Approve ${name} for ${feature}?${changed ? ` Changed since v${revision}: ${changed.trim()}` : ''} It covers ${[spec.artefact, ...Object.keys(spec.docs ?? {})].map(f => `${loadConfig(dir).specsDir}/${feature}/${f}`).join(' and ')}.${intent} [gate ${feature} ${state.stage} ${(gate.fingerprint ?? '').slice(0, 8)}]`,
           multiSelect: false,
           options: [
@@ -966,7 +966,7 @@ const commands = {
     const state = need()
     const from = rest[0]
     if (!from || !fs.existsSync(path.resolve(dir, from))) fail('Usage: sdlc import-speckit <feature> <path to Spec Kit spec.md>')
-    if (state.stage !== 1) fail(`${feature} is past Plan: import a Spec Kit spec only into a feature at stage 1.`)
+    if (state.stage !== 1) fail(`${feature} is past Define: import a Spec Kit spec only into a feature at Define.`)
     const folder = path.join(dir, loadConfig(dir).specsDir, feature)
     const prdFile = path.join(folder, 'prd.md')
     const current = fs.existsSync(prdFile) ? fs.readFileSync(prdFile, 'utf8') : ''
@@ -976,7 +976,7 @@ const commands = {
     if (!spec.requirements.length) fail(`${from} has no functional requirements (- **FR-001**: ...): is it a Spec Kit spec.md?`)
     fs.writeFileSync(prdFile, prdFromSpecKit(spec, fs.readFileSync(path.join(TEMPLATES, 'prd.md'), 'utf8')))
     fs.writeFileSync(path.join(folder, 'acceptance.feature'), featureFromSpecKit(spec))
-    console.log(`Imported ${spec.requirements.length} requirements, ${spec.scenarios.length} scenarios, ${spec.assumptions.length + spec.clarifications.length} assumptions and ${spec.outcomes.length ? 1 : 0} outcome from ${from}.\nStill to do before Plan: tag each scenario with the requirement it proves (@R1 ...) and its level; write the problem, users and jobs, the non-functional requirements, never-claims and scope; name the outcome's owner; and get the person's intent (sdlc ask ${feature}).`)
+    console.log(`Imported ${spec.requirements.length} requirements, ${spec.scenarios.length} scenarios, ${spec.assumptions.length + spec.clarifications.length} assumptions and ${spec.outcomes.length ? 1 : 0} outcome from ${from}.\nStill to do before Define: tag each scenario with the requirement it proves (@R1 ...) and its level; write the problem, users and jobs, the non-functional requirements, never-claims and scope; name the outcome's owner; and get the person's intent (sdlc ask ${feature}).`)
   },
 
   // Copy rules and GitHub templates into this repo, never overwriting what is there.
