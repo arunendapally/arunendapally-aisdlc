@@ -346,7 +346,31 @@ export function changedFiles(dir, cfg = loadConfig(dir)) {
 
 export function changedLines(dir, cfg = loadConfig(dir)) {
   const harness = harnessFiles(dir, cfg)
-  return changedFiles(dir, cfg).filter(f => !matches(f.file, cfg.prLineExcludes) && !harness.has(f.file)).reduce((sum, f) => sum + f.lines, 0)
+  return changedFiles(dir, cfg).filter(f => !matches(f.file, cfg.prLineExcludes) && !harness.has(f.file) && !unmodifiedKit(dir, f.file)).reduce((sum, f) => sum + f.lines, 0)
+}
+
+// The files "sdlc init-repo" copies from templates/repo, as repo paths: the scaffold, not product code.
+let scaffoldCache
+export function scaffoldFiles() {
+  if (scaffoldCache) return scaffoldCache
+  const out = new Set()
+  const walk = rel => {
+    for (const e of fs.readdirSync(path.join(KIT, rel), { withFileTypes: true })) {
+      const from = path.join(rel, e.name)
+      if (e.isDirectory()) walk(from)
+      else out.add(from.split(path.sep).join('/'))
+    }
+  }
+  if (fs.existsSync(KIT)) walk('')
+  return (scaffoldCache = out)
+}
+
+// A kit file exactly as the plugin ships it is the plugin's code, not the change under review; edited, it counts.
+const kitText = file => fs.readFileSync(file, 'utf8').replace(/
+/g, '
+')
+function unmodifiedKit(dir, file) {
+  return scaffoldFiles().has(file) && fs.existsSync(path.join(dir, file)) && kitText(path.join(dir, file)) === kitText(path.join(KIT, file))
 }
 
 // The scripts the gate and proof commands run (directly, or through an npm script) are the harness the

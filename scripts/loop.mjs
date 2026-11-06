@@ -11,8 +11,7 @@ import os from 'node:os'
 import path from 'node:path'
 import crypto from 'node:crypto'
 import { spawnSync } from 'node:child_process'
-import { fileURLToPath } from 'node:url'
-import { STAGES, stageSpec, git, gitOk, loadConfig, section, changedFiles, listFeatures, nextStage, writeState, matches, destructiveMigrations } from './lib.mjs'
+import { STAGES, stageSpec, git, gitOk, loadConfig, section, changedFiles, listFeatures, nextStage, writeState, matches, destructiveMigrations, scaffoldFiles } from './lib.mjs'
 import { matrix } from './testmatrix.mjs'
 import { check as knowledgeCheck, pages as knowledgePages } from './knowledge.mjs'
 import { parseFacts, factProblems } from './facts.mjs'
@@ -67,23 +66,6 @@ export function judgeProof(acs, run) {
   const pkg = run.output?.match(/Cannot find (?:module|package) '((?:@[\w.-]+\/)?[\w][\w.-]*)'/)?.[1]
   if (run.status !== 0 && pkg) return acs.map(ac => ({ ac, red: false, why: `the base run failed on a missing package (${pkg}), not on the code under test` }))
   return acs.map(ac => (run.status !== 0 ? { ac, red: true } : { ac, red: false, why: 'the run passed against the base code' }))
-}
-
-// The files "sdlc init-repo" copies from templates/repo, as repo paths: the scaffold, not product code.
-let scaffoldCache
-export function scaffoldFiles() {
-  if (scaffoldCache) return scaffoldCache
-  const root = path.join(path.dirname(fileURLToPath(import.meta.url)), '..', 'templates', 'repo')
-  const out = new Set()
-  const walk = rel => {
-    for (const e of fs.readdirSync(path.join(root, rel), { withFileTypes: true })) {
-      const from = path.join(rel, e.name)
-      if (e.isDirectory()) walk(from)
-      else out.add(from.split(path.sep).join('/'))
-    }
-  }
-  if (fs.existsSync(root)) walk('')
-  return (scaffoldCache = out)
 }
 
 // The criteria this branch adds: those the base commit's acceptance.feature does not already have.
