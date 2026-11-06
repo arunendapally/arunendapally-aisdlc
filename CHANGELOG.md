@@ -4,6 +4,8 @@ All notable changes to this repository. The format follows [Keep a Changelog](ht
 
 ## [Unreleased]
 
+## [0.7.1] - 2026-11-06
+
 - **Bypass mode means no guard stops the session** (ADR-0006). In Claude Code's bypassPermissions mode the pre-tool guard lets every call through and audits what it would have refused as `bypassed`; only a human pause still stops the session. Every other mode keeps every guard. Tests in `tests/bypass.test.mjs`.
 
 ## [0.7.0] - 2026-11-04
