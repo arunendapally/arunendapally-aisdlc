@@ -20,6 +20,11 @@
       "fingerprint": "e4059b942e673bd0",
       "by": "Arun Endapally",
       "approvedAt": "2026-11-06T07:52:16.181Z"
+    },
+    "3": {
+      "status": "waiting",
+      "requestedAt": "2026-11-06T07:52:21.246Z",
+      "fingerprint": "3cfa8dd61834a623"
     }
   },
   "retries": {},
@@ -27,7 +32,7 @@
     "brownfield"
   ],
   "capability": "gates-and-names",
-  "updatedAt": "2026-11-06T07:52:16.187Z",
+  "updatedAt": "2026-11-06T07:52:21.248Z",
   "intent": {
     "change": "Branch runs on its own",
     "smallest": "Gates pass on checks",
