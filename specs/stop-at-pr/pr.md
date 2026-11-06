@@ -5,7 +5,7 @@ Spec: specs/stop-at-pr/prd.md (R1 to R6). Not in this PR: deleting the now-unuse
 
 ## Test results
 
-Suite: 237 passed, 0 failed, 0 skipped (baseline 229 on main), npm test on this commit
+Suite: 240 passed, 0 failed, 0 skipped (baseline 229 on main), npm test on this commit
 Evals: 30/30 golden tasks pass, F1 to F5 each caught, npm run eval on this commit
 Proof: not run, no proofCommand; AC-1 to AC-5 failed on the base code before the change and AC-6 passed (it pins unchanged behaviour), run by the tech lead
 Criteria: 6 of 6 traced (tests/stop-at-pr.test.mjs)

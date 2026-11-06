@@ -1,7 +1,7 @@
 {
   "feature": "stop-at-pr",
   "lane": "full",
-  "stage": 5,
+  "stage": 6,
   "branch": "feature/stop-at-pr",
   "createdAt": "2026-11-06T14:31:43.773Z",
   "stages": {
@@ -18,7 +18,11 @@
       "leftAt": "2026-11-06T15:42:55.378Z"
     },
     "5": {
-      "enteredAt": "2026-11-06T15:42:55.378Z"
+      "enteredAt": "2026-11-06T15:42:55.378Z",
+      "leftAt": "2026-11-06T15:43:09.703Z"
+    },
+    "6": {
+      "enteredAt": "2026-11-06T15:43:09.703Z"
     }
   },
   "gates": {
@@ -45,6 +49,14 @@
       "approvedAt": "2026-11-06T15:42:55.063Z",
       "auto": true,
       "fingerprint": "4d10a98858c4fc32"
+    },
+    "5": {
+      "status": "approved",
+      "by": "checks: autonomy granted by Arun Endapally",
+      "requestedAt": "2026-11-06T15:43:08.980Z",
+      "approvedAt": "2026-11-06T15:43:08.980Z",
+      "auto": true,
+      "fingerprint": "4d10a98858c4fc32"
     }
   },
   "retries": {},
@@ -52,7 +64,7 @@
     "brownfield"
   ],
   "capability": "gates-and-names",
-  "updatedAt": "2026-11-06T15:42:55.378Z",
+  "updatedAt": "2026-11-06T15:43:09.703Z",
   "revisions": {
     "1": 2,
     "3": 2
@@ -77,6 +89,91 @@
   "baselineRuntime": "v24.19.0",
   "proofBase": "c6b642df93e343271f99bf195e46ef68d394f9fb",
   "sizeChecked": 106,
-  "lastPacketHead": "2eac610",
-  "ledgerIds": []
+  "lastPacketHead": "a4dd6f3",
+  "ledgerIds": [
+    "F1",
+    "F2",
+    "F3",
+    "F4",
+    "F5"
+  ],
+  "riskTier": "high",
+  "reviewedSha": "a4dd6f33733f86b1c5c5bcca6c560d285c71ae90",
+  "reviewedFiles": [
+    ".ai-sdlc/.gitignore",
+    ".ai-sdlc/autonomy.json",
+    ".ai-sdlc/config.json",
+    ".github/pull_request_template.md",
+    ".gitignore",
+    "CHANGELOG.md",
+    "commands/hotfix.md",
+    "commands/release.md",
+    "commands/start.md",
+    "commands/verify.md",
+    "docs/adr/0008-the-plugin-stops-at-a-raised-pr.md",
+    "evals/golden/05-review-needs-pre-review.json",
+    "evals/golden/15-outcome-outlives-release.json",
+    "evals/golden/23-review-converges.json",
+    "evals/golden/24-approval-covers-what-was-checked.json",
+    "scripts/lib.mjs",
+    "scripts/loop.mjs",
+    "scripts/review.mjs",
+    "scripts/sdlc.mjs",
+    "skills/org-ai-sdlc/SKILL.md",
+    "skills/org-ai-sdlc/templates/pr.md",
+    "specs/gates-and-names/slices.md",
+    "specs/stop-at-pr/acceptance.feature",
+    "specs/stop-at-pr/facts.md",
+    "specs/stop-at-pr/plan.md",
+    "specs/stop-at-pr/pr.md",
+    "specs/stop-at-pr/prd.md",
+    "specs/stop-at-pr/review.md",
+    "specs/stop-at-pr/state.json",
+    "specs/stop-at-pr/tasks.md",
+    "templates/repo/.ai-sdlc/.gitignore",
+    "templates/repo/.claude/rules/ai-sdlc.md",
+    "templates/repo/.github/pull_request_template.md",
+    "tests/autonomy.test.mjs",
+    "tests/failures.test.mjs",
+    "tests/lanes.test.mjs",
+    "tests/loop.test.mjs",
+    "tests/quality.test.mjs",
+    "tests/release-criteria.test.mjs",
+    "tests/review.test.mjs",
+    "tests/smooth.test.mjs",
+    "tests/stop-at-pr.test.mjs",
+    "specs/stop-at-pr/review-packet.md"
+  ],
+  "reviewedHashes": {
+    ".github/pull_request_template.md": "f12d236514bfce9e",
+    ".gitignore": "2bb5dec6fdd5ff34",
+    "CHANGELOG.md": "06cfc95f717ff23e",
+    "commands/hotfix.md": "a9db0962be1531e9",
+    "commands/release.md": "d225fb8370aea248",
+    "commands/start.md": "d57048a29a9bb148",
+    "commands/verify.md": "ccff00de9b847a29",
+    "docs/adr/0008-the-plugin-stops-at-a-raised-pr.md": "e5c65e4787ec9312",
+    "evals/golden/05-review-needs-pre-review.json": "1b2b144c8934b8a8",
+    "evals/golden/15-outcome-outlives-release.json": "1cb280c841594040",
+    "evals/golden/23-review-converges.json": "e39468970260723e",
+    "evals/golden/24-approval-covers-what-was-checked.json": "b056810361a491ac",
+    "scripts/lib.mjs": "0db24e8492aef361",
+    "scripts/loop.mjs": "055446bc2963b5e6",
+    "scripts/review.mjs": "640cbec0d817545b",
+    "scripts/sdlc.mjs": "28446fde22751a19",
+    "skills/org-ai-sdlc/SKILL.md": "089bb2ada5d741ef",
+    "skills/org-ai-sdlc/templates/pr.md": "f12d236514bfce9e",
+    "templates/repo/.ai-sdlc/.gitignore": "7bf3d55e344000e2",
+    "templates/repo/.claude/rules/ai-sdlc.md": "d1a33309d8ed2182",
+    "templates/repo/.github/pull_request_template.md": "f12d236514bfce9e",
+    "tests/autonomy.test.mjs": "b484d690d5ad316f",
+    "tests/failures.test.mjs": "a2cab06a4699ed95",
+    "tests/lanes.test.mjs": "259eb4d1fe3177b2",
+    "tests/loop.test.mjs": "ffd362a34eb43768",
+    "tests/quality.test.mjs": "1e48104da36d5296",
+    "tests/release-criteria.test.mjs": "36ebce0d73121667",
+    "tests/review.test.mjs": "df4c8119d5fadc14",
+    "tests/smooth.test.mjs": "6263ebc690ccfba8",
+    "tests/stop-at-pr.test.mjs": "510de520b29ec08e"
+  }
 }
