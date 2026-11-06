@@ -65,11 +65,32 @@ test('AC-4 Raising a conflict does not count against the retry cap', () => {
   assert.deepEqual(r.state('demo').retries, { '4:gate': 2 })
 })
 
-test('AC-5 A spec change unlocks the tests', () => {
+// The spec's next version: changed after the proof, sent back to Define by the request, requested again.
+const newVersion = r => {
+  r.put('specs/demo/prd.md', READY_PRD + '\n## Changes since v1\n\n- R1 now saves 200 items.\n')
+  r.sdlc('request', 'demo')
+  r.sdlc('request', 'demo')
+}
+
+test('AC-5 A spec version a person approved unlocks the tests', () => {
   const r = proved()
-  assert.equal(writeTest(r).decision, 'deny')
-  r.put('specs/demo/prd.md', READY_PRD + '\nChanged.\n')
+  newVersion(r)
+  assert.equal(r.state('demo').gates['1'].status, 'waiting')
+  r.setState('demo', { stage: 4 })
+  assert.match(writeTest(r).reason, /locked/, 'an edited spec alone unlocks nothing')
+  r.setState('demo', { stage: 1 })
+  r.say('sdlc approve demo 1')
+  assert.equal(r.state('demo').gates['1'].by, 'Test Human')
   assert.equal(writeTest(r).decision, 'allow')
+})
+
+test('AC-6 A spec change no person approved keeps the tests locked', () => {
+  const r = proved()
+  r.say('sdlc autonomy on test repo')
+  newVersion(r)
+  const gate = r.state('demo').gates['1']
+  assert.deepEqual([gate.status, gate.auto, r.state('demo').stage], ['approved', true, 4], 'Define passed on checks')
+  assert.match(writeTest(r).reason, /locked/)
 })
 
 test('AC-1 only a person settles a conflict; "change the test" unlocks it until the next proof', () => {

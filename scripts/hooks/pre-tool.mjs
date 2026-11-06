@@ -133,7 +133,7 @@ const branch = git('rev-parse --abbrev-ref HEAD', at)
 const onProtected = atCfg.protectedBranches.includes(branch)
 // A proved test is locked against the agent (test-lock): it changes only through a conflict a person settles.
 const proved = listFeatures(dir).find(s => s.branch === branch && s.lock)
-const locked = proved ? (await import('../loop.mjs')).lockedFiles(dir, proved) : []
+const locked = proved ? (await import('../loop.mjs')).lockedFiles(proved) : []
 const testLock = target => {
   const hit = locked.find(f => f.toLowerCase() === relPath(dir, target).toLowerCase())
   if (hit) deny(`${hit} is a test the proof of ${proved.feature} locked: make the code pass it. If it contradicts the spec, run "sdlc conflict ${proved.feature} <AC-n> <reason>", then "sdlc ask ${proved.feature}"; only a person settles it.`, 'test-lock')

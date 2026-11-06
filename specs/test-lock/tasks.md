@@ -7,7 +7,7 @@ Read first: standards/engineering-standards.md, standards/testing-standards.md, 
 
 ## Approach
 
-One predicate, `lockedFiles(dir, state)` in scripts/loop.mjs, says which proved test files are locked: the files of a passing proof (F1), none once the spec drifted after it (gate 1 not approved, approved after the proof, or its fingerprint changed; F4, R5), less the files of a criterion whose conflict a person settled as "change" after the proof (R2).
+One predicate, `lockedFiles(state)` in scripts/loop.mjs, says which proved test files are locked: the files of the last passing proof (state.lock, F1), none once a person approved a new spec version after it (a Define gate passed on checks does not count; R5), less the files of a criterion whose conflict a person settled as "change" after the proof (R2).
 The pre-tool guard refuses a Write or Edit (and a heredoc write) to a locked file through the existing decide(), so bypass mode audits it (F3, PRD A1), naming the file and "sdlc conflict" (R1).
 `sdlc proof` refuses before running when a locked file changed, and keeps the old proof, so the lock survives the refusal (R2).
 `sdlc conflict <feature> <AC-n> <reason>` records an open conflict with the criterion's test files, audits it and leaves retries alone (R3, R4); a Build or Verify request waits while one is open.

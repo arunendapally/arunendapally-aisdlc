@@ -4,7 +4,7 @@ All notable changes to this repository. The format follows [Keep a Changelog](ht
 
 ## [Unreleased]
 
-- **Proved tests are locked** (test-lock). After the proof, the pre-tool guard refuses an agent's edit, or a shell write, move or delete, of a test file it recorded (audited instead in bypass mode), and `sdlc proof` refuses a changed one. Only a passing proof moves the lock. A builder whose test contradicts the spec runs `sdlc conflict <feature> <AC-n> <reason>`: an answer, not a retry; the feature waits, and `sdlc ask` puts Change the test or Keep the test to a person, recorded as `sdlc settle`. A spec change unlocks the tests. Tests in `tests/test-lock.test.mjs`.
+- **Proved tests are locked** (test-lock). After the proof, the pre-tool guard refuses an agent's edit, or a shell write, move or delete, of a test file it recorded (audited instead in bypass mode), and `sdlc proof` refuses a changed one. Only a passing proof moves the lock. A builder whose test contradicts the spec runs `sdlc conflict <feature> <AC-n> <reason>`: an answer, not a retry; the feature waits, and `sdlc ask` puts Change the test or Keep the test to a person, recorded as `sdlc settle`. A new spec version a person approved unlocks the tests; one passed on checks does not. Tests in `tests/test-lock.test.mjs`.
 
 ## [0.7.1] - 2026-11-06
 
