@@ -43,6 +43,11 @@
       "approvedAt": "2026-11-06T08:51:17.129Z",
       "auto": true,
       "fingerprint": "95fe14bb6bdd6094"
+    },
+    "5": {
+      "status": "waiting",
+      "requestedAt": "2026-11-06T09:22:45.182Z",
+      "fingerprint": "1386760387a18823"
     }
   },
   "retries": {},
@@ -50,7 +55,7 @@
     "brownfield"
   ],
   "capability": "gates-and-names",
-  "updatedAt": "2026-11-06T09:22:30.890Z",
+  "updatedAt": "2026-11-06T09:22:46.248Z",
   "intent": {
     "change": "Branch runs on its own",
     "smallest": "Gates pass on checks",
@@ -82,7 +87,7 @@
   "baselineRuntime": "v24.19.0",
   "proofBase": "c6b642df93e343271f99bf195e46ef68d394f9fb",
   "sizeChecked": 63,
-  "lastPacketHead": "4f84723",
+  "lastPacketHead": "1c47852",
   "ledgerIds": [
     "F1",
     "F2",
@@ -94,11 +99,46 @@
   ],
   "riskTier": "high",
   "reviewRounds": 2,
-  "lastRefusal": {
-    "stage": 5,
-    "at": "2026-11-06T09:22:30.890Z",
-    "reasons": [
-      "review.md: F7: commit e96c4d3 does not change scripts/sdlc.mjs"
-    ]
+  "reviewedSha": "1c47852d1820250d3ecae26fe3670f9048b3e788",
+  "reviewedFiles": [
+    ".ai-sdlc/.gitignore",
+    ".ai-sdlc/autonomy.json",
+    ".ai-sdlc/config.json",
+    "CHANGELOG.md",
+    "commands/design.md",
+    "commands/plan.md",
+    "docs/adr/0007-feature-branch-runs-on-checks-until-the-pr.md",
+    "scripts/lib.mjs",
+    "scripts/review.mjs",
+    "scripts/sdlc.mjs",
+    "skills/org-ai-sdlc/SKILL.md",
+    "specs/branch-autonomy/acceptance.feature",
+    "specs/branch-autonomy/facts.md",
+    "specs/branch-autonomy/plan.md",
+    "specs/branch-autonomy/pr.md",
+    "specs/branch-autonomy/prd.md",
+    "specs/branch-autonomy/review-packet.md",
+    "specs/branch-autonomy/review.md",
+    "specs/branch-autonomy/state.json",
+    "specs/branch-autonomy/tasks.md",
+    "specs/gates-and-names/slices.md",
+    "templates/repo/.claude/rules/ai-sdlc.md",
+    "tests/branch-autonomy.test.mjs",
+    "tests/helpers.mjs",
+    "tests/hooks.test.mjs"
+  ],
+  "reviewedHashes": {
+    "CHANGELOG.md": "241dbf4501bd885e",
+    "commands/design.md": "eb73b4286d467972",
+    "commands/plan.md": "86490e51abb9b677",
+    "docs/adr/0007-feature-branch-runs-on-checks-until-the-pr.md": "3de9e254ef445b72",
+    "scripts/lib.mjs": "0fb0dffda923a8c2",
+    "scripts/review.mjs": "5ef81167a74c33dc",
+    "scripts/sdlc.mjs": "abfa38bb0f1cdc6f",
+    "skills/org-ai-sdlc/SKILL.md": "10485d10d808d677",
+    "templates/repo/.claude/rules/ai-sdlc.md": "e403147ef3feb204",
+    "tests/branch-autonomy.test.mjs": "7456bd73025ea6a4",
+    "tests/helpers.mjs": "b44ab4fa8d2ee1a6",
+    "tests/hooks.test.mjs": "d0116b887854e6c8"
   }
 }
