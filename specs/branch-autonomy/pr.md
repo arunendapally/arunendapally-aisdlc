@@ -15,7 +15,7 @@ Removed, skipped or quarantined: none. tests/helpers.mjs and tests/hooks.test.mj
 ## Pre-review
 
 Risk: high, because it changes who approves gates 1 and 3 (the gate engine decides when no person is asked)
-Open findings: 0 (7 found by pre-review, all fixed in cdd00b4 or the ADR, see specs/branch-autonomy/review.md)
+Open findings: 0 (7 found by pre-review, 6 fixed in cdd00b4, F7 wontfix with the ADR corrected, see specs/branch-autonomy/review.md)
 Look here first: scripts/lib.mjs:446 (branchAutoBlock: is this the right set of conditions for no person before the PR, and is any non-protected branch counting as the feature branch acceptable, ADR-0007 Q4), tests/helpers.mjs:59 (every older test now names a Plan and Design owner, so only tests/branch-autonomy.test.mjs exercises the default config at gates 1 and 3), scripts/sdlc.mjs:324 (the branch rule only after autonomy and earned trust, and only when spec.isAuto is false)
 Lenses run: correctness, simplicity, tests (mutation in a scratch copy, by the pre-reviewer, not the qa-engineer agent), security of the gate path (by the pre-reviewer)
 Revert: git revert of the merge commit; no data to back out. Gates already passed on checks stay recorded as checks: feature branch in state.json and audit.jsonl and are not undone.

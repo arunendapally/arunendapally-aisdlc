@@ -50,7 +50,7 @@
     "brownfield"
   ],
   "capability": "gates-and-names",
-  "updatedAt": "2026-11-06T09:22:17.625Z",
+  "updatedAt": "2026-11-06T09:22:30.890Z",
   "intent": {
     "change": "Branch runs on its own",
     "smallest": "Gates pass on checks",
@@ -82,7 +82,7 @@
   "baselineRuntime": "v24.19.0",
   "proofBase": "c6b642df93e343271f99bf195e46ef68d394f9fb",
   "sizeChecked": 63,
-  "lastPacketHead": "e96c4d3",
+  "lastPacketHead": "4f84723",
   "ledgerIds": [
     "F1",
     "F2",
@@ -93,12 +93,12 @@
     "F7"
   ],
   "riskTier": "high",
-  "reviewRounds": 1,
+  "reviewRounds": 2,
   "lastRefusal": {
     "stage": 5,
-    "at": "2026-11-06T09:22:17.625Z",
+    "at": "2026-11-06T09:22:30.890Z",
     "reasons": [
-      "review.md: F7: \"fixed\" must name the commit that fixed it (\"fixed: <sha>\")"
+      "review.md: F7: commit e96c4d3 does not change scripts/sdlc.mjs"
     ]
   }
 }
