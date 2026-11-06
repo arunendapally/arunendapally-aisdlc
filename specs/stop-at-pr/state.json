@@ -1,16 +1,16 @@
 {
   "feature": "stop-at-pr",
   "lane": "full",
-  "stage": 1,
+  "stage": 3,
   "branch": "feature/stop-at-pr",
   "createdAt": "2026-11-06T14:31:43.773Z",
   "stages": {
     "1": {
-      "enteredAt": "2026-11-06T15:36:11.105Z"
+      "enteredAt": "2026-11-06T15:36:11.105Z",
+      "leftAt": "2026-11-06T15:36:47.078Z"
     },
     "3": {
-      "enteredAt": "2026-11-06T14:33:09.170Z",
-      "leftAt": "2026-11-06T14:33:52.884Z"
+      "enteredAt": "2026-11-06T15:36:47.078Z"
     },
     "4": {
       "enteredAt": "2026-11-06T14:33:52.884Z",
@@ -21,15 +21,24 @@
       "leftAt": "2026-11-06T15:36:11.105Z"
     }
   },
-  "gates": {},
+  "gates": {
+    "1": {
+      "status": "approved",
+      "by": "checks: autonomy granted by Arun Endapally",
+      "requestedAt": "2026-11-06T15:36:47.075Z",
+      "approvedAt": "2026-11-06T15:36:47.075Z",
+      "auto": true,
+      "fingerprint": "cdc14043e66a3f05"
+    }
+  },
   "retries": {},
   "kinds": [
     "brownfield"
   ],
   "capability": "gates-and-names",
-  "updatedAt": "2026-11-06T15:36:18.656Z",
+  "updatedAt": "2026-11-06T15:36:49.578Z",
   "revisions": {
-    "1": 1,
+    "1": 2,
     "3": 1
   },
   "gateRuns": {
@@ -55,14 +64,10 @@
   "lastPacketHead": "2eac610",
   "ledgerIds": [],
   "lastRefusal": {
-    "stage": 1,
-    "at": "2026-11-06T15:36:18.656Z",
+    "stage": 3,
+    "at": "2026-11-06T15:36:49.577Z",
     "reasons": [
-      "facts.md: F1 is stale: scripts/lib.mjs changed since 22024f9; re-read it and re-verify",
-      "facts.md: F2 is stale: scripts/lib.mjs changed since 22024f9; re-read it and re-verify",
-      "facts.md: F3 is stale: scripts/loop.mjs changed since 22024f9; re-read it and re-verify",
-      "facts.md: F4 is stale: scripts/loop.mjs changed since 22024f9; re-read it and re-verify",
-      "facts.md: F5 is stale: scripts/sdlc.mjs changed since 22024f9; re-read it and re-verify"
+      "plan.md was approved as v1: add \"## Changes since v1\" saying what changed and why (the change request), so v2 can be approved"
     ]
   }
 }

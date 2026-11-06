@@ -13,7 +13,7 @@ Open: none.
 | R1 every lane ends at Verify | scripts/lib.mjs LANES stages |
 | R2 Verify passes on checks | scripts/lib.mjs LANES auto [4, 5]; STAGES[5] owner |
 | R3 no merge command | scripts/sdlc.mjs merge() removed |
-| R4 @release listed after deploy | scripts/sdlc.mjs Verify refusal removed; scripts/review.mjs packet section |
+| R4 @release listed after deploy | scripts/sdlc.mjs Verify needs the PR to name it under Check after deploy; scripts/review.mjs packet section |
 | R5 outcome follow-up at completion | scripts/loop.mjs advanceFeature() reads prd.md |
 | R6 failing Verify still stops | unchanged refusal path in scripts/sdlc.mjs request() |
 
@@ -62,3 +62,8 @@ None, because it reads and writes only the feature's own state.json, as today.
 - Alert: None, because this is a local CLI with no service.
 - Config and secrets: none new.
 - Cost and backup: None, because nothing new is stored.
+
+## Changes since v1
+
+- R4 row: Verify needs the PR body to name each untested @release criterion under "Check after deploy" (PRD v2, pre-review F2).
+- Error handling: a completed feature whose branch changed after Verify reopens Verify on the next request, and status flags it (pre-review F1).
