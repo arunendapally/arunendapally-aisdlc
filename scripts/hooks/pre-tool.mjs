@@ -239,7 +239,7 @@ if (skips) ask(`${rel} adds a skipped test. A skip needs a quarantine entry with
 if (matches(rel, cfg.scriptPaths) && cfg.deployPatterns.some(p => new RegExp(p, 'i').test(content))) ask(`${rel} would run a merge, deploy or human decision when executed. A human must approve it.`, 'deploy-in-script')
 
 // Stage gates on the artefact chain: each artefact needs the gate before it.
-const spec = rel.match(new RegExp(`^${cfg.specsDir}/([^/]+)/(plan|tasks)\\.md$`))
+const spec = rel.match(new RegExp(`^${cfg.specsDir}/([^/]+)/(plan|design|tasks)\\.md$`))
 if (spec) {
   const state = readState(dir, spec[1])
   if (state && state.stage < 3 && state.gates[1]?.status !== 'approved') deny(`${spec[2]}.md waits for gate 1 (the PRD and acceptance.feature) to be approved first.`, 'artefact-order')

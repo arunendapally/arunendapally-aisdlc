@@ -31,7 +31,7 @@ test('bug lane: repro red, then green, passes Build on checks; Verify passes on 
   assert.equal(r.sdlc('gate', 'demo').status, 0)
   const build = r.sdlc('request', 'demo')
   assert.equal(build.status, 0, build.out)
-  assert.match(build.out, /passed on checks.*now at stage 5/)
+  assert.match(build.out, /passed on checks.*now at Verify/)
   assert.equal(r.state('demo').stage, 5)
 
   const early = r.sdlc('request', 'demo')
@@ -42,7 +42,7 @@ test('bug lane: repro red, then green, passes Build on checks; Verify passes on 
   r.sdlc('review', 'demo')
   const verify = r.sdlc('request', 'demo')
   assert.equal(verify.status, 0, verify.out)
-  assert.match(verify.out, /Gate 5 \(Verify\) passed on checks.*demo is complete/)
+  assert.match(verify.out, /Verify passed on checks.*demo is complete/)
   assert.ok(r.state('demo').closedAt)
 })
 
@@ -110,7 +110,7 @@ test('issue #27: a task in a second repo moves light-lane work up to the full la
   assert.match(r.sdlc('request', 'demo').out, /T2 changes a second repo \(web-app\), which needs the full lane: ask a human to type "sdlc lane demo full"/)
 
   r.say('sdlc autonomy on a demo with no users and no data')
-  assert.match(r.sdlc('request', 'demo').out, /T2 changes a second repo \(web-app\), so demo moves to the full lane and goes back to stage 3 \(Design\)/)
+  assert.match(r.sdlc('request', 'demo').out, /T2 changes a second repo \(web-app\), so demo moves to the full lane and goes back to Design/)
   assert.equal(r.state('demo').lane, 'full')
 })
 

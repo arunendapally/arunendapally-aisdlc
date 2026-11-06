@@ -178,7 +178,7 @@ if (verb === 'lane') {
   state.laneSetBy = who
   writeState(dir, state)
   audit(dir, { event: 'lane', feature, lane, by: who })
-  say(`${who} set ${feature} to the ${lane} lane.${back ? ' It goes back to stage 3 (Design): write plan.md, then request the gate.' : ''}`)
+  say(`${who} set ${feature} to the ${lane} lane.${back ? ' It goes back to Design: write design.md, then request the gate.' : ''}`)
 }
 
 const stage = Number(stageText)

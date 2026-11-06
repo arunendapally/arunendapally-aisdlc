@@ -1,4 +1,4 @@
-<!-- Stage 5 Verify. Owner: pre-reviewer and engineer agents. Gate: none, it passes on its checks; who reviews and merges the PR is the org's own process (ADR-0008).
+<!-- Verify. Owner: pre-reviewer and engineer agents. Gate: none, it passes on its checks; who reviews and merges the PR is the org's own process (ADR-0008).
      This file is the PR body. A required section with only a comment in it is empty, and the gate refuses it.
      Keep every "## " heading exactly as written; never start a line with "# " or "## " inside a section,
      even a shell comment in a code block. Or: None, because <reason>, where a section does not apply.

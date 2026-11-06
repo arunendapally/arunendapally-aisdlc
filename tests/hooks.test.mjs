@@ -98,7 +98,7 @@ test('the gate chain: one human approval of the spec, then the feature moves on 
   assert.equal(state().gates['1'].status, 'waiting')
 
   assert.match(say('sdlc approve demo 4'), /not 4/)
-  assert.match(say('sdlc approve demo 1'), /Test Human approved gate 1 .*now at stage 4 \(Build\)/)
+  assert.match(say('sdlc approve demo 1'), /Test Human approved gate 1 .*now at Build/)
   assert.equal(state().gates['1'].by, 'Test Human')
   assert.equal(state().stage, 4, 'the light lane has no Design stage')
   assert.equal(write('src/app.ts'), 'allow')
@@ -154,7 +154,7 @@ test('only a human lightens the lane; moving to full during Build goes back to D
   s.stages[4] = { enteredAt: s.createdAt }
   fs.writeFileSync(path.join(repo, 'specs', 'demo', 'state.json'), JSON.stringify(s))
   assert.match(say('sdlc lane demo light'), /can no longer move/)
-  assert.match(say('sdlc lane demo full'), /back to stage 3 \(Design\)/)
+  assert.match(say('sdlc lane demo full'), /back to Design/)
   assert.equal(state().lane, 'full')
   assert.equal(state().stage, 3)
 })
@@ -336,7 +336,7 @@ test('the build gate records a baseline and refuses a request below it', () => {
   assert.notEqual(sdlc('request', 'demo').status, 0)
   cfg(12)
   assert.equal(sdlc('gate', 'demo').status, 0)
-  assert.match(sdlc('request', 'demo').stdout.toString(), /passed on checks.*now at stage 5/, 'Build passes on checks and moves on')
+  assert.match(sdlc('request', 'demo').stdout.toString(), /passed on checks.*now at Verify/, 'Build passes on checks and moves on')
   assert.equal(state().stage, 5)
 })
 
@@ -362,7 +362,7 @@ test('session start reports features and the pause flag', () => {
   sdlc('init', 'demo')
   say('sdlc pause')
   const out = run('session-start', {})
-  assert.match(out, /demo: stage 1 Plan/)
+  assert.match(out, /demo: Define/)
   assert.match(out, /PAUSED/)
 })
 

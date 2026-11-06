@@ -78,8 +78,8 @@ test('a spec changed after Plan was approved sends the feature back to Plan', ()
 
   r.put('specs/demo/prd.md', READY_PRD.replace('Save an item', 'Save and share an item'))
   const out = r.sdlc('request', 'demo').out
-  assert.match(out, /The spec \(prd\.md or acceptance\.feature\) has changed since gate 1 was approved/)
-  assert.match(out, /back to stage 1 \(Plan\)/)
+  assert.match(out, /The spec \(prd\.md or acceptance\.feature\) has changed since Define was approved/)
+  assert.match(out, /back to Define/)
   const s = r.state('demo')
   assert.equal(s.stage, 1)
   assert.equal(s.gates['1'], undefined, 'the old approval no longer covers the spec')
@@ -105,7 +105,7 @@ test('a plan changed after Design was approved sends the feature back to Design,
   assert.equal(r.state('demo').stage, 4)
 
   r.fill('specs/demo/plan.md', PLAN, '\n## Decisions\n\nNone, because no ADR. Also cache the totals.\n')
-  assert.match(r.sdlc('request', 'demo').out, /The plan \(plan\.md\) has changed since gate 3 was approved, so demo goes back to stage 3 \(Design\)/)
+  assert.match(r.sdlc('request', 'demo').out, /The design \(plan\.md\) has changed since Design was approved, so demo goes back to Design/)
   const s = r.state('demo')
   assert.equal(s.stage, 3)
   assert.equal(s.gates['3'], undefined)
@@ -243,7 +243,7 @@ test('sdlc close: only a person retires work, with a reason, and never while a l
   assert.ok(s.closedAt)
   assert.equal(s.closedBy, 'Test Human')
   assert.equal(s.outcome, undefined, 'nothing was released, so no outcome follow-up')
-  assert.match(r.sdlc('status').out, /spike-idea: closed at stage 1 by Test Human: superseded by saved-items/)
+  assert.match(r.sdlc('status').out, /spike-idea: closed at Define by Test Human: superseded by saved-items/)
   assert.doesNotMatch(r.hook('session-start', {}), /spike-idea: stage/)
 
   r.sdlc('init', 'checkout', '--full')

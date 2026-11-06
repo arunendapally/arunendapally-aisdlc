@@ -1,9 +1,13 @@
 ---
-description: Stage 5 Verify. The full gate, the test proof, the review packet and pre-review, and an honest PR body; ends at a raised PR.
+description: Verify. The full gate, the test proof, the review packet and pre-review, and an honest PR body; ends at a raised PR.
 argument-hint: <feature-slug>
 ---
 
-Stage 5 for `$ARGUMENTS`. You are the `tech-lead`.
+Verify for `$ARGUMENTS`. You are the `tech-lead`.
+
+**Input:** the built change, its tests and the spec.
+**Processing:** the full gate, the test proof, the review packet and pre-review, every finding settled.
+**Output:** `pr.md` and a raised PR, passed on checks; who approves and merges it is the org's rule.
 
 1. Run the full gate: `node "${CLAUDE_PLUGIN_ROOT}/scripts/sdlc.mjs" gate $ARGUMENTS`. It fails below the baseline.
 2. Prove the tests: `node "${CLAUDE_PLUGIN_ROOT}/scripts/sdlc.mjs" proof $ARGUMENTS`. Every new criterion's tests must pass here and fail on the base code; changing a test afterwards means proving again. With no `proofCommand`, say under `## Not verified` that the proof did not run.

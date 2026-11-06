@@ -9,7 +9,7 @@ if (isPaused(dir)) lines.push('AGENTS ARE PAUSED by a human. Do not write or run
 if (isFrozen(dir)) lines.push('The error budget is spent: no new full or light features (sdlc init is refused); bug, hotfix and reliability work comes first.')
 for (const s of listFeatures(dir).filter(s => !s.closedAt)) {
   const gate = s.gates[s.stage]?.status ?? 'not requested'
-  lines.push(`- ${s.feature}: stage ${s.stage} ${STAGES[s.stage].name}, ${s.lane} lane, branch ${s.branch}, gate ${gate} (owner: ${stageSpec(s).owner})`)
+  lines.push(`- ${s.feature}: ${STAGES[s.stage].name}, ${s.lane} lane, branch ${s.branch}, gate ${gate} (owner: ${stageSpec(s).owner})`)
 }
 for (const o of overdueGates(dir)) lines.push(`OVERDUE: ${o.feature} gate ${o.stage} has waited ${o.hours}h (deadline ${o.limit}h) on ${o.owner}. Tell the human and suggest a backup reviewer.`)
 for (const s of overduePostmortems(dir)) lines.push(`POSTMORTEM OVERDUE: hotfix ${s.feature} shipped without one. Run /ai-sdlc:incident ${s.feature}.`)
