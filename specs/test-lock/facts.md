@@ -7,9 +7,10 @@
 ## Facts
 
 - F1: [governing] The proof records a hash of every test file it ran, so the plugin knows which test files prove which feature. Source: scripts/loop.mjs:161. Verified: 568b41b.
-- F2: At Verify, a test file changed after the proof asks for the proof to run again; since this slice, `sdlc proof` first refuses a locked test changed since the last passing proof, unless a person settled its conflict or approved a new spec version. Source: scripts/loop.mjs:205-206, scripts/sdlc.mjs:761-762. Verified: 568b41b.
+- F2: At Verify, a test file changed after the proof asks for the proof to run again. Source: scripts/loop.mjs:205-206. Verified: 568b41b.
 - F3: The pre-tool guard decides every refusal in one place and, in bypass mode, audits it as bypassed instead of refusing (ADR-0006), so a lock in the guard is advisory in bypass mode. Source: scripts/hooks/pre-tool.mjs:34-37. Verified: 568b41b.
 - F4: A spec edited after approval sends the feature back to its first stage and audits a spec-drift event, so a spec change is already detected. Source: scripts/sdlc.mjs:319. Verified: 568b41b.
+- F5: Since this slice, `sdlc proof` refuses a locked test changed since the last passing proof, unless a person settled its conflict or approved a new spec version. Source: scripts/sdlc.mjs:761-762. Verified: 568b41b.
 
 ## Not found
 
