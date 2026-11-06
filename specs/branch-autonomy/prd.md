@@ -27,7 +27,6 @@ A person running a feature on its own branch is stopped at every gate before the
 ## Constraints
 
 - The PR review stays the human gate; nothing reaches main without it. (Arun, plugin owner)
-- ADR-0005 is superseded by this feature's design. (CTO triage, 2026-11-05)
 
 ## Current system
 
@@ -41,8 +40,8 @@ Plan and Design wait for a named person; only Build passes on checks (F1, F2). R
 
 ## Requirements
 
-- R1. (must) Work on a feature branch passes the Plan gate on its checks, with no person asked. Needs: which branch the work is on (F7).
-- R2. (must) Work on a feature branch in the full lane passes the Design gate on its checks, with no person asked. Needs: which branch the work is on (F7).
+- R1. (must) Work on a feature branch passes the Plan gate on its checks, with no person asked, unless the repo names a person for Plan or a person already sent it back. Needs: which branch the work is on (F7).
+- R2. (must) Work on a feature branch in the full lane passes the Design gate on its checks, with no person asked, unless the repo names a person for Design, a person already sent it back, or the change touches stored data or security. Needs: which branch the work is on (F7).
 - R3. (must) The merge gate still waits for a person, so nothing reaches main without the PR review. Needs: nothing new (F6).
 - R4. (must) A spec or design edited after it passed on checks sends the work back to that gate, as it does after a person approves. Needs: what was checked when it passed (F3).
 - R5. (must) A gate that fails its checks on a branch stops with the reasons and is not passed by anyone else. Needs: nothing new.
@@ -81,3 +80,8 @@ Objective: a person is asked for a decision only at the PR (specs/gates-and-name
 - A1: who: Arun. Recommend: accept, and read the first three PRs for anything a Plan or Design person would have caught.
 - A2: who: Arun. Recommend: keep Release human (R7).
 - A3: who: Arun. Recommend: keep the intent question; it is the one input checks cannot make up.
+
+## Changes since v1
+
+- Removed the constraint "ADR-0005 is superseded": it was the agent's triage note, not a person's, and the design review found nothing in ADR-0005 changes (ADR-0007 Review Q2, Q15).
+- R1 and R2 name when a person keeps the gate: a named gate owner, a person's send-back, and for Design, data or security work (ADR-0007 Review Q1, Q6, Q7, Q13).
