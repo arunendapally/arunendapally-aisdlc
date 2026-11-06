@@ -1,0 +1,19 @@
+{
+  "feature": "merge-is-hand-check",
+  "lane": "light",
+  "stage": 1,
+  "branch": "feature/merge-is-hand-check",
+  "createdAt": "2026-11-06T09:33:57.943Z",
+  "stages": {
+    "1": {
+      "enteredAt": "2026-11-06T09:33:57.943Z"
+    }
+  },
+  "gates": {},
+  "retries": {},
+  "kinds": [
+    "brownfield"
+  ],
+  "capability": "gates-and-names",
+  "updatedAt": "2026-11-06T09:33:57.952Z"
+}
