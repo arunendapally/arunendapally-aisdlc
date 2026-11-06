@@ -34,7 +34,7 @@ The proof records each test file's hash (F1); a changed test only asks for the p
 ## Requirements
 
 - R1. (must) After the proof, an agent's edit to a test file the proof recorded is refused, naming the file and how to raise a conflict. Needs: which test files the proof recorded (F1).
-- R2. (must) A test changed after the proof cannot be proved again until a person settles a raised conflict or the spec changes. Needs: which conflicts were raised and settled.
+- R2. (must) A test changed after the proof cannot be proved again until a person settles a raised conflict or approves a new spec version. Needs: which conflicts were raised and settled.
 - R3. (must) An agent can raise "this test conflicts with the spec" for a criterion, with a reason, and the feature then waits for a person. Needs: nothing new.
 - R4. (must) Raising a conflict counts as an answer, not as a failed check against the retry cap. Needs: nothing new.
 - R5. (must) A new spec version a person approved unlocks the feature's tests; a spec change no person approved does not. Needs: when the spec changed (F4), and who approved the new version.
