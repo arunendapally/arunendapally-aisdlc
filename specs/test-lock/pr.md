@@ -14,7 +14,13 @@ Removed, skipped or quarantined: none
 
 ## Pre-review
 
-Pending: the pre-reviewer writes this section.
+Risk: high, because the change is a security guard on agent behaviour, and its bypasses (F1, F2, F3) were reproduced or follow from the code.
+Open findings: 5 (1 blocker, 2 major, 1 minor, 1 nit)
+Look here first: scripts/sdlc.mjs:764 (a failed or narrowed proof drops the lock, F1), scripts/loop.mjs:184 (an agent spec edit unlocks every test, and under autonomy no person sees it: needs your ruling on A2, F3), scripts/hooks/pre-tool.mjs:212 (shell writes other than heredocs pass the guard, F2)
+Lenses run: correctness, simplicity, tests, security
+Revert: git revert of the merge commit; no data to back out (state.json conflicts entries are ignored by the old code)
+Checked mechanically: all 5 criteria walked through the code and each has a test that asserts the outcome; no new dependencies; settle is refused to agents by Bash, the CLI path and a prefilled AskUserQuestion; the lock does not block non-test files (AC-1 test plus Write to src); packet signals for user-prompt.mjs, lib.mjs and loop.mjs are covered by tests/test-lock.test.mjs through the hooks and CLI; no secrets
+Could not check: the guard in a live Claude Code session; that the new tests fail on the base code (taken from the PR, not re-run); the full suite
 
 ## Not verified
 

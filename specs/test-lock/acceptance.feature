@@ -31,7 +31,13 @@ Feature: Proved tests are locked
     Then the feature still has 2 failed checks recorded
 
   @R5 @AC-5 @subsystem
-  Scenario: A spec change unlocks the tests
-    Given the PRD changed after it passed Define
-    When an agent writes to "tests/demo.test.mjs"
+  Scenario: A spec version a person approved unlocks the tests
+    Given a person approved a new version of the PRD after the proof
+    When an agent writes to the proved test
     Then the write is allowed
+
+  @R5 @AC-6 @subsystem
+  Scenario: A spec change no person approved keeps the tests locked
+    Given an agent changed the PRD and it passed Define on checks after the proof
+    When an agent writes to the proved test
+    Then the write is refused

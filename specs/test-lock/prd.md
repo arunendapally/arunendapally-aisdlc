@@ -19,6 +19,7 @@ An agent that cannot make a test pass can edit the test and run the proof again,
 
 ## Questions asked
 
+- Q2: What should unlock a locked test when the spec changes? A: Product people own the PRD (they may use an AI agent). When arch and dev find issues while socialising the capability, product adds a decision log entry, moves things out of scope or clarifies or corrects the requirements, and creates a new version of the PRD that says what changed from the previous one. (Arun, plugin owner, 2026-11-06)
 - Q1: Which research recommendations should the plugin take? A: Arun accepted the re-sliced capability, which includes test-lock: tests proven red are locked against the builder, and a conflicting test is escalated, not edited. (Arun, plugin owner, 2026-11-06)
 
 ## Current system
@@ -28,7 +29,7 @@ The proof records each test file's hash (F1); a changed test only asks for the p
 ## Assumptions
 
 - A1: In bypass mode the guard only audits the edit (ADR-0006); the proof refusal still stops it. [unconfirmed]
-- A2: A spec change unlocks the feature's tests, since the tests must follow the new spec. [unconfirmed]
+- A2: Until the decision-log slice ships, "a new PRD version a person made" is read as a new spec version a person approved at Define; an agent's spec edit passed on checks is not one (Q2). [unconfirmed]
 
 ## Requirements
 
@@ -36,7 +37,7 @@ The proof records each test file's hash (F1); a changed test only asks for the p
 - R2. (must) A test changed after the proof cannot be proved again until a person settles a raised conflict or the spec changes. Needs: which conflicts were raised and settled.
 - R3. (must) An agent can raise "this test conflicts with the spec" for a criterion, with a reason, and the feature then waits for a person. Needs: nothing new.
 - R4. (must) Raising a conflict counts as an answer, not as a failed check against the retry cap. Needs: nothing new.
-- R5. (must) A spec change unlocks the feature's tests. Needs: when the spec changed (F4).
+- R5. (must) A new spec version a person approved unlocks the feature's tests; a spec change no person approved does not. Needs: when the spec changed (F4), and who approved the new version.
 
 ## Non-functional requirements
 
@@ -66,4 +67,8 @@ Objective: a green suite means the spec's behaviour (specs/gates-and-names/slice
 ## Open questions
 
 - A1: who: Arun. Recommend: accept; bypass mode was his call (ADR-0006).
-- A2: who: Arun. Recommend: accept.
+- A2: who: Arun. Recommend: accept; decision-log will make the decision log entry the trigger.
+
+## Changes since v1
+
+- R5: only a new spec version a person approved unlocks tests; an agent's own spec edit passed on checks does not (pre-review F3, Arun's answer Q2).
