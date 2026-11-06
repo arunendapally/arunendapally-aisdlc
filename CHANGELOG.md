@@ -4,6 +4,8 @@ All notable changes to this repository. The format follows [Keep a Changelog](ht
 
 ## [Unreleased]
 
+- **Bypass mode means no guard stops the session** (ADR-0006). In Claude Code's bypassPermissions mode the pre-tool guard lets every call through and audits what it would have refused as `bypassed`; only a human pause still stops the session. Every other mode keeps every guard. Tests in `tests/bypass.test.mjs`.
+
 ## [0.7.0] - 2026-11-04
 
 The unit-converter run's findings, the council on templates, and issue [#25](https://github.com/arunendapally/arunendapally-aisdlc/issues/25). PRs #40 to #47.
