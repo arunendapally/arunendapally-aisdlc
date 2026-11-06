@@ -1,38 +1,30 @@
 {
   "feature": "test-lock",
   "lane": "light",
-  "stage": 5,
+  "stage": 4,
   "branch": "feature/test-lock",
   "createdAt": "2026-11-06T16:50:57.835Z",
   "stages": {
     "1": {
-      "enteredAt": "2026-11-06T16:50:57.835Z",
-      "leftAt": "2026-11-06T16:51:35.335Z"
+      "enteredAt": "2026-11-06T18:30:06.997Z",
+      "leftAt": "2026-11-06T18:30:56.652Z"
     },
     "4": {
-      "enteredAt": "2026-11-06T16:51:35.335Z",
-      "leftAt": "2026-11-06T18:13:39.884Z"
+      "enteredAt": "2026-11-06T18:30:56.652Z"
     },
     "5": {
-      "enteredAt": "2026-11-06T18:13:39.884Z"
+      "enteredAt": "2026-11-06T18:13:39.884Z",
+      "leftAt": "2026-11-06T18:30:06.997Z"
     }
   },
   "gates": {
     "1": {
       "status": "approved",
       "by": "checks: autonomy granted by Arun Endapally",
-      "requestedAt": "2026-11-06T16:51:35.332Z",
-      "approvedAt": "2026-11-06T16:51:35.332Z",
+      "requestedAt": "2026-11-06T18:30:56.648Z",
+      "approvedAt": "2026-11-06T18:30:56.648Z",
       "auto": true,
-      "fingerprint": "27fa8b685ef9dd1f"
-    },
-    "4": {
-      "status": "approved",
-      "by": "checks: autonomy granted by Arun Endapally",
-      "requestedAt": "2026-11-06T18:13:39.665Z",
-      "approvedAt": "2026-11-06T18:13:39.665Z",
-      "auto": true,
-      "fingerprint": "8f3a917afd4f5d3f"
+      "fingerprint": "ee173599b4b2d37f"
     }
   },
   "retries": {},
@@ -40,9 +32,9 @@
     "brownfield"
   ],
   "capability": "gates-and-names",
-  "updatedAt": "2026-11-06T18:26:01.667Z",
+  "updatedAt": "2026-11-06T18:30:56.652Z",
   "revisions": {
-    "1": 1
+    "1": 2
   },
   "gateRuns": {
     "4": {
