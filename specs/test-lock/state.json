@@ -1,7 +1,7 @@
 {
   "feature": "test-lock",
   "lane": "light",
-  "stage": 5,
+  "stage": 6,
   "branch": "feature/test-lock",
   "createdAt": "2026-11-06T16:50:57.835Z",
   "stages": {
@@ -14,7 +14,11 @@
       "leftAt": "2026-11-06T18:52:39.640Z"
     },
     "5": {
-      "enteredAt": "2026-11-06T18:52:39.640Z"
+      "enteredAt": "2026-11-06T18:52:39.640Z",
+      "leftAt": "2026-11-06T19:03:02.466Z"
+    },
+    "6": {
+      "enteredAt": "2026-11-06T19:03:02.466Z"
     }
   },
   "gates": {
@@ -33,6 +37,14 @@
       "approvedAt": "2026-11-06T18:52:39.263Z",
       "auto": true,
       "fingerprint": "201fad6dd267d2b5"
+    },
+    "5": {
+      "status": "approved",
+      "by": "checks: autonomy granted by Arun Endapally",
+      "requestedAt": "2026-11-06T19:03:01.749Z",
+      "approvedAt": "2026-11-06T19:03:01.749Z",
+      "auto": true,
+      "fingerprint": "201fad6dd267d2b5"
     }
   },
   "retries": {},
@@ -40,7 +52,7 @@
     "brownfield"
   ],
   "capability": "gates-and-names",
-  "updatedAt": "2026-11-06T18:52:39.640Z",
+  "updatedAt": "2026-11-06T19:03:02.466Z",
   "revisions": {
     "1": 2
   },
@@ -54,8 +66,8 @@
     },
     "5": {
       "ok": true,
-      "count": 239,
-      "at": "2026-11-06T18:26:01.601Z",
+      "count": 240,
+      "at": "2026-11-06T19:02:57.601Z",
       "runs": 1,
       "runtime": "v24.19.0"
     }
@@ -64,6 +76,55 @@
   "baselineRuntime": "v24.19.0",
   "proofBase": "c6b642df93e343271f99bf195e46ef68d394f9fb",
   "sizeChecked": 88,
-  "lastPacketHead": "8e3b191",
-  "ledgerIds": []
+  "lastPacketHead": "a9a144c",
+  "ledgerIds": [
+    "F1",
+    "F2",
+    "F3",
+    "F4",
+    "F5"
+  ],
+  "riskTier": "high",
+  "reviewedSha": "a9a144c2d3b7037e9166e4b28707450769e70dec",
+  "reviewedFiles": [
+    ".ai-sdlc/.gitignore",
+    ".ai-sdlc/autonomy.json",
+    ".ai-sdlc/config.json",
+    "CHANGELOG.md",
+    "commands/build.md",
+    "evals/golden/13-tests-prove-themselves.json",
+    "scripts/hooks/answers.mjs",
+    "scripts/hooks/pre-tool.mjs",
+    "scripts/hooks/user-prompt.mjs",
+    "scripts/lib.mjs",
+    "scripts/loop.mjs",
+    "scripts/sdlc.mjs",
+    "skills/org-ai-sdlc/SKILL.md",
+    "specs/gates-and-names/slices.md",
+    "specs/test-lock/acceptance.feature",
+    "specs/test-lock/facts.md",
+    "specs/test-lock/pr.md",
+    "specs/test-lock/prd.md",
+    "specs/test-lock/review.md",
+    "specs/test-lock/state.json",
+    "specs/test-lock/tasks.md",
+    "tests/test-lock.test.mjs",
+    ".ai-sdlc/AUTONOMY",
+    "specs/stage-names/review-packet.md",
+    "specs/stop-at-pr/review-packet.md",
+    "specs/test-lock/review-packet.md"
+  ],
+  "reviewedHashes": {
+    "CHANGELOG.md": "35d83575c859838b",
+    "commands/build.md": "4a335ecc37d97890",
+    "evals/golden/13-tests-prove-themselves.json": "39f53e8f41ccb536",
+    "scripts/hooks/answers.mjs": "88e4baaa052e585e",
+    "scripts/hooks/pre-tool.mjs": "8ae7ffcacd14d140",
+    "scripts/hooks/user-prompt.mjs": "3631e6fb8d227f65",
+    "scripts/lib.mjs": "3059abf05a8a8ccb",
+    "scripts/loop.mjs": "b31bb4ff3c004970",
+    "scripts/sdlc.mjs": "77294945087aeb62",
+    "skills/org-ai-sdlc/SKILL.md": "34ceeb2c738c4869",
+    "tests/test-lock.test.mjs": "3e30d2a9672c586e"
+  }
 }

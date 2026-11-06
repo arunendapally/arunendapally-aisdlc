@@ -28,3 +28,4 @@ The test proof did not run: no proofCommand in .ai-sdlc/config.json.
 The guard in a live session: only the hook tests ran it. In bypass mode it audits the edit instead of refusing (ADR-0006); the proof refusal still stops a changed test.
 A write to a locked test through node -e or another interpreter is not caught by the guard; the proof refusal still stops it.
 The unlock rule follows Arun's answer (PRD Q2): only a new spec version a person approved unlocks tests; the change-request slice will make a CR the other route.
+One gate run recorded 239 of 240 tests (a flaky run); npm test and the next gate both passed 240.
