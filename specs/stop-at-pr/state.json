@@ -1,26 +1,35 @@
 {
   "feature": "stop-at-pr",
   "lane": "full",
-  "stage": 1,
+  "stage": 3,
   "branch": "feature/stop-at-pr",
   "createdAt": "2026-11-06T14:31:43.773Z",
   "stages": {
     "1": {
-      "enteredAt": "2026-11-06T14:31:43.773Z"
+      "enteredAt": "2026-11-06T14:31:43.773Z",
+      "leftAt": "2026-11-06T14:33:09.170Z"
+    },
+    "3": {
+      "enteredAt": "2026-11-06T14:33:09.170Z"
     }
   },
-  "gates": {},
+  "gates": {
+    "1": {
+      "status": "approved",
+      "by": "checks: autonomy granted by Arun Endapally",
+      "requestedAt": "2026-11-06T14:33:09.166Z",
+      "approvedAt": "2026-11-06T14:33:09.166Z",
+      "auto": true,
+      "fingerprint": "489297085a549955"
+    }
+  },
   "retries": {},
   "kinds": [
     "brownfield"
   ],
   "capability": "gates-and-names",
-  "updatedAt": "2026-11-06T14:32:18.412Z",
-  "lastRefusal": {
-    "stage": 1,
-    "at": "2026-11-06T14:32:18.411Z",
-    "reasons": [
-      "no intent from a person yet. Run \"sdlc ask stop-at-pr\" and ask its three questions with the question tool"
-    ]
+  "updatedAt": "2026-11-06T14:33:09.170Z",
+  "revisions": {
+    "1": 1
   }
 }
