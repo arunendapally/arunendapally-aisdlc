@@ -46,6 +46,12 @@ test('merge-is-hand-check AC-1: a @manual criterion needs no "Checked by hand" l
   const tm = await import('../scripts/testmatrix.mjs')
   assert.equal(tm.manualProblems, undefined, 'Verify has no check for the line')
   assert.ok(!matrix(r.repo, 'demo').problems.some(p => /AC-2/.test(p)))
+  // The Verify request itself, on a PR body with no "Checked by hand" line: no refusal names AC-2.
+  r.setState('demo', { stage: 5, stages: { 5: { enteredAt: new Date().toISOString() } } })
+  r.put('specs/demo/pr.md', '## Summary\n\nx\n\n## Test results\n\nSuite: 1 passed\n\n## Pre-review\n\nRisk: medium\n\n## Not verified\n\nx\n')
+  const out = r.sdlc('request', 'demo').out
+  assert.match(out, /Gate 5/, out)
+  assert.doesNotMatch(out, /AC-2/)
 })
 
 test('merge-is-hand-check AC-2: the packet lists the criteria a person checks before merging', () => {
