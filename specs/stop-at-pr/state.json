@@ -1,0 +1,19 @@
+{
+  "feature": "stop-at-pr",
+  "lane": "full",
+  "stage": 1,
+  "branch": "feature/stop-at-pr",
+  "createdAt": "2026-11-06T14:31:43.773Z",
+  "stages": {
+    "1": {
+      "enteredAt": "2026-11-06T14:31:43.773Z"
+    }
+  },
+  "gates": {},
+  "retries": {},
+  "kinds": [
+    "brownfield"
+  ],
+  "capability": "gates-and-names",
+  "updatedAt": "2026-11-06T14:31:43.774Z"
+}
