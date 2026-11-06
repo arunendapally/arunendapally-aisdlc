@@ -174,12 +174,12 @@ export function runProof(dir, state, opts = {}, cfg = loadConfig(dir)) {
   }
 }
 
-// The proved test files an agent may not change (test-lock): those of a passing proof, none once the
-// spec changed after it (gate 1 lapsed, re-approved or edited), less a criterion's files whose conflict
-// a person settled as "change the test" after it.
+// The proved test files an agent may not change (test-lock): those of the last passing proof (state.lock,
+// which a failed or narrower proof never clears), none once the spec changed after it (gate 1 lapsed,
+// re-approved or edited), less a criterion's files whose conflict a person settled as "change the test".
 export function lockedFiles(dir, state, cfg = loadConfig(dir)) {
-  const p = state.proof
-  if (!p?.ok || !p.files || state.closedAt) return []
+  const p = state.lock
+  if (!p?.files || state.closedAt) return []
   const g = state.gates?.[1]
   if (['full', 'light'].includes(state.lane) && (g?.status !== 'approved' || g.approvedAt > p.at || (g.fingerprint && g.fingerprint !== gateFingerprint(dir, state, 1, cfg)))) return []
   const freed = Object.values(state.conflicts ?? {}).filter(c => c.decision === 'change' && c.settledAt > p.at).flatMap(c => c.files)

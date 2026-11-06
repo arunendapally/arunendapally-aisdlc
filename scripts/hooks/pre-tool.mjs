@@ -132,11 +132,21 @@ const atCfg = at === dir ? cfg : loadConfig(at)
 const branch = git('rev-parse --abbrev-ref HEAD', at)
 const onProtected = atCfg.protectedBranches.includes(branch)
 // A proved test is locked against the agent (test-lock): it changes only through a conflict a person settles.
-const proved = listFeatures(dir).find(s => s.branch === branch && s.proof?.ok)
+const proved = listFeatures(dir).find(s => s.branch === branch && s.lock)
 const locked = proved ? (await import('../loop.mjs')).lockedFiles(dir, proved) : []
 const testLock = target => {
   const hit = locked.find(f => f.toLowerCase() === relPath(dir, target).toLowerCase())
   if (hit) deny(`${hit} is a test the proof of ${proved.feature} locked: make the code pass it. If it contradicts the spec, run "sdlc conflict ${proved.feature} <AC-n> <reason>", then "sdlc ask ${proved.feature}"; only a person settles it.`, 'test-lock')
+}
+// The files a shell segment writes, moves or deletes (review F2): a redirect's target, sed -i, cp or
+// Copy-Item's destination, and every argument of mv, rm, tee, touch, truncate and their PowerShell names.
+const unquote = a => a.replace(/^["']|["']$/g, '')
+const shellWrites = t => {
+  const out = [...t.matchAll(/(?:^|[^<>])>>?\s*("[^"]+"|'[^']+'|[^\s;&|]+)/g)].map(m => unquote(m[1]))
+  const w = t.trim().split(/\s+/).map(unquote)
+  if (/^(mv|rm|tee|touch|truncate|Move-Item|Remove-Item|Set-Content|Add-Content|Out-File)$/i.test(w[0]) || (w[0] === 'sed' && w.some(a => /^(-i|--in-place)/.test(a)))) out.push(...w.slice(1))
+  if (/^(cp|Copy-Item)$/i.test(w[0])) out.push(w.at(-1))
+  return out
 }
 
 if (tool === 'Bash' || tool === 'PowerShell') {
@@ -210,6 +220,7 @@ if (tool === 'Bash' || tool === 'PowerShell') {
   for (const p of parts) {
     const target = writeTarget(p)
     if (target) testLock(target)
+    for (const t of shellWrites(p.text)) testLock(t)
     if (target && (matches(target, cfg.denyPaths) || matches(target, cfg.askPaths))) deny(`${target} is a guardrail, CI or ownership file: a shell write to it is never allowed. Use the Write tool, which asks a human.`, 'guardrail-command')
     if (guardrail.test(code(p)) && !exempt(p)) deny('Commands may not touch feature state, guardrails, settings, CI or ownership files. To read a feature\'s state, run "sdlc status <feature> --json" or use the Read tool. Otherwise use sdlc.mjs, or ask a human.', 'guardrail-command')
   }

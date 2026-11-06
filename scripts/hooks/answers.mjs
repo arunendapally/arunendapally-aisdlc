@@ -40,9 +40,13 @@ for (const q of questions) {
 }
 
 for (const q of questions) {
-  const conflict = q.question?.match(/\[conflict ([a-z0-9-]+) (AC-\d+)\]$/)
+  // Bound to the open conflict by when it was raised, as a gate question is by its fingerprint (review F4).
+  const conflict = q.question?.match(/\[conflict ([a-z0-9-]+) (AC-\d+) (\d+)\]$/)
   const choice = { 'Change the test': 'change', 'Keep the test': 'keep' }[answer(q)]
-  if (conflict && choice) record(`sdlc settle ${conflict[1]} ${conflict[2]} ${choice}`)
+  if (!conflict || !choice) continue
+  const open = readState(dir, conflict[1])?.conflicts?.[conflict[2]]
+  if (open?.status !== 'open' || open.at.replace(/\D/g, '') !== conflict[3]) said.push(`The conflict on ${conflict[2]} for ${conflict[1]}: the question no longer matches what is open, so nothing was recorded. Run "sdlc ask ${conflict[1]}" again.`)
+  else record(`sdlc settle ${conflict[1]} ${conflict[2]} ${choice}`)
 }
 
 const intent = questions.filter(q => /\[intent [a-z0-9-]+\]$/.test(q.question ?? ''))

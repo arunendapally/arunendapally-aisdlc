@@ -540,7 +540,7 @@ const commands = {
       return console.log(JSON.stringify({
         questions: [{
           header: `Conflict ${open[0]}`,
-          question: `The builder says the test for ${open[0]} of ${feature} contradicts the spec: "${open[1].reason}". Change the test, or keep it? [conflict ${feature} ${open[0]}]`,
+          question: `The builder says the test for ${open[0]} of ${feature} contradicts the spec: "${open[1].reason}". Change the test, or keep it? [conflict ${feature} ${open[0]} ${open[1].at.replace(/\D/g, '')}]`,
           multiSelect: false,
           options: [
             { label: 'Change the test', description: 'The spec is right: the builder may change this test, then prove it again.' },
@@ -758,10 +758,15 @@ const commands = {
     if (!fs.existsSync(path.join(dir, cfg.specsDir, feature, 'acceptance.feature')) && !files?.length) fail(`${feature} has no acceptance.feature: name the tests to prove with --files a,b`)
     const base = flag('base') ?? (state.lane === 'hotfix' ? state.proofBase : undefined)
     // A proved test changes only through a conflict a person settled (test-lock). The old proof stays.
-    const changed = lockedFiles(dir, state, cfg).filter(f => !fs.existsSync(path.join(dir, f)) || sha256(fs.readFileSync(path.join(dir, f), 'utf8')) !== state.proof.files[f])
+    const changed = lockedFiles(dir, state, cfg).filter(f => !fs.existsSync(path.join(dir, f)) || sha256(fs.readFileSync(path.join(dir, f), 'utf8')) !== state.lock.files[f])
     if (changed.length) fail(`${changed.join(', ')} changed after the proof, and no conflict a person settled covers it. Restore it (git checkout -- ${changed.join(' ')}), or if it contradicts the spec, run "sdlc conflict ${feature} <AC-n> <reason>" and wait for the person.`)
     const result = runProof(dir, state, { files, base }, cfg)
     state.proof = result
+    // Only a passing proof moves the lock, and files still locked stay locked (review F1).
+    if (result.ok && Object.keys(result.files ?? {}).length) {
+      const kept = Object.fromEntries(lockedFiles(dir, state, cfg).map(f => [f, state.lock.files[f]]))
+      state.lock = { files: { ...kept, ...result.files }, at: result.at }
+    }
     writeState(dir, state)
     if (!result.ok) fail(`Proof FAILED${result.base ? ` against ${result.base}` : ''}:\n- ${result.problems.join('\n- ')}`)
     if (!result.acs.length) return console.log(`Nothing for the proof to run against ${result.base}: every new criterion is proved another way.${result.due ? ` ${result.due.join(', ')}.` : ''}${result.skipped ? ` Left to their own run (proofSkipLevels): ${result.skipped.join(', ')}.` : ''}`)
