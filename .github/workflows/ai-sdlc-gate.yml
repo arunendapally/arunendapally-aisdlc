@@ -1,0 +1,73 @@
+# The authority: the same checks hold for humans and agents. Claude Code hooks only fail sooner.
+# Make these required by applying .github/rulesets/main.json:
+#   gh api repos/{owner}/{repo}/rulesets --method POST --input .github/rulesets/main.json
+name: ai-sdlc
+on:
+  pull_request:
+  pull_request_review:
+    types: [submitted, dismissed]
+permissions:
+  contents: read
+  pull-requests: read
+jobs:
+  pr-body:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - name: PR body has every section its lane needs, and a clean pre-review
+        env:
+          BODY: ${{ github.event.pull_request.body }}
+        run: node .github/scripts/check-pr-body.mjs
+
+  pr-size:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - name: Small PRs review faster
+        env:
+          GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+          REPO: ${{ github.repository }}
+          PR_NUMBER: ${{ github.event.pull_request.number }}
+          BODY: ${{ github.event.pull_request.body }}
+          LABELS: ${{ toJson(github.event.pull_request.labels) }}
+        run: node .github/scripts/check-pr-size.mjs
+
+  gate-approvals:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - name: A feature on this branch has an approved Build gate and a human review
+        env:
+          HEAD_REF: ${{ github.event.pull_request.head.ref }}
+          GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+          REPO: ${{ github.repository }}
+          PR_NUMBER: ${{ github.event.pull_request.number }}
+          PR_AUTHOR: ${{ github.event.pull_request.user.login }}
+        run: node .github/scripts/check-gates.mjs
+
+  secrets:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+      - uses: gitleaks/gitleaks-action@v2
+        env:
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+
+  dependencies:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/dependency-review-action@v4
+        with:
+          fail-on-severity: critical
+
+  build-and-test:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      # Replace with your stack: types, lint, whole suite, end-to-end, accessibility, mutation on changed guards.
+      - name: Full gate
+        run: |
+          if [ -f package.json ]; then npm ci && npm run gate --if-present && npm test --if-present; else echo "Add your gate here" && exit 1; fi

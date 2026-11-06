@@ -1,0 +1,35 @@
+# The repo is the source of truth. Confluence is read and comment only, published on merge.
+# Needs vars CONFLUENCE_BASE_URL and CONFLUENCE_SPACE, and secrets CONFLUENCE_USER and CONFLUENCE_TOKEN.
+name: publish-docs
+on:
+  push:
+    branches: [main]
+    paths: ["specs/**", "docs/**"]
+permissions:
+  contents: read
+jobs:
+  publish:
+    runs-on: ubuntu-latest
+    if: vars.CONFLUENCE_BASE_URL != ''
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          fetch-depth: 2
+      - name: Validate and render C4 views
+        if: hashFiles('docs/architecture/workspace.dsl') != ''
+        run: |
+          docker run --rm -v "$PWD/docs/architecture:/usr/local/structurizr" structurizr/cli validate -workspace workspace.dsl
+          docker run --rm -v "$PWD/docs/architecture:/usr/local/structurizr" structurizr/cli export -workspace workspace.dsl -format mermaid
+      - name: Publish changed artefacts
+        env:
+          BASE: ${{ vars.CONFLUENCE_BASE_URL }}
+          SPACE: ${{ vars.CONFLUENCE_SPACE }}
+          CONFLUENCE_USER: ${{ secrets.CONFLUENCE_USER }}
+          CONFLUENCE_TOKEN: ${{ secrets.CONFLUENCE_TOKEN }}
+        run: |
+          # Skips files marked "visibility: internal". Each page carries its source path, the commit and an "edit in the repo" banner.
+          for f in $(git diff --name-only HEAD~1 HEAD -- specs docs | grep '\.md$'); do
+            grep -q '^visibility: internal' "$f" && continue
+            echo "Publish $f@$GITHUB_SHA to $SPACE"
+            # Plug in your publisher here, for example the mark CLI or the Confluence REST API.
+          done

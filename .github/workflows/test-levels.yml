@@ -1,0 +1,65 @@
+# The test pyramid in order: unit, then subsystem with a real database, then the API contract with
+# Newman, then E2E with Playwright. A failure stops the later, slower levels. Reports are kept.
+# Adjust the npm scripts to your repo: test:unit, test:subsystem, start:test, test:e2e.
+name: test-levels
+on:
+  pull_request:
+permissions:
+  contents: read
+jobs:
+  unit:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with: { node-version: 22, cache: npm }
+      - run: npm ci
+      - run: npm run test:unit
+
+  subsystem:
+    needs: unit
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with: { node-version: 22, cache: npm }
+      - run: npm ci
+      # Testcontainers starts its own throwaway Postgres; the runner's Docker is enough.
+      - run: npm run test:subsystem
+
+  api:
+    needs: subsystem
+    runs-on: ubuntu-latest
+    services:
+      postgres:
+        image: postgres:16-alpine
+        env: { POSTGRES_PASSWORD: test, POSTGRES_DB: app_test }
+        ports: ["5432:5432"]
+        options: --health-cmd pg_isready --health-interval 5s --health-retries 10
+    env:
+      DATABASE_URL: postgres://postgres:test@localhost:5432/app_test
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with: { node-version: 22, cache: npm }
+      - run: npm ci
+      - run: npm run start:test &
+      - run: npx wait-on http://localhost:3000/health
+      - run: npx newman run tests/api/api.postman_collection.json -e tests/api/test.postman_environment.json --env-var testAdminToken=${{ secrets.TEST_ADMIN_TOKEN }} --bail --reporters cli,junit --reporter-junit-export reports/api.xml
+      - uses: actions/upload-artifact@v4
+        if: always()
+        with: { name: api-report, path: reports/ }
+
+  e2e:
+    needs: api
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with: { node-version: 22, cache: npm }
+      - run: npm ci
+      - run: npx playwright install --with-deps chromium
+      - run: npm run test:e2e
+      - uses: actions/upload-artifact@v4
+        if: always()
+        with: { name: playwright-report, path: playwright-report/ }
