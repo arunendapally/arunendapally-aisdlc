@@ -5,8 +5,8 @@ Spec: specs/test-lock/prd.md (R1 to R5). Not in this PR: locking tests before an
 
 ## Test results
 
-Suite: 236 passed, 0 failed, 0 skipped (baseline 229 on main), sdlc gate on this commit
-Evals: run by sdlc gate on this commit, green
+Suite: 240 passed, 0 failed, 0 skipped (baseline 229 on main), sdlc gate on this commit
+Evals: green via sdlc gate on this commit; eval 13 now checks the lock refusal and that a failed proof keeps the lock (791e775, reason in the commit message)
 Proof: not run, no proofCommand; all 7 new tests failed on the base code, and each guard was broken once on purpose to see its test fail
 Criteria: 5 of 5 traced (tests/test-lock.test.mjs)
 New tests: tests/test-lock.test.mjs (AC-1 to AC-5)
@@ -14,8 +14,8 @@ Removed, skipped or quarantined: none
 
 ## Pre-review
 
-Risk: high, because the change is a security guard on agent behaviour, and its bypasses (F1, F2, F3) were reproduced or follow from the code.
-Open findings: 5 (1 blocker, 2 major, 1 minor, 1 nit)
+Risk: high, because the change is a security guard on agent behaviour; the bypasses the pre-review reproduced (F1 to F3) are closed and tested
+Open findings: 0 (F1 to F4 fixed in c5b2591 and 354b553; F5 wontfix, the repo config rides here so the gate runs)
 Look here first: scripts/sdlc.mjs:764 (a failed or narrowed proof drops the lock, F1), scripts/loop.mjs:184 (an agent spec edit unlocks every test, and under autonomy no person sees it: needs your ruling on A2, F3), scripts/hooks/pre-tool.mjs:212 (shell writes other than heredocs pass the guard, F2)
 Lenses run: correctness, simplicity, tests, security
 Revert: git revert of the merge commit; no data to back out (state.json conflicts entries are ignored by the old code)
@@ -26,4 +26,5 @@ Could not check: the guard in a live Claude Code session; that the new tests fai
 
 The test proof did not run: no proofCommand in .ai-sdlc/config.json.
 The guard in a live session: only the hook tests ran it. In bypass mode it audits the edit instead of refusing (ADR-0006); the proof refusal still stops a changed test.
-A write to a locked test through a Bash heredoc has no test.
+A write to a locked test through node -e or another interpreter is not caught by the guard; the proof refusal still stops it.
+The unlock rule follows Arun's answer (PRD Q2): only a new spec version a person approved unlocks tests; the change-request slice will make a CR the other route.
