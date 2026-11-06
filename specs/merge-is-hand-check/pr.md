@@ -14,7 +14,7 @@ Removed, skipped or quarantined: the V5 test for the "Checked by hand" line, rep
 
 ## Pre-review
 
-Risk: medium, because it removes a Verify refusal in scripts/sdlc.mjs and changes the review packet text; tests exist, no data or contract change, but the gate it loosens matters under autonomy (F1).
+Risk: high, because .github/pull_request_template.md is on a path that always needs a person; the change itself it removes a Verify refusal in scripts/sdlc.mjs and changes the review packet text; tests exist, no data or contract change, but the gate it loosens matters under autonomy (F1).
 Open findings: 0 (F1 wontfix: sdlc merge is removed by stop-at-pr; F2 fixed in 235a1a3)
 Look here first: scripts/sdlc.mjs:572 (sdlc merge under autonomy lands an untested @manual criterion with no person looking; decide whether merge must refuse it, F1), scripts/review.mjs:198 (the packet wording is now the only place a person is told to check by hand; judge whether a reviewer will see it)
 Lenses run: correctness, tests

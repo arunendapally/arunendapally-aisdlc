@@ -40,7 +40,7 @@
     "brownfield"
   ],
   "capability": "gates-and-names",
-  "updatedAt": "2026-11-06T14:22:25.532Z",
+  "updatedAt": "2026-11-06T14:30:15.644Z",
   "revisions": {
     "1": 1
   },
@@ -51,12 +51,31 @@
       "at": "2026-11-06T09:58:23.136Z",
       "runs": 1,
       "runtime": "v24.19.0"
+    },
+    "5": {
+      "ok": true,
+      "count": 231,
+      "at": "2026-11-06T14:30:11.282Z",
+      "runs": 1,
+      "runtime": "v24.19.0"
     }
   },
   "baseline": 231,
   "baselineRuntime": "v24.19.0",
   "proofBase": "c6b642df93e343271f99bf195e46ef68d394f9fb",
   "sizeChecked": 34,
-  "lastPacketHead": "deae28f",
-  "ledgerIds": []
+  "lastPacketHead": "b6e3dbf",
+  "ledgerIds": [
+    "F1",
+    "F2"
+  ],
+  "riskTier": "high",
+  "reviewRounds": 1,
+  "lastRefusal": {
+    "stage": 5,
+    "at": "2026-11-06T14:30:15.644Z",
+    "reasons": [
+      "the pre-review says \"Risk: medium\", but the change is high: .github/pull_request_template.md is on a path that always needs a person"
+    ]
+  }
 }
