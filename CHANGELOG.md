@@ -4,6 +4,8 @@ All notable changes to this repository. The format follows [Keep a Changelog](ht
 
 ## [Unreleased]
 
+- **The plugin stops at a raised PR** (ADR-0008). Every lane ends at Verify (full 1, 3, 4, 5; light 1, 4, 5; bug, task and hotfix 4, 5), and Build and Verify pass on their checks; no stage names who approves or merges. A feature completes at Verify and opens its outcome follow-up from the PRD's `## Outcome metric`. `sdlc merge` is removed. A `@release` criterion is no longer refused at Verify; the review packet lists it under `## Check after deploy`. The unused release code, `release.md` template and release evals stay until a follow-up removes them. Tests in `tests/stop-at-pr.test.mjs`.
+
 ## [0.7.1] - 2026-11-06
 
 - **Bypass mode means no guard stops the session** (ADR-0006). In Claude Code's bypassPermissions mode the pre-tool guard lets every call through and audits what it would have refused as `bypassed`; only a human pause still stops the session. Every other mode keeps every guard. Tests in `tests/bypass.test.mjs`.

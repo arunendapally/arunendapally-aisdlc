@@ -5,7 +5,7 @@ import fs from 'node:fs'
 import path from 'node:path'
 import { fileURLToPath } from 'node:url'
 import { spawnSync } from 'node:child_process'
-import { STAGES, LANES, root, git, loadConfig, readState, writeState, listFeatures, missingHeadings, isFrozen, destructiveMigrations,
+import { STAGES, root, git, loadConfig, readState, writeState, listFeatures, missingHeadings, isFrozen, destructiveMigrations,
   stageSpec, section, matches, changedFiles, changedLines, createFeature, copyTemplate, TEMPLATES, overdueGates, overduePostmortems,
   KINDS, trustedGates, promotable, readTrust, writeTrust, lessonPaid, lessonProblem, lessonsOwed, audit, withIntent, INTENT_PARTS, autonomy } from './lib.mjs'
 import { check, conformance, OKF_VERSION, relevant, writeIndex } from './knowledge.mjs'
@@ -460,8 +460,6 @@ const commands = {
         missing.push(...matrix(dir, feature).problems.map(p => `test matrix: ${p}`))
         const prFile = path.join(folder, spec.artefact)
         missing.push(...manualProblems(dir, feature, fs.existsSync(prFile) ? fs.readFileSync(prFile, 'utf8') : '').map(p => `test matrix: ${p}`))
-        // A lane with no Release has no probe to prove a @release criterion.
-        if (!LANES[state.lane]?.stages.includes(6)) missing.push(...matrix(dir, feature).rows.filter(r => r.due === 'release').map(r => `test matrix: ${r.ac} is tagged @release, but the ${state.lane} lane has no Release to probe it: write a test`))
       }
       if (pre && !/Risk:[ \t]*(low|medium|high)\b/i.test(pre)) missing.push('the pre-review gives no "Risk: low|medium|high"')
       if (pre && !/Open findings:[ \t]*0\b/i.test(pre)) missing.push('the pre-review still has open findings ("Open findings: 0" is required)')
@@ -566,22 +564,6 @@ const commands = {
       }, null, 2))
     }
     fail(`Nothing to ask the person for ${feature}: no gate is waiting${state.stage === 1 && !state.intent ? '' : ' and the intent is set'}. Run sdlc request ${feature} first.`)
-  },
-
-  // With autonomy, the merge a person makes on GitHub: push exactly the commit Verify reviewed to main,
-  // fast-forward only. If main has moved, the branch takes main and goes through Verify again.
-  merge() {
-    const state = need()
-    const granted = autonomy(dir)
-    if (!granted) fail(`Merging ${feature} needs autonomy (a person types "sdlc autonomy on <reason>"). Without it, a person merges the PR.`)
-    if (state.gates[5]?.status !== 'approved' || !state.reviewedSha) fail(`${feature} has not passed Verify (gate 5), so there is no reviewed commit to merge.`)
-    onBranch(state)
-    const head = git('rev-parse HEAD', dir)
-    if (head !== state.reviewedSha) fail(`HEAD ${head.slice(0, 7)} is not the commit Verify reviewed (${state.reviewedSha.slice(0, 7)}). Request gate 5 again, or reset to it.`)
-    const r = spawnSync('git', ['push', '-q', 'origin', `${head}:refs/heads/main`], { cwd: dir, encoding: 'utf8' })
-    if (r.status !== 0) fail(`main has moved, so ${head.slice(0, 7)} is not a fast-forward. Merge origin/main into ${state.branch}, then request gate 5 again.\n${r.stderr.trim()}`)
-    audit(dir, { event: 'merge', feature, sha: head, by: `autonomy granted by ${granted.by}` })
-    console.log(`Merged ${feature} (${head.slice(0, 7)}, the reviewed commit) into main, under autonomy granted by ${granted.by}. Release can now find it on origin/main.`)
   },
 
   // Approvals and gates passed on checks move the feature on by themselves; this is for a feature whose
@@ -1011,6 +993,6 @@ if (HUMAN_VERBS.includes(cmd)) {
 }
 
 if (!commands[cmd]) {
-  fail(`Usage: sdlc <init|bug|task|kind|request|advance|gate|tests|proof|spike|review|gherkin|api|packets|retry|status|outcome|trust|metrics|retro|incident|knowledge|init-repo> [feature] [...]\nA person, in their own terminal: sdlc <${HUMAN_VERBS.join('|')}> ...`)
+  fail(`${cmd ? `Unknown command: ${cmd}.\n` : ''}Usage: sdlc <init|bug|task|kind|request|advance|gate|tests|proof|spike|review|gherkin|api|packets|retry|status|outcome|trust|metrics|retro|incident|knowledge|init-repo> [feature] [...]\nA person, in their own terminal: sdlc <${HUMAN_VERBS.join('|')}> ...`)
 }
 commands[cmd]()

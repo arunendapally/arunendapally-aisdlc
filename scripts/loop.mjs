@@ -393,9 +393,9 @@ export function advanceFeature(dir, state) {
       const live = fs.existsSync(artefact) ? liveShaIn(fs.readFileSync(artefact, 'utf8')) : null
       if (live && !/unknown/i.test(live)) state.liveSha = live
     }
-    // The feature closes at release; its outcome is a follow-up with an owner and a date.
-    const release = path.join(dir, cfg.specsDir, state.feature, 'release.md')
-    const outcome = fs.existsSync(release) ? outcomeFollowUp(state, fs.readFileSync(release, 'utf8'), cfg) : null
+    // The feature closes at its PR (ADR-0008); its outcome, from the PRD, is a follow-up with an owner and a date.
+    const prd = path.join(dir, cfg.specsDir, state.feature, 'prd.md')
+    const outcome = fs.existsSync(prd) ? outcomeFollowUp(state, fs.readFileSync(prd, 'utf8'), cfg) : null
     if (outcome) state.outcome = outcome
     writeState(dir, state)
     const proofNote = cfg.proofCommand ? `, and the test proof: sdlc proof ${state.feature} --files <repro tests>` : ''

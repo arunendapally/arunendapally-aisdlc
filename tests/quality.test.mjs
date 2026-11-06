@@ -213,10 +213,11 @@ test('AC-10 the findings ledger refuses open serious findings, missing locations
   r.sdlc('bug', 'demo')
   r.setState('demo', { stage: 5, stages: { 5: { enteredAt: hoursAgo(1) } }, baseline: 12 })
   r.fill('specs/demo/bug.md', ['## Repro', '## Expected and actual', '## Root cause', '## Fix', '## Test results', '## Not verified'], '\n## Pre-review\n\nRisk: high, it touches retries\nOpen findings: 0\nLenses run: correctness, tests\nRevert: git revert the merge commit\n')
+  r.put('src/a.ts', 'x\n')
+  // No gate run yet, so this request is refused (Verify passes on checks, ADR-0008) after it builds the packet.
+  assert.match(r.sdlc('request', 'demo').out, /Rebuilt specs\/demo\/review-packet\.md at HEAD/, 'no packet is built, not refused')
   gate.green()
   r.sdlc('gate', 'demo')
-  r.put('src/a.ts', 'x\n')
-  assert.match(r.sdlc('request', 'demo').out, /Rebuilt specs\/demo\/review-packet\.md at HEAD/, 'no packet is built, not refused')
   const row = (...cells) => `| ${cells.join(' | ')} |`
   const ledger = rows => r.put('specs/demo/review.md', `| ID | Severity | Location | Checklist | Finding | Status | Source |\n|---|---|---|---|---|---|---|\n${rows.join('\n')}\n`)
   ledger([
