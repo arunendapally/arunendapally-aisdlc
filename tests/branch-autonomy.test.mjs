@@ -125,3 +125,22 @@ test('data work keeps its people at Design', () => {
   const out = r.sdlc('request', 'demo')
   assert.doesNotMatch(out.out, /passed on checks/)
 })
+
+// Each condition of the rule, pinned directly (pre-review F1, F3, F5): a repo on feature/demo with nothing else blocking.
+test('the rule itself: each condition keeps the person, and only the switch message names the switch', async () => {
+  const { branchAutoBlock } = await import('../scripts/lib.mjs')
+  const r = makeRepo()
+  const cfg = { ...DEFAULT_CONFIG, gateOwners: {} }
+  const base = { feature: 'demo', branch: 'feature/demo', stage: 1, gates: {}, kinds: [] }
+  assert.equal(branchAutoBlock(r.repo, base, cfg), null)
+  assert.equal(branchAutoBlock(r.repo, { ...base, stage: 3 }, cfg), null)
+  for (const stage of [4, 5, 6]) assert.match(branchAutoBlock(r.repo, { ...base, stage }, cfg), /not a stage/, `gate ${stage} keeps its own route`)
+  assert.match(branchAutoBlock(r.repo, { ...base, gates: { 1: { status: 'waiting' } } }, cfg), /gate 1 is waiting/)
+  assert.match(branchAutoBlock(r.repo, { ...base, stage: 3, kinds: ['data'] }, cfg), /data work/)
+  assert.equal(branchAutoBlock(r.repo, { ...base, kinds: ['data'] }, cfg), null, 'data work still passes Plan on checks')
+  assert.match(branchAutoBlock(r.repo, { ...base, stage: 3 }, cfg, 'personal data'), /Security and privacy touches personal data/)
+  assert.match(branchAutoBlock(r.repo, { ...base, branch: 'HEAD' }, cfg), /no branch of its own/)
+  assert.match(branchAutoBlock(r.repo, { ...base, branch: 'main' }, cfg), /no branch of its own/)
+  assert.match(branchAutoBlock(r.repo, { ...base, branch: 'feature/other' }, cfg), /switch to feature\/other/)
+  assert.match(branchAutoBlock(r.repo, { ...base, branch: 'feature/other' }, { ...cfg, gateOwners: { 1: ['Priya'] } }), /gateOwners names Priya/, 'a named owner is named, not the switch')
+})

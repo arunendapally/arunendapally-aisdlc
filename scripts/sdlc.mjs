@@ -301,8 +301,13 @@ const commands = {
     if ([4, 5].includes(state.stage)) onBranch(state)
     // With autonomy granted by a person, every gate passes on its checks, recorded as granted by them.
     const granted = autonomy(dir)
-    const onOwnBranch = state.branch && git('rev-parse --abbrev-ref HEAD', dir) === state.branch
-    const next = n => (granted ? `Request gate ${n} again: it passes on its checks under autonomy.` : BRANCH_AUTO.includes(n) && onOwnBranch ? `Request gate ${n} again: it passes on its checks on this branch.` : `Request gate ${n} again so a person approves the new version.`)
+    // ADR-0007: why a person keeps gate n (null when the branch rule passes it); drift clears the gate records.
+    const keeps = n => {
+      const prdFile = path.join(dir, cfg.specsDir, feature, 'prd.md')
+      const risky = n === 3 && fs.existsSync(prdFile) ? nonFunctionalProblems(fs.readFileSync(prdFile, 'utf8')).risky : null
+      return branchAutoBlock(dir, { ...state, stage: n, gates: {} }, cfg, risky)
+    }
+    const next = n => (granted ? `Request gate ${n} again: it passes on its checks under autonomy.` : BRANCH_AUTO.includes(n) && !keeps(n) ?`Request gate ${n} again: it passes on its checks on this branch.` : `Request gate ${n} again so a person approves the new version.`)
     // A spec or plan edited after it was approved has not been seen by a person: back to that stage,
     // not on to ship. The approvals after it went with the old version, so they go too.
     const drifted = (state.dataDoc
