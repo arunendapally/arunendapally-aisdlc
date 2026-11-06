@@ -1,19 +1,60 @@
 {
   "feature": "stage-names",
   "lane": "light",
-  "stage": 1,
+  "stage": 5,
   "branch": "feature/stage-names",
   "createdAt": "2026-11-06T15:43:41.135Z",
   "stages": {
     "1": {
-      "enteredAt": "2026-11-06T15:43:41.135Z"
+      "enteredAt": "2026-11-06T15:43:41.135Z",
+      "leftAt": "2026-11-06T15:44:20.266Z"
+    },
+    "4": {
+      "enteredAt": "2026-11-06T15:44:20.266Z",
+      "leftAt": "2026-11-06T16:27:33.626Z"
+    },
+    "5": {
+      "enteredAt": "2026-11-06T16:27:33.626Z"
     }
   },
-  "gates": {},
+  "gates": {
+    "1": {
+      "status": "approved",
+      "by": "checks: autonomy granted by Arun Endapally",
+      "requestedAt": "2026-11-06T15:44:20.263Z",
+      "approvedAt": "2026-11-06T15:44:20.263Z",
+      "auto": true,
+      "fingerprint": "203ff21cf6b64308"
+    },
+    "4": {
+      "status": "approved",
+      "by": "checks: autonomy granted by Arun Endapally",
+      "requestedAt": "2026-11-06T16:27:33.183Z",
+      "approvedAt": "2026-11-06T16:27:33.183Z",
+      "auto": true,
+      "fingerprint": "18d0d6c1a31c859d"
+    }
+  },
   "retries": {},
   "kinds": [
     "brownfield"
   ],
   "capability": "gates-and-names",
-  "updatedAt": "2026-11-06T15:43:41.137Z"
+  "updatedAt": "2026-11-06T16:27:33.626Z",
+  "revisions": {
+    "1": 1
+  },
+  "gateRuns": {
+    "4": {
+      "ok": true,
+      "count": 245,
+      "at": "2026-11-06T16:27:24.204Z",
+      "runs": 1,
+      "runtime": "v24.19.0"
+    }
+  },
+  "baseline": 245,
+  "baselineRuntime": "v24.19.0",
+  "proofBase": "c6b642df93e343271f99bf195e46ef68d394f9fb",
+  "sizeChecked": 242
 }
