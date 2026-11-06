@@ -28,7 +28,14 @@ const readDenials = () => {
   }
 }
 
+// bypassPermissions is the person deciding no guard should stop this session (ADR-0006). Only their
+// own pause still does. Every bypassed refusal is audited, so the PR review sees what passed.
+const mode = input.permission_mode
 const decide = (permissionDecision, reason, rule) => {
+  if (mode === 'bypassPermissions' && rule !== 'paused') {
+    audit(dir, { event: 'pre-tool', tool, decision: 'bypassed', would: permissionDecision, reason, rule, mode, session })
+    process.exit(0)
+  }
   audit(dir, { event: 'pre-tool', tool, decision: permissionDecision, reason, rule, session })
   let text = reason
   if (permissionDecision === 'deny' && rule !== 'held') {
