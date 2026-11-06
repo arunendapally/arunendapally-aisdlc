@@ -1,0 +1,19 @@
+{
+  "feature": "stage-names",
+  "lane": "light",
+  "stage": 1,
+  "branch": "feature/stage-names",
+  "createdAt": "2026-11-06T15:43:41.135Z",
+  "stages": {
+    "1": {
+      "enteredAt": "2026-11-06T15:43:41.135Z"
+    }
+  },
+  "gates": {},
+  "retries": {},
+  "kinds": [
+    "brownfield"
+  ],
+  "capability": "gates-and-names",
+  "updatedAt": "2026-11-06T15:43:41.137Z"
+}
