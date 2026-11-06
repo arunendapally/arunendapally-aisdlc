@@ -164,7 +164,7 @@ test('the change sets its risk tier, and the pre-review may raise it but never l
   const v = verifyRepo()
   v.put('src/auth/token.ts', 'export const t = 1\n')
   const out = v.sdlc('request', 'demo').out
-  assert.match(out, /the pre-review says "Risk: medium", but the change is high: src\/auth\/token\.ts is on a path that always needs a person/)
+  assert.match(out, /the pre-review says "Risk: medium", but the change is high: src\/auth\/token\.ts is on a high-risk path, so the org's review rules decide who looks/)
   assert.equal(v.state('demo').riskTier, 'high')
   v.fill('specs/demo/bug.md', BUG, PRE('high'))
   assert.match(v.sdlc('request', 'demo').out, /Risk tier: high/)

@@ -299,6 +299,18 @@ const commands = {
     const state = need()
     const cfg = loadConfig(dir)
     if ([4, 5].includes(state.stage)) onBranch(state)
+    // Verify is the last stage (ADR-0008): code committed after it passed reopens it, so the PR's review
+    // covers what is on the branch.
+    const moved = state.closedAt && !state.closedReason && state.stage === 5 ? unreviewedChanges(dir, state, cfg) : []
+    if (moved.length) {
+      for (const k of ['closedAt', 'outcome', 'postmortemDue']) delete state[k]
+      delete state.gates[5]
+      delete state.gateRuns?.[5]
+      delete state.stages[5]?.leftAt
+      writeState(dir, state)
+      audit(dir, { event: 'reopen', feature, files: moved.slice(0, 20) })
+      console.log(`${moved.slice(0, 5).join(', ')} changed after Verify reviewed ${state.reviewedSha.slice(0, 7)}, so ${feature} is back at stage 5 (Verify).`)
+    }
     // With autonomy granted by a person, every gate passes on its checks, recorded as granted by them.
     const granted = autonomy(dir)
     const next = n => (granted ? `Request gate ${n} again: it passes on its checks under autonomy.` : `Request gate ${n} again so a person approves the new version.`)
@@ -331,7 +343,7 @@ const commands = {
     }
     if ([4, 5].includes(state.stage) && !(state.kinds ?? []).includes('data')) {
       const schema = changedFiles(dir, cfg).filter(f => matches(f.file, ['**/migrations/**', '**/*.sql', '**/schema.prisma'])).map(f => f.file)
-      if (schema.length) missing.push(`${schema.join(', ')} change the schema: this is data work. Run "sdlc kind ${feature} data" (the DBA reviews the PR); it starts db-design.md, and its "## Data impact" is part of the spec, so filling it sends the spec back to Plan for approval`)
+      if (schema.length) missing.push(`${schema.join(', ')} change the schema: this is data work. Run "sdlc kind ${feature} data" (its pre-review runs the data lens); it starts db-design.md, and its "## Data impact" is part of the spec, so filling it sends the spec back to Plan for approval`)
     }
     // The light lane is for additive, low-risk work: altering or dropping data, or a high-risk path,
     // needs the Design gate of the full lane.
@@ -459,7 +471,12 @@ const commands = {
       if (fs.existsSync(path.join(folder, 'acceptance.feature'))) {
         missing.push(...matrix(dir, feature).problems.map(p => `test matrix: ${p}`))
         const prFile = path.join(folder, spec.artefact)
-        missing.push(...manualProblems(dir, feature, fs.existsSync(prFile) ? fs.readFileSync(prFile, 'utf8') : '').map(p => `test matrix: ${p}`))
+        const prText = fs.existsSync(prFile) ? fs.readFileSync(prFile, 'utf8') : ''
+        missing.push(...manualProblems(dir, feature, prText).map(p => `test matrix: ${p}`))
+        // ADR-0008: only the deployed build can show a @release criterion, so the PR names it for a person.
+        const after = (section(prText, '## Check after deploy') ?? '').replace(/<!--[\s\S]*?-->/g, '')
+        missing.push(...matrix(dir, feature).rows.filter(r => r.due === 'release' && !r.traced && !new RegExp(`\\b${r.ac}\\b`).test(after))
+          .map(r => `test matrix: ${r.ac} is tagged @release with no test: name it under "## Check after deploy" in ${spec.artefact}, for a person to check on the deployed build`))
       }
       if (pre && !/Risk:[ \t]*(low|medium|high)\b/i.test(pre)) missing.push('the pre-review gives no "Risk: low|medium|high"')
       if (pre && !/Open findings:[ \t]*0\b/i.test(pre)) missing.push('the pre-review still has open findings ("Open findings: 0" is required)')
@@ -692,7 +709,9 @@ const commands = {
         const open = s.outcome?.status === 'open' ? `, OUTCOME ${lateOutcomes.includes(s.feature) ? 'OVERDUE' : 'DUE'} ${s.outcome.due.slice(0, 10)} (${s.outcome.owner})` : ''
         const outcome = open || (s.outcome ? `, outcome ${s.outcome.status}` : '')
         const how = s.closedReason ? `closed at stage ${s.stage} by ${s.closedBy}: ${s.closedReason}` : 'complete'
-        console.log(`${s.feature}: ${how} (${s.lane} lane)${due}${outcome}`)
+        // Only on the feature's own branch: elsewhere HEAD holds other work.
+        const moved = !s.closedReason && s.branch === git('rev-parse --abbrev-ref HEAD', dir) && unreviewedChanges(dir, s).length ? ', CHANGED AFTER VERIFY: request Verify again' : ''
+        console.log(`${s.feature}: ${how} (${s.lane} lane)${moved}${due}${outcome}`)
         continue
       }
       const gate = s.gates[s.stage]
