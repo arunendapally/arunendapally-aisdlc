@@ -77,9 +77,11 @@ test('the unmodified init-repo kit does not count toward PR size, an edited kit 
   r.git('add', '.')
   r.git('commit', '-m', 'kit')
   assert.equal(changedLines(r.repo), 0, 'committed, the kit still does not count')
+  const owners = '.github/CODEOWNERS'
+  r.put(owners, fs.readFileSync(path.join(r.repo, owners), 'utf8').replace(/\r?\n/g, '\r\n'))
+  assert.equal(changedLines(r.repo), 0, 'a kit file checked out with CRLF line endings is still the kit')
   const file = '.github/workflows/ai-sdlc-gate.yml'
-  r.put(file, `${fs.readFileSync(path.join(r.repo, file), 'utf8')}# edited
-`)
+  r.put(file, `${fs.readFileSync(path.join(r.repo, file), 'utf8')}# edited\n`)
   assert.ok(changedLines(r.repo) > 0, 'an edited kit file counts')
 })
 
