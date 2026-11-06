@@ -37,7 +37,7 @@ Full, light and hotfix lanes end at Release; Verify and Release wait for named p
 - R1. (must) A feature in any lane is complete once Verify passes its checks, with no stage after it. Needs: which stages each lane runs (F1).
 - R2. (must) Verify passes on its checks, without waiting for a named approver. Needs: nothing new.
 - R3. (must) The plugin offers no command that merges or pushes to main. Needs: nothing new (F7).
-- R4. (must) A criterion tagged @release is not refused at Verify, and the review packet lists it to check after deploy. Needs: which criteria are tagged @release (F6).
+- R4. (must) A criterion tagged @release is not refused at Verify when the PR names it under "Check after deploy", and the review packet lists it there too. Needs: which criteria are tagged @release (F6).
 - R5. (should) A feature with an outcome metric gets its follow-up owner and date when it completes. Needs: the PRD's outcome metric (F4).
 - R6. (must) A Verify whose checks fail still stops with the reasons. Needs: nothing new.
 
@@ -71,3 +71,7 @@ Objective: a person is asked for a decision only at the PR (specs/gates-and-name
 - A1: who: Arun. Recommend: accept; a hotfix is still a PR, and the incident record is not a release step.
 - A2: who: Arun. Recommend: accept; the deployed build is the org's, so the check is theirs.
 - A3: who: Arun. Recommend: accept; the PR is the last thing the plugin sees.
+
+## Changes since v1
+
+- R4: Verify now needs the PR body to name each untested @release criterion under "Check after deploy", so the person reviewing the PR sees it; the packet alone is not in the PR (pre-review F2).

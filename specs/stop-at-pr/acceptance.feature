@@ -31,6 +31,7 @@ Feature: The plugin stops at a raised PR
   @R4 @AC-4 @unit
   Scenario: A @release criterion is listed to check after deploy
     Given AC-3 "The live page shows the new price" is tagged @release with no test
+    And the PR body names AC-3 under "## Check after deploy"
     When the review packet is built
     Then it lists "AC-3" under "## Check after deploy"
     And no Verify problem names AC-3
