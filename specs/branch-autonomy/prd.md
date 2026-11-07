@@ -30,7 +30,7 @@ A person running a feature on its own branch is stopped at every gate before the
 
 ## Current system
 
-Plan and Design wait for a named person; only Build passes on checks (F1, F2). Repo-wide autonomy is the one way around the waits, and it also merges to main (F4, F5). Agents already cannot push to main (F6).
+Define and Design wait for a named person; only Build and Verify pass on checks (F1, F2). Repo-wide autonomy is the one way around the waits (F4). The plugin no longer merges (F5), and agents cannot push to main (F6).
 
 ## Assumptions
 
@@ -91,3 +91,4 @@ Objective: a person is asked for a decision only at the PR (specs/gates-and-name
 - R3 now says the plugin never merges or pushes to main and the PR review is the org's: main's ADR-0008 ends every lane at Verify, which passes on its checks, and removes the merge command.
 - R7 is removed: Release is out of scope under ADR-0008. AC-7 goes with it; nothing is renumbered.
 - Stage 1 is now named Define (#56); "Plan" in R1, R4 and AC-1, AC-4, AC-5 means Define.
+- Current system restated after main's ADR-0008: Verify passes on checks and there is no merge command (F1, F5 re-pinned).
