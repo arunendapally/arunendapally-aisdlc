@@ -14,10 +14,22 @@ Removed, skipped or quarantined: none
 
 ## Pre-review
 
-Pending: the pre-reviewer writes this section.
+Risk: medium, because it is code (the floor) in the gate path that refuses a stage request, with no data, auth or contract change; a false refusal blocks work, a false pass only lets an open checklist through.
+Open findings: 3 (F1 minor, F2 and F3 nits; see review.md)
+Look here first: scripts/sdlc.mjs:340 (the stage list and the artefact it reads decide which gates enforce the checklist; only Define is exercised by a test), skills/org-ai-sdlc/templates/prd.md:130 and design.md:123 (whether these checklist items are the right ones per stage is a product call)
+Lenses run: correctness, simplicity, tests
+Revert: git revert of the merge commit; no data or state to back out, and documents that carry a checklist keep passing on the old code because it ignores the section.
+Checked mechanically: walked AC-1 to AC-6 through scripts/lib.mjs openDoneItems and the request path; tests/definition-of-done.test.mjs passes (9 of 9) and imports openDoneItems, so it fails on the base; R4 holds (no section, no refusal); light lane reads tasks.md at Build and bug, task and hotfix documents have no section; no new dependency (checklist 24 to 26); changelog updated (21); no secrets; packet signal on .github/pull_request_template.md is a template text change only.
+Could not check: the full suite count (255) was not rerun here; no mutation run on the stage list; security and operability lenses listed in the packet were not run, judged unneeded for a template and gate-text change.
 
 ## Not verified
 
 The test proof did not run: no proofCommand in .ai-sdlc/config.json.
 The agent ticks its own checklist items; the gate checks only that none is left open, and the PR reviewer reads them (PRD A2).
 A live session on this code: the installed 0.7.1 CLI ran the gates.
+
+## Definition of done
+
+- [x] Pre-review has no open findings
+- [x] Not verified is honest
+- [x] PR raised from the branch
