@@ -436,6 +436,17 @@ export function designDoc(dir, state) {
   return !fs.existsSync(path.join(folder, 'design.md')) && fs.existsSync(path.join(folder, 'plan.md')) ? 'plan.md' : 'design.md'
 }
 
+// A feature in a capability shares the capability's architecture overview; one without keeps its own (capability-overview R2, A2).
+export const overviewFile = (dir, state) => path.join(dir, loadConfig(dir).specsDir, state.capability ?? state.feature, 'architecture-overview.md')
+// The overview's "## Decision log": | Date | Decision | Agreed by | Source | Changes |, read by cell position.
+export const decisionsOf = text => (section(text, '## Decision log') ?? '').split('\n').filter(l => /^\s*\|/.test(l) && !/^\s*\|[\s:|-]+$/.test(l)).slice(1)
+  .map(l => l.split('|').slice(1, -1).map(c => c.trim())).map(([date, decision, agreedBy, source, changes]) => ({ date, decision, agreedBy, source, changes }))
+// R4: a row with no one who agreed it, or no source, is not a record of an agreement.
+export const decisionProblems = text => decisionsOf(text).flatMap(d => {
+  const gaps = [!d.agreedBy && 'agreed by', !d.source && 'source'].filter(Boolean)
+  return gaps.length ? [`decision log row "${d.date} ${d.decision}" has no ${gaps.join(' and no ')}: name the person who agreed it ("unconfirmed" until they confirm) and quote or link the exchange`] : []
+})
+
 // Copy an artefact template into the feature folder; returns its repo-relative path.
 export function copyTemplate(dir, feature, name) {
   const to = path.join(dir, loadConfig(dir).specsDir, feature, name)

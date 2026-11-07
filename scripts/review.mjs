@@ -6,7 +6,7 @@
 //   retro learns from what only humans found.
 import fs from 'node:fs'
 import path from 'node:path'
-import { STAGES, git, loadConfig, matches, changedFiles, designDoc } from './lib.mjs'
+import { STAGES, git, loadConfig, matches, changedFiles, designDoc, overviewFile, decisionsOf } from './lib.mjs'
 import { matrix, levels, levelOf } from './testmatrix.mjs'
 
 // A test file is one the test matrix gives a level, or anything in a test folder (helpers, fixtures).
@@ -154,13 +154,17 @@ export function packet(dir, state) {
   const last = state.lastPacketHead && git(`cat-file -t ${state.lastPacketHead}`, dir) === 'commit' ? state.lastPacketHead : null
   const sinceLast = last ? git(`diff --name-only ${last}`, dir).split('\n').filter(f => f && !f.startsWith(`${cfg.specsDir}/`)) : null
 
+  // capability-overview R5: a decision no named person has confirmed is for the human reviewer to see.
+  const overview = overviewFile(dir, state)
+  const unconfirmed = fs.existsSync(overview) ? decisionsOf(fs.readFileSync(overview, 'utf8')).filter(d => /^unconfirmed$/i.test(d.agreedBy)) : []
+
   // ADR-0007: every gate no person saw, and every drift that sent the work back, from the audit log.
   const auditFile = path.join(dir, '.ai-sdlc', 'audit.jsonl')
   const autoGates = (fs.existsSync(auditFile) ? fs.readFileSync(auditFile, 'utf8').split('\n') : []).filter(Boolean)
     .map(l => { try { return JSON.parse(l) } catch { return {} } })
     .filter(e => e.feature === state.feature && ['auto', 'spec-drift', 'plan-drift'].includes(e.event))
 
-  return { feature: state.feature, lane: state.lane, head: git('rev-parse --short HEAD', dir), files: rows, autoGates, code: code.length, tests: tests.length, deletedTests, untested, lenses, newDeps, oversized, codeLines, criteria, last, sinceLast }
+  return { unconfirmed, feature: state.feature, lane: state.lane, head: git('rev-parse --short HEAD', dir), files: rows, autoGates, code: code.length, tests: tests.length, deletedTests, untested, lenses, newDeps, oversized, codeLines, criteria, last, sinceLast }
 }
 
 export function packetText(p) {
@@ -214,6 +218,7 @@ export function packetText(p) {
     ...(afterDeploy.length ? ['## Check after deploy', '', ...afterDeploy.map(s => `- ${s.ac} (${s.level}): ${s.name}`), ''] : []),
     // The merge is the hand check: no line in the PR body records it (merge-is-hand-check).
     ...(untested.some(s => s.due === 'manual') ? ['## Check by hand before merging', '', 'Your merge records that you checked these. Judge too whether a test was possible.', '', ...untested.filter(s => s.due === 'manual').map(s => `- ${s.ac} ${s.name} (${s.level})`), ''] : []),
+    ...(p.unconfirmed?.length ? ['## Unconfirmed decisions', '', ...p.unconfirmed.map(d => `- ${d.date}: ${d.decision} (source: ${d.source}; changes: ${d.changes || 'none named'})`), ''] : []),
     ...(p.deletedTests.length ? ['## Deleted tests', '', ...p.deletedTests.map(f => `- \`${f}\`: say why in the PR, or restore it`), ''] : []),
     '## All files',
     '',

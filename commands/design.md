@@ -13,6 +13,7 @@ Design for `$ARGUMENTS` (the light lane skips it; its design is `## Approach` in
 2. Only what the change needs:
    - data work: the `dba` draws the ER diagram of the change in `specs/$ARGUMENTS/db-design.md` `## Data model` and writes its migration plan (expand-contract); `design.md` `## Data model` says "See db-design.md.";
    - API work: `node "${CLAUDE_PLUGIN_ROOT}/scripts/sdlc.mjs" api $ARGUMENTS` starts `openapi.yaml`; declare any breaking change in `## Contracts`;
+   - a feature in a capability: its systems under change are the rows of `specs/<capability>/architecture-overview.md`, shared with the capability's other features; add a row for a repo this feature changes, and record a decision agreed after the PRD in its `## Decision log`;
    - a new or changed container: update the C4 model in `docs/architecture/workspace.dsl`;
    - a screen: the `ux-designer` designs it from the product's real components, with its accessibility checks;
    - a high-risk path: the `safe-ai-sdlc-expert` writes the threat model.
