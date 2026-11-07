@@ -22,7 +22,8 @@
       "leftAt": "2026-11-07T14:41:08.629Z"
     },
     "6": {
-      "enteredAt": "2026-11-07T14:41:08.629Z"
+      "enteredAt": "2026-11-07T14:41:08.629Z",
+      "leftAt": "2026-11-07T14:41:43.095Z"
     }
   },
   "gates": {
@@ -63,7 +64,7 @@
   "kinds": [
     "brownfield"
   ],
-  "updatedAt": "2026-11-07T14:41:08.629Z",
+  "updatedAt": "2026-11-07T14:41:43.097Z",
   "revisions": {
     "1": 1,
     "3": 1
@@ -139,5 +140,6 @@
     "scripts/sdlc.mjs": "6c689acbe353d546",
     "tests/review.test.mjs": "80dd590ef960abce",
     "tests/stop-at-pr.test.mjs": "2bedac935d60e8c4"
-  }
+  },
+  "closedAt": "2026-11-07T14:41:43.095Z"
 }
