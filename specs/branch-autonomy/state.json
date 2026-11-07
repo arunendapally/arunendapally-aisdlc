@@ -1,7 +1,7 @@
 {
   "feature": "branch-autonomy",
   "lane": "full",
-  "stage": 4,
+  "stage": 5,
   "branch": "feature/branch-autonomy",
   "createdAt": "2026-11-06T05:56:55.367Z",
   "stages": {
@@ -14,11 +14,11 @@
       "leftAt": "2026-11-07T03:35:01.669Z"
     },
     "4": {
-      "enteredAt": "2026-11-07T03:35:01.669Z"
+      "enteredAt": "2026-11-07T03:35:01.669Z",
+      "leftAt": "2026-11-07T03:48:39.561Z"
     },
     "5": {
-      "enteredAt": "2026-11-06T08:51:17.509Z",
-      "leftAt": "2026-11-07T03:34:02.721Z"
+      "enteredAt": "2026-11-07T03:48:39.561Z"
     }
   },
   "gates": {
@@ -37,6 +37,14 @@
       "approvedAt": "2026-11-07T03:35:01.664Z",
       "auto": true,
       "fingerprint": "a550b56f7140269b"
+    },
+    "4": {
+      "status": "approved",
+      "by": "checks: autonomy granted by Arun Endapally",
+      "requestedAt": "2026-11-07T03:48:38.019Z",
+      "approvedAt": "2026-11-07T03:48:38.019Z",
+      "auto": true,
+      "fingerprint": "ab4a55a89ae8efa1"
     }
   },
   "retries": {},
@@ -44,7 +52,7 @@
     "brownfield"
   ],
   "capability": "gates-and-names",
-  "updatedAt": "2026-11-07T03:35:01.669Z",
+  "updatedAt": "2026-11-07T03:48:39.561Z",
   "intent": {
     "change": "Branch runs on its own",
     "smallest": "Gates pass on checks",
@@ -59,8 +67,8 @@
   "gateRuns": {
     "4": {
       "ok": true,
-      "count": 240,
-      "at": "2026-11-06T08:51:15.377Z",
+      "count": 259,
+      "at": "2026-11-07T03:45:58.091Z",
       "runs": 1,
       "runtime": "v24.19.0"
     },
