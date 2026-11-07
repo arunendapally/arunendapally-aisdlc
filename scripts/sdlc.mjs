@@ -7,7 +7,7 @@ import { fileURLToPath } from 'node:url'
 import { spawnSync } from 'node:child_process'
 import { STAGES, root, git, loadConfig, readState, writeState, listFeatures, missingHeadings, isFrozen, destructiveMigrations,
   stageSpec, section, matches, changedFiles, changedLines, createFeature, copyTemplate, TEMPLATES, overdueGates, overduePostmortems,
-  KINDS, trustedGates, promotable, readTrust, writeTrust, lessonPaid, lessonProblem, lessonsOwed, audit, withIntent, INTENT_PARTS, autonomy, designDoc, BRANCH_AUTO, branchAutoBlock, overviewFile, decisionProblems } from './lib.mjs'
+  KINDS, trustedGates, promotable, readTrust, writeTrust, lessonPaid, lessonProblem, lessonsOwed, audit, withIntent, INTENT_PARTS, autonomy, designDoc, BRANCH_AUTO, branchAutoBlock, overviewFile, decisionProblems, openDoneItems } from './lib.mjs'
 import { check, conformance, OKF_VERSION, relevant, writeIndex } from './knowledge.mjs'
 import { collect, analyze, report, approvalSignals, approvalLines } from './retro.mjs'
 import { lint, requirementsFrom } from './gherkin.mjs'
@@ -351,6 +351,9 @@ const commands = {
       if (!keptBy) spec = { ...spec, isAuto: true, owner: 'feature branch' }
     }
     const missing = missingHeadings(dir, state)
+    // R2: the stage's definition of done, when its document has one, has no item left open.
+    const doneFile = path.join(dir, cfg.specsDir, feature, spec.artefact)
+    if ([1, 3, 4, 5].includes(state.stage) && fs.existsSync(doneFile)) missing.push(...openDoneItems(fs.readFileSync(doneFile, 'utf8'), spec.artefact))
     const warnings = []
     // A spec or design approved before comes back as the next revision, and says what changed and why.
     const revision = state.revisions?.[state.stage] ?? 0

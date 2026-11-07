@@ -6,6 +6,7 @@ argument-hint: <feature-slug>
 Define for `$ARGUMENTS`. Delegate to the `product-owner` agent, with the `qa-engineer` for the acceptance criteria.
 
 **Input:** the person's request and intent, the triage, and for brownfield or data work the current code.
+**Ready when:** the intent is answered.
 **Processing:** ask only the essential questions, record assumptions, write numbered requirements and one Gherkin scenario per requirement, pin facts to the code.
 **Output:** `prd.md`, `acceptance.feature` and, when needed, `facts.md`, approved together at the Define gate.
 

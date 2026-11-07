@@ -6,6 +6,7 @@ argument-hint: <feature-slug>
 Verify for `$ARGUMENTS`. You are the `tech-lead`.
 
 **Input:** the built change, its tests and the spec.
+**Ready when:** the Build definition of done in `tasks.md` is complete.
 **Processing:** the full gate, the test proof, the review packet and pre-review, every finding settled.
 **Output:** `pr.md` and a raised PR, passed on checks; who approves and merges it is the org's rule.
 

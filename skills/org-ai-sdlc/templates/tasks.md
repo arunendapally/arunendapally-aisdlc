@@ -47,3 +47,11 @@ always shows today's price; the other option, keeping the price seen, needs a pr
   - done when: AC-3 passes; a redelivered event marks the item once.
   - traps: duplicate event delivery
 -->
+
+## Definition of done
+
+<!-- Tick each item ("- [x]") once done, or write "- N/A: <reason>". The gate refuses an open item or a bare N/A. -->
+- [ ] Tests failed first, then pass
+- [ ] Gate green at or above the baseline
+- [ ] Every task done
+- [ ] Diff within the size limit
