@@ -5,7 +5,7 @@ Spec: specs/merge-is-hand-check/prd.md (R1 to R3). This PR also carries the re-s
 
 ## Test results
 
-Suite: 231 passed, 0 failed, 0 skipped (baseline 229 on main), npm test on this commit
+Suite: 248 passed, 0 failed, 0 skipped (main after #54 and #56), npm test on this commit
 Evals: 30/30 golden tasks pass, npm run eval on this commit
 Proof: not run, no proofCommand; the AC-1 and AC-2 tests failed on the base code before the change, AC-3 passed as it pins unchanged behaviour
 Criteria: 3 of 3 traced (AC-1 to AC-3 in tests/release-criteria.test.mjs)
