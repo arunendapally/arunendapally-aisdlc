@@ -1,0 +1,19 @@
+{
+  "feature": "plan-roadmap",
+  "lane": "light",
+  "stage": 1,
+  "branch": "feature/plan-roadmap",
+  "createdAt": "2026-11-07T04:05:48.992Z",
+  "stages": {
+    "1": {
+      "enteredAt": "2026-11-07T04:05:48.992Z"
+    }
+  },
+  "gates": {},
+  "retries": {},
+  "kinds": [
+    "brownfield"
+  ],
+  "capability": "gates-and-names",
+  "updatedAt": "2026-11-07T04:05:48.993Z"
+}
