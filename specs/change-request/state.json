@@ -1,0 +1,121 @@
+{
+  "feature": "change-request",
+  "lane": "light",
+  "stage": 6,
+  "branch": "feature/change-request",
+  "createdAt": "2026-11-07T12:17:39.800Z",
+  "stages": {
+    "1": {
+      "enteredAt": "2026-11-07T12:17:39.800Z",
+      "leftAt": "2026-11-07T12:18:33.569Z"
+    },
+    "4": {
+      "enteredAt": "2026-11-07T12:18:33.569Z",
+      "leftAt": "2026-11-07T12:56:37.004Z"
+    },
+    "5": {
+      "enteredAt": "2026-11-07T12:56:37.004Z",
+      "leftAt": "2026-11-07T13:08:13.799Z"
+    },
+    "6": {
+      "enteredAt": "2026-11-07T13:08:13.799Z"
+    }
+  },
+  "gates": {
+    "1": {
+      "status": "approved",
+      "by": "checks: autonomy granted by Arun Endapally",
+      "requestedAt": "2026-11-07T12:18:33.560Z",
+      "approvedAt": "2026-11-07T12:18:33.560Z",
+      "auto": true,
+      "fingerprint": "f1ee4a4259001406"
+    },
+    "4": {
+      "status": "approved",
+      "by": "checks: autonomy granted by Arun Endapally",
+      "requestedAt": "2026-11-07T12:56:36.707Z",
+      "approvedAt": "2026-11-07T12:56:36.707Z",
+      "auto": true,
+      "fingerprint": "ac745f6d884f1c61"
+    },
+    "5": {
+      "status": "approved",
+      "by": "checks: autonomy granted by Arun Endapally",
+      "requestedAt": "2026-11-07T13:08:12.935Z",
+      "approvedAt": "2026-11-07T13:08:12.935Z",
+      "auto": true,
+      "fingerprint": "a6507094cdffddc2"
+    }
+  },
+  "retries": {},
+  "kinds": [
+    "brownfield"
+  ],
+  "capability": "gates-and-names",
+  "updatedAt": "2026-11-07T13:08:13.800Z",
+  "revisions": {
+    "1": 1
+  },
+  "gateRuns": {
+    "4": {
+      "ok": true,
+      "count": 250,
+      "at": "2026-11-07T12:56:24.803Z",
+      "runs": 1,
+      "runtime": "v24.19.0"
+    },
+    "5": {
+      "ok": true,
+      "count": 250,
+      "at": "2026-11-07T13:08:07.286Z",
+      "runs": 1,
+      "runtime": "v24.19.0"
+    }
+  },
+  "baseline": 250,
+  "baselineRuntime": "v24.19.0",
+  "proofBase": "47df4d4d1f5972cd3dadc372d1fea4109a36bbf7",
+  "sizeChecked": 85,
+  "lastPacketHead": "3198460",
+  "ledgerIds": [
+    "F1",
+    "F2"
+  ],
+  "riskTier": "medium",
+  "reviewedSha": "31984607768ec5713cea5b70dc690c4978990504",
+  "reviewedFiles": [
+    "CHANGELOG.md",
+    "commands/build.md",
+    "docs/org-ai-sdlc-process.md",
+    "docs/other-agents.md",
+    "evals/golden/25-spec-drift-goes-back-to-plan.json",
+    "scripts/sdlc.mjs",
+    "skills/org-ai-sdlc/SKILL.md",
+    "specs/change-request/acceptance.feature",
+    "specs/change-request/facts.md",
+    "specs/change-request/pr.md",
+    "specs/change-request/prd.md",
+    "specs/change-request/review.md",
+    "specs/change-request/state.json",
+    "specs/change-request/tasks.md",
+    "tests/autonomy.test.mjs",
+    "tests/change-request.test.mjs",
+    "tests/review.test.mjs",
+    "specs/capability-overview/review-packet.md",
+    "specs/change-request/review-packet.md",
+    "specs/change-request/test-matrix.md",
+    "specs/definition-of-done/review-packet.md"
+  ],
+  "reviewedHashes": {
+    "CHANGELOG.md": "d244fc8e9e32c036",
+    "commands/build.md": "4b3d38967eb16a9b",
+    "docs/org-ai-sdlc-process.md": "a5a10678e8dca7a0",
+    "docs/other-agents.md": "3c0538ff84a15d55",
+    "evals/golden/25-spec-drift-goes-back-to-plan.json": "51be9ed40fa8af7d",
+    "scripts/sdlc.mjs": "37212611380389ce",
+    "skills/org-ai-sdlc/SKILL.md": "e4b523c482bab88f",
+    "tests/autonomy.test.mjs": "08a348e0966dab6d",
+    "tests/change-request.test.mjs": "ca547a57cb32239f",
+    "tests/review.test.mjs": "6c7b6cafe08eee0e"
+  }
+}

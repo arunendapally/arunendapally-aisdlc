@@ -7,18 +7,18 @@ import { fileURLToPath } from 'node:url'
 import { spawnSync } from 'node:child_process'
 import { STAGES, root, git, loadConfig, readState, writeState, listFeatures, missingHeadings, isFrozen, destructiveMigrations,
   stageSpec, section, matches, changedFiles, changedLines, createFeature, copyTemplate, TEMPLATES, overdueGates, overduePostmortems,
-  KINDS, trustedGates, promotable, readTrust, writeTrust, lessonPaid, lessonProblem, lessonsOwed, audit, withIntent, INTENT_PARTS, autonomy, designDoc, BRANCH_AUTO, branchAutoBlock } from './lib.mjs'
+  KINDS, trustedGates, promotable, readTrust, writeTrust, lessonPaid, lessonProblem, lessonsOwed, audit, withIntent, INTENT_PARTS, autonomy, designDoc, BRANCH_AUTO, branchAutoBlock, overviewFile, decisionProblems, openDoneItems, slicesOf, roadmapProblems } from './lib.mjs'
 import { check, conformance, OKF_VERSION, relevant, writeIndex } from './knowledge.mjs'
 import { collect, analyze, report, approvalSignals, approvalLines } from './retro.mjs'
 import { lint, requirementsFrom } from './gherkin.mjs'
 import { packet, packetText, parseLedger, ledgerProblems } from './review.mjs'
 import { boardProblems } from './design-review.mjs'
-import { matrix, matrixText, manualProblems } from './testmatrix.mjs'
+import { matrix, matrixText } from './testmatrix.mjs'
 import { factsGateProblems, assumptionProblems } from './facts.mjs'
 import { erProblems, openapiProblems, breakingChanges, undefinedFields } from './contracts.mjs'
 import { solutionWarnings } from './solutions.mjs'
 import { parseSpecKit, prdFromSpecKit, featureFromSpecKit } from './speckit.mjs'
-import { runProof, proofProblems, releaseProblems, advanceFeature, overdueOutcomes, riskTier, gateFingerprint, unreviewedChanges, contentHashes, readTriggers, addTrigger, clearTriggers, repeatedFindings } from './loop.mjs'
+import { runProof, lockedFiles, sha256, proofProblems, releaseProblems, advanceFeature, overdueOutcomes, riskTier, gateFingerprint, unreviewedChanges, contentHashes, readTriggers, addTrigger, clearTriggers, repeatedFindings } from './loop.mjs'
 
 const dir = root()
 const [cmd, feature, ...rest] = process.argv.slice(2)
@@ -118,9 +118,10 @@ const fieldWarnings = state => {
   return missing.length ? [`field names not defined in openapi.yaml: ${missing.map(m => `${m.name} (${m.where})`).join(', ')}. Use the contract's names, or add them to it`] : []
 }
 // Work across repos (issue #27 d, #26 packets). Each task names its repos ("repos: [web]", this repo when
-// absent); a feature-level architecture-overview.md declares the systems under change before tasks exist.
+// absent); architecture-overview.md (the capability's, or the feature's own) declares the systems under change.
 const thisRepo = () => path.basename(git('remote get-url origin', dir) || dir).replace(/\.git$/, '')
-const tasksOf = text => [...(section(text, '## Tasks') ?? '').matchAll(TASK_LINE)].map(([, id, rest]) => ({
+const tasksOf = text => [...(section(text, '## Tasks') ?? '').matchAll(TASK_LINE)].map(([line, id, rest]) => ({
+  line: line.trim(),
   id,
   repos: (rest.match(/repos:\s*\[([^\]]*)\]/)?.[1] ?? thisRepo()).split(',').map(s => s.trim()).filter(Boolean),
   deps: (rest.match(/depends-on:\s*\[([^\]]*)\]/)?.[1] ?? '').split(',').map(s => s.trim()).filter(Boolean),
@@ -133,12 +134,13 @@ const systemProblems = state => {
   const folder = path.join(dir, loadConfig(dir).specsDir, state.feature)
   const tasks = fs.existsSync(path.join(folder, 'tasks.md')) ? tasksOf(fs.readFileSync(path.join(folder, 'tasks.md'), 'utf8')) : []
   const repos = [...new Set(tasks.flatMap(t => t.repos))]
-  const file = path.join(folder, 'architecture-overview.md')
-  if (!fs.existsSync(file)) return repos.length > 1 ? [`tasks.md names more than one repo (${repos.join(', ')}): write specs/${state.feature}/architecture-overview.md from the plugin's architecture-overview.md template, with a "## Systems under change" table, before the tasks are built`] : []
+  const file = overviewFile(dir, state)
+  if (!fs.existsSync(file)) return repos.length > 1 ? [`tasks.md names more than one repo (${repos.join(', ')}): write ${path.relative(dir, file).split(path.sep).join('/')} from the plugin's architecture-overview.md template, with a "## Systems under change" table, before the tasks are built`] : []
   const systems = systemsOf(fs.readFileSync(file, 'utf8'))
   const problems = systems.filter(s => !CHANGE_TYPES.includes(s.type)).map(s => `architecture-overview.md: ${s.system} has change type "${s.type}": use new, modified, config-only or consumer-only (verify)`)
   for (const t of tasks) for (const repo of t.repos.filter(r => !systems.some(s => s.system === r))) problems.push(`architecture-overview.md: ${t.id} changes ${repo}, which is not in "## Systems under change"`)
-  for (const s of systems.filter(s => ['new', 'modified'].includes(s.type) && !tasks.some(t => t.repos.includes(s.system)))) problems.push(`architecture-overview.md: ${s.system} is ${s.type}, but no task in tasks.md changes it`)
+  // A capability's systems are changed across its features, so one feature need not change them all.
+  for (const s of systems.filter(s => !state.capability && ['new', 'modified'].includes(s.type) && !tasks.some(t => t.repos.includes(s.system)))) problems.push(`architecture-overview.md: ${s.system} is ${s.type}, but no task in tasks.md changes it`)
   return problems
 }
 // The Analyze gate needs acceptance.feature: valid Gherkin that covers every PRD requirement.
@@ -235,6 +237,27 @@ const scaffoldKinds = state => {
   fs.writeFileSync(prd, text)
 }
 
+// A spec or plan edited after it was approved has not been seen by a person: back to that stage,
+// not on to ship. The approvals after it went with the old version, so they go too.
+const driftOf = (state, cfg) => (state.dataDoc
+  ? [[1, 'Define', 'the spec (prd.md, acceptance.feature, or db-design.md "## Data impact")'], [3, 'Design', `the design (${designDoc(dir, state)}, or db-design.md "## Data model" or "## Migration plan (expand-contract)")`]]
+  : [[1, 'Define', 'the spec (prd.md or acceptance.feature)'], [3, 'Design', `the design (${designDoc(dir, state)})`]])
+  .find(([s]) => state.stage > s && state.gates[s]?.status === 'approved' && state.gates[s].fingerprint && state.gates[s].fingerprint !== gateFingerprint(dir, state, s, cfg))
+const goBack = (state, [back, name, what], cfg = loadConfig(dir)) => {
+  const now = new Date().toISOString()
+  state.stages[state.stage] = { ...state.stages[state.stage], leftAt: now }
+  for (const s of Object.keys(state.gates)) if (Number(s) >= back) delete state.gates[s]
+  state.stage = back
+  state.stages[back] = { enteredAt: now }
+  writeState(dir, state)
+  audit(dir, { event: back === 1 ? 'spec-drift' : 'plan-drift', feature })
+  // ADR-0007: a gate the branch rule passes is requested again on its checks; otherwise a person approves.
+  const prdFile = path.join(dir, cfg.specsDir, feature, 'prd.md')
+  const risky = back === 3 && fs.existsSync(prdFile) ? nonFunctionalProblems(fs.readFileSync(prdFile, 'utf8')).risky : null
+  const next = autonomy(dir) ? `Request the ${name} gate again: it passes on its checks under autonomy.` : BRANCH_AUTO.includes(back) && !branchAutoBlock(dir, { ...state, stage: back, gates: {} }, cfg, risky) ? `Request the ${name} gate again: it passes on its checks on this branch.` : `Request the ${name} gate again so a person approves the new version.`
+  return `${what[0].toUpperCase()}${what.slice(1)} has changed since ${name} was approved, so ${feature} goes back to ${name}. ${next} Tests already written stay.`
+}
+
 const commands = {
   // Create a feature at stage 1, in the light lane unless --full. Starting full is always allowed
   // (it only adds the Design gate); only a human moves a feature from full to light ("sdlc lane").
@@ -252,7 +275,9 @@ const commands = {
     const feat = copyTemplate(dir, feature, 'acceptance.feature')
     // The script writes the line: the PRD itself waits for the person's intent.
     if (capability) fs.writeFileSync(path.join(dir, prd), fs.readFileSync(path.join(dir, prd), 'utf8').replace(/^(# PRD: .*\n)/, `$1\nCapability: ${capability} (${slices})\n`))
+    if (capability) copyTemplate(dir, capability, 'architecture-overview.md')
     scaffoldKinds(state)
+    if (capability) for (const p of roadmapProblems(fs.readFileSync(path.join(dir, slices), 'utf8'))) console.log(`Warning: ${slices}: ${p}`)
     console.log(`Created ${feature} at Define, ${lane} lane${kindNote()}. Write ${prd} and ${feat}; one approval covers both.`)
   },
 
@@ -314,30 +339,13 @@ const commands = {
     }
     // With autonomy granted by a person, every gate passes on its checks, recorded as granted by them.
     const granted = autonomy(dir)
-    // ADR-0007: why a person keeps gate n (null when the branch rule passes it); drift clears the gate records.
-    const keeps = n => {
-      const prdFile = path.join(dir, cfg.specsDir, feature, 'prd.md')
-      const risky = n === 3 && fs.existsSync(prdFile) ? nonFunctionalProblems(fs.readFileSync(prdFile, 'utf8')).risky : null
-      return branchAutoBlock(dir, { ...state, stage: n, gates: {} }, cfg, risky)
+    const drifted = driftOf(state, cfg)
+    // Once Build has started, a spec change is the person's call: a change request or an amendment.
+    if (drifted?.[0] === 1 && state.stage >= 4) {
+      audit(dir, { event: 'change-asked', feature })
+      fail(`The spec changed after development started. Ask the person, with the question tool: change request or amend the existing PRD? Change request (often better when much is already built): a new PRD linked to this one, with its own effort estimate, timeline and PR; the work already done and its estimate stay as agreed, and the extra effort is visible. Amend: a new version of this PRD saying what changed; simpler for a small clarification, but the original estimate must be re-done with the added effort stated. Either way the design and tasks may change. Their answer: change request: sdlc cr ${feature} <new-slug>; amend: sdlc amend ${feature}.`)
     }
-    const next = n => (granted ? `Request the ${STAGES[n].name} gate again: it passes on its checks under autonomy.` : BRANCH_AUTO.includes(n) && !keeps(n) ? `Request the ${STAGES[n].name} gate again: it passes on its checks on this branch.` : `Request the ${STAGES[n].name} gate again so a person approves the new version.`)
-    // A spec or plan edited after it was approved has not been seen by a person: back to that stage,
-    // not on to ship. The approvals after it went with the old version, so they go too.
-    const drifted = (state.dataDoc
-      ? [[1, 'Define', 'the spec (prd.md, acceptance.feature, or db-design.md "## Data impact")'], [3, 'Design', `the design (${designDoc(dir, state)}, or db-design.md "## Data model" or "## Migration plan (expand-contract)")`]]
-      : [[1, 'Define', 'the spec (prd.md or acceptance.feature)'], [3, 'Design', `the design (${designDoc(dir, state)})`]])
-      .find(([s]) => state.stage > s && state.gates[s]?.status === 'approved' && state.gates[s].fingerprint && state.gates[s].fingerprint !== gateFingerprint(dir, state, s, cfg))
-    if (drifted) {
-      const [back, name, what] = drifted
-      const now = new Date().toISOString()
-      state.stages[state.stage] = { ...state.stages[state.stage], leftAt: now }
-      for (const s of Object.keys(state.gates)) if (Number(s) >= back) delete state.gates[s]
-      state.stage = back
-      state.stages[back] = { enteredAt: now }
-      writeState(dir, state)
-      audit(dir, { event: back === 1 ? 'spec-drift' : 'plan-drift', feature })
-      fail(`${what[0].toUpperCase()}${what.slice(1)} has changed since ${name} was approved, so ${feature} goes back to ${name}. ${next(back)} Tests already written stay.`)
-    }
+    if (drifted) fail(goBack(state, drifted, cfg))
     let spec = granted ? { ...stageSpec(state, state.stage, trustedGates(dir)), isAuto: true, owner: `autonomy granted by ${granted.by}` } : stageSpec(state, state.stage, trustedGates(dir))
     if (spec.artefact === 'design.md') spec.artefact = designDoc(dir, state)
     // ADR-0007: after autonomy and earned trust, the feature branch rule; keptBy says why a person decides.
@@ -349,6 +357,9 @@ const commands = {
       if (!keptBy) spec = { ...spec, isAuto: true, owner: 'feature branch' }
     }
     const missing = missingHeadings(dir, state)
+    // R2: the stage's definition of done, when its document has one, has no item left open.
+    const doneFile = path.join(dir, cfg.specsDir, feature, spec.artefact)
+    if ([1, 3, 4, 5].includes(state.stage) && fs.existsSync(doneFile)) missing.push(...openDoneItems(fs.readFileSync(doneFile, 'utf8'), spec.artefact))
     const warnings = []
     // A spec or design approved before comes back as the next revision, and says what changed and why.
     const revision = state.revisions?.[state.stage] ?? 0
@@ -357,6 +368,8 @@ const commands = {
       const text = fs.existsSync(path.join(dir, cfg.specsDir, feature, doc)) ? fs.readFileSync(path.join(dir, cfg.specsDir, feature, doc), 'utf8') : ''
       if (!section(text, `## Changes since v${revision}`)) missing.push(`${doc} was approved as v${revision}: add "## Changes since v${revision}" saying what changed and why (the change request), so v${revision + 1} can be approved`)
     }
+    // A conflict between a proved test and the spec waits for a person (test-lock).
+    for (const [ac, c] of Object.entries(state.conflicts ?? {})) if (c.status === 'open') missing.push(`the conflict on ${ac} waits for a person: run sdlc ask ${feature} and put its question`)
     if ([4, 5].includes(state.stage) && !(state.kinds ?? []).includes('data')) {
       const schema = changedFiles(dir, cfg).filter(f => matches(f.file, ['**/migrations/**', '**/*.sql', '**/schema.prisma'])).map(f => f.file)
       if (schema.length) missing.push(`${schema.join(', ')} change the schema: this is data work. Run "sdlc kind ${feature} data" (its pre-review runs the data lens); it starts db-design.md, and its "## Data impact" is part of the spec, so filling it sends the spec back to Define for approval`)
@@ -402,6 +415,8 @@ const commands = {
       if (state.intent && prdText) fs.writeFileSync(prd, withIntent(prdText, state.intent))
       else if (granted && !section(prdText, '## Intent')) missing.push('the PRD has no "## Intent" (change, smallest, drop if): with autonomy the agent writes it, and the request still checks it')
       else if (!granted && !state.intent) missing.push(`no intent from a person yet. Run "sdlc ask ${feature}" and ask its three questions with the question tool`)
+      const slices = state.capability && path.join(dir, cfg.specsDir, state.capability, 'slices.md')
+      if (slices && fs.existsSync(slices)) missing.push(...roadmapProblems(fs.readFileSync(slices, 'utf8'), feature).map(p => `${state.capability}/slices.md: ${p}`))
       if (fs.existsSync(prd)) missing.push(...assumptionProblems(fs.readFileSync(prd, 'utf8')).map(p => `prd.md: ${p}`))
       // The same route as a high-risk path at Build: a person moves it, or autonomy does, since it only adds checks.
       const nfr = nonFunctionalProblems(prdText)
@@ -421,6 +436,9 @@ const commands = {
       if (scenarios > cfg.sliceScenarios) warnings.push(`${scenarios} scenarios is more than one slice usually holds (${cfg.sliceScenarios}). Consider splitting the feature now: each slice is built and reviewed as one PR of at most ${cfg.maxPrLines[state.lane] ?? cfg.maxPrLines.full} code lines.`)
       const kinds = state.kinds ?? []
       if (kinds.includes('brownfield') || kinds.includes('data') || fs.existsSync(path.join(dir, cfg.specsDir, feature, 'facts.md'))) missing.push(...factsGateProblems(dir, state))
+      const overview = fs.existsSync(overviewFile(dir, state)) ? fs.readFileSync(overviewFile(dir, state), 'utf8') : ''
+      if (state.capability && !section(overview, '## System context')) missing.push(`${cfg.specsDir}/${state.capability}/architecture-overview.md has no "## System context": draw the capability's C4 Level 1 there (template: architecture-overview.md)`)
+      missing.push(...decisionProblems(overview).map(p => `architecture-overview.md: ${p}`))
     }
     if (state.stage === 3) {
       missing.push(...boardProblems(dir, feature))
@@ -482,13 +500,13 @@ const commands = {
       // Remember every finding id the gate has seen, so a row cannot be deleted instead of closed.
       const findings = parseLedger(fs.readFileSync(ledger, 'utf8'))
       missing.push(...ledgerProblems(dir, findings, state.ledgerIds ?? [], { strictFixes: highRisk }).map(p => `review.md: ${p}`))
+      if (fs.existsSync(overviewFile(dir, state))) missing.push(...decisionProblems(fs.readFileSync(overviewFile(dir, state), 'utf8')).map(p => `architecture-overview.md: ${p}`))
       state.ledgerIds = [...new Set([...(state.ledgerIds ?? []), ...findings.map(f => f.id)])]
       writeState(dir, state)
       if (fs.existsSync(path.join(folder, 'acceptance.feature'))) {
         missing.push(...matrix(dir, feature).problems.map(p => `test matrix: ${p}`))
         const prFile = path.join(folder, spec.artefact)
         const prText = fs.existsSync(prFile) ? fs.readFileSync(prFile, 'utf8') : ''
-        missing.push(...manualProblems(dir, feature, prText).map(p => `test matrix: ${p}`))
         // ADR-0008: only the deployed build can show a @release criterion, so the PR names it for a person.
         const after = (section(prText, '## Check after deploy') ?? '').replace(/<!--[\s\S]*?-->/g, '')
         missing.push(...matrix(dir, feature).rows.filter(r => r.due === 'release' && !r.traced && !new RegExp(`\\b${r.ac}\\b`).test(after))
@@ -562,11 +580,49 @@ Ask the owner: run "sdlc ask ${feature}" and put its question to them with the q
     if (state.stage === 5) console.log(`Risk tier: ${state.riskTier}. Files reviewed: ${state.reviewedFiles.length}.\nNot verified: ${section(doc(spec.artefact), '## Not verified') || 'nothing listed'}`)
   },
 
+  // The person's answer to "change request or amend?". A change request is a new feature in the same
+  // capability that names the original; the original keeps its state and approvals.
+  cr() {
+    const state = need()
+    const slug = rest[0]
+    if (!slug || !/^[a-z0-9][a-z0-9-]*$/.test(slug)) fail('Usage: sdlc cr <feature> <new-slug>')
+    if (readState(dir, slug)) fail(`Feature "${slug}" already exists.`)
+    if (isFrozen(dir)) fail('The error budget is spent, so new features wait until a human unfreezes it.')
+    const specs = loadConfig(dir).specsDir
+    createFeature(dir, { feature: slug, lane: state.lane, extra: { kinds: [], ...(state.capability ? { capability: state.capability } : {}) } })
+    const prd = copyTemplate(dir, slug, 'prd.md')
+    const feat = copyTemplate(dir, slug, 'acceptance.feature')
+    const cap = state.capability ? `Capability: ${state.capability} (${specs}/${state.capability}/slices.md)\n` : ''
+    fs.writeFileSync(path.join(dir, prd), fs.readFileSync(path.join(dir, prd), 'utf8').replace(/^(# PRD: .*\n)/, `$1\nChanges: ${feature}\n${cap}`))
+    console.log(`Created ${slug} at Define, ${state.lane} lane, as a change request to ${feature}, whose state and approvals are untouched. Put ${feature}'s spec back to its approved text (git restore ${specs}/${feature}/prd.md ${specs}/${feature}/acceptance.feature) and write the change in ${prd} and ${feat}.`)
+  },
+
+  amend() {
+    const state = need()
+    const drifted = driftOf(state, loadConfig(dir))
+    if (drifted?.[0] !== 1) fail(`${feature}'s spec has not changed since Define was approved: nothing to amend.`)
+    console.log(goBack(state, drifted))
+  },
+
   // The question a person answers with a click instead of typing a command (owner feedback, 29 Oct).
   // Prints the AskUserQuestion input; the agent asks it, and the answers hook records the choice. The
   // marker binds the question to this feature, gate and fingerprint, so a stale one records nothing.
   ask() {
     const state = need()
+    const open = Object.entries(state.conflicts ?? {}).find(([, c]) => c.status === 'open')
+    if (open) {
+      return console.log(JSON.stringify({
+        questions: [{
+          header: `Conflict ${open[0]}`,
+          question: `The builder says the test for ${open[0]} of ${feature} contradicts the spec: "${open[1].reason}". Change the test, or keep it? [conflict ${feature} ${open[0]} ${open[1].at.replace(/\D/g, '')}]`,
+          multiSelect: false,
+          options: [
+            { label: 'Change the test', description: 'The spec is right: the builder may change this test, then prove it again.' },
+            { label: 'Keep the test', description: 'The test is right: the code must meet it.' },
+          ],
+        }],
+      }, null, 2))
+    }
     const gate = state.gates[state.stage]
     if (gate?.status === 'waiting') {
       const spec = stageSpec(state, state.stage)
@@ -710,13 +766,19 @@ Ask the owner: run "sdlc ask ${feature}" and put its question to them with the q
     for (const cap of feature || !fs.existsSync(specs) ? [] : fs.readdirSync(specs).filter(c => fs.existsSync(path.join(specs, c, 'slices.md')))) {
       const text = fs.readFileSync(path.join(specs, cap, 'slices.md'), 'utf8')
       console.log(`Capability ${cap}: ${(section(text, '## Outcome') ?? '').split('\n')[0] || 'no outcome written'}`)
-      for (const [, slug, line] of (section(text, '## Slices') ?? '').matchAll(/^\s*[-*]\s*([a-z0-9][a-z0-9-]*):\s*(.*)$/gm)) {
-        const s = readState(dir, slug)
-        const after = line.match(/Depends on:\s*([^.]+)/i)?.[1].trim()
-        const waits = after && !/^none$/i.test(after) ? `, depends on ${after}` : ''
-        const where = s ? (s.closedAt ? `complete (${s.lane} lane)` : `${STAGES[s.stage].name} (${s.lane} lane)`) : `not started (${line.match(/Status:\s*([^.\n]+)/i)?.[1].trim() ?? 'no status'})`
-        console.log(`  ${slug}: ${where}${waits}`)
+      // Grouped now, next, later (plan-roadmap R1), with enablers marked.
+      const all = slicesOf(text)
+      for (const horizon of ['now', 'next', 'later'].filter(h => all.some(s => s.horizon === h))) {
+        console.log(`  ${horizon}`)
+        for (const { slug, line, enabler } of all.filter(s => s.horizon === horizon)) {
+          const s = readState(dir, slug)
+          const after = line.match(/Depends on:\s*([^.]+)/i)?.[1].trim()
+          const waits = after && !/^none$/i.test(after) ? `, depends on ${after}` : ''
+          const where = s ? (s.closedAt ? `complete (${s.lane} lane)` : `${STAGES[s.stage].name} (${s.lane} lane)`) : `not started (${line.match(/Status:\s*([^.\n]+)/i)?.[1].trim() ?? 'no status'})`
+          console.log(`    ${slug}: ${enabler ? 'enabler, ' : ''}${where}${waits}`)
+        }
       }
+      for (const p of roadmapProblems(text)) console.log(`  ROADMAP: ${p}`)
     }
     if (!features.length) return console.log('No features in flight. Start one with /ai-sdlc:start.')
     const overdue = overdueGates(dir)
@@ -740,6 +802,7 @@ Ask the owner: run "sdlc ask ${feature}" and put its question to them with the q
       const wait = gate?.status === 'waiting' ? `, waiting on ${stageSpec(s).owner} for ${hours(gate.requestedAt)}h${deadline}` : ''
       const revisions = Object.entries(s.revisions ?? {}).map(([n, v]) => `${STAGES[n].name} v${v}`).join(', ')
       console.log(`${s.feature}: ${STAGES[s.stage].name} (${s.lane} lane)${s.spike ? ', SPIKE' : ''}, gate ${gate?.status ?? 'not requested'}${wait}${revisions ? ` [${revisions}]` : ''}`)
+      for (const [ac, c] of Object.entries(s.conflicts ?? {})) if (c.status === 'open') console.log(`  conflict on ${ac} waiting for a person: ${c.reason}`)
       if (s.lastRefusal?.stage === s.stage) console.log(`  last request refused ${hours(s.lastRefusal.at)}h ago: ${s.lastRefusal.reasons.join('; ')}`)
     }
     for (const t of readTriggers(dir)) console.log(`RETRO DUE: ${t.reason}. Run: sdlc retro`)
@@ -761,12 +824,34 @@ Ask the owner: run "sdlc ask ${feature}" and put its question to them with the q
     const files = flag('files')?.split(',').map(f => f.trim()).filter(Boolean)
     if (!fs.existsSync(path.join(dir, cfg.specsDir, feature, 'acceptance.feature')) && !files?.length) fail(`${feature} has no acceptance.feature: name the tests to prove with --files a,b`)
     const base = flag('base') ?? (state.lane === 'hotfix' ? state.proofBase : undefined)
+    // A proved test changes only through a conflict a person settled (test-lock). The old proof stays.
+    const changed = lockedFiles(state).filter(f => !fs.existsSync(path.join(dir, f)) || sha256(fs.readFileSync(path.join(dir, f), 'utf8')) !== state.lock.files[f])
+    if (changed.length) fail(`${changed.join(', ')} changed after the proof, and no conflict a person settled covers it. Restore it (git checkout -- ${changed.join(' ')}), or if it contradicts the spec, run "sdlc conflict ${feature} <AC-n> <reason>" and wait for the person.`)
     const result = runProof(dir, state, { files, base }, cfg)
     state.proof = result
+    // Only a passing proof moves the lock, and files still locked stay locked (review F1).
+    if (result.ok && Object.keys(result.files ?? {}).length) {
+      const kept = Object.fromEntries(lockedFiles(state).map(f => [f, state.lock.files[f]]))
+      state.lock = { files: { ...kept, ...result.files }, at: result.at }
+    }
     writeState(dir, state)
     if (!result.ok) fail(`Proof FAILED${result.base ? ` against ${result.base}` : ''}:\n- ${result.problems.join('\n- ')}`)
     if (!result.acs.length) return console.log(`Nothing for the proof to run against ${result.base}: every new criterion is proved another way.${result.due ? ` ${result.due.join(', ')}.` : ''}${result.skipped ? ` Left to their own run (proofSkipLevels): ${result.skipped.join(', ')}.` : ''}`)
     console.log(`Proof passed against ${result.base}: ${result.acs.join(', ')} ${result.perTest ? 'each failed' : 'failed'} on the base code and pass here. Locked ${Object.keys(result.files).length} test file(s); changing one means proving again.${result.untested ? ` Not proved, no test traces them: ${result.untested.join(', ')}.` : ''}${result.skipped ? ` Not proved, ${result.skipLevels.join(' and ')} tests are left to their own run (proofSkipLevels): ${result.skipped.join(', ')}.` : ''}${result.due ? ` Proved another way: ${result.due.join(', ')}.` : ''}${result.greenfield ? ' Greenfield: the base commit has no code, so the tests failed there because the code is missing, not because they check its behaviour. Review the tests for what they assert.' : ''}`)
+  },
+
+  // A test that contradicts the spec is an answer, not a failed check (test-lock): it waits for a person,
+  // who settles it with "sdlc ask". Retries are left alone. "sdlc conflict <feature> <AC-n> <reason>"
+  conflict() {
+    const state = need()
+    const ac = rest[0]?.toUpperCase()
+    const reason = rest.slice(1).join(' ').trim()
+    const row = matrix(dir, feature).rows.find(r => r.ac === ac)
+    if (!row || !reason) fail(`Usage: sdlc conflict ${feature} <AC-n> <reason>, for a criterion in acceptance.feature.`)
+    state.conflicts = { ...state.conflicts, [ac]: { status: 'open', reason, files: row.tests.map(t => t.replace(/ \([^)]*\)$/, '')), at: new Date().toISOString() } }
+    writeState(dir, state)
+    audit(dir, { event: 'conflict', feature, ac, reason })
+    console.log(`Conflict on ${ac} recorded; it waits for a person. Run "sdlc ask ${feature}" and put its question. Do not change the test.`)
   },
 
   // A spike may skip the red-first habit inside a slice, never the proof; its code cannot merge.
@@ -868,7 +953,7 @@ Ask the owner: run "sdlc ask ${feature}" and put its question to them with the q
     const folder = path.join(dir, loadConfig(dir).specsDir, feature)
     if (!fs.existsSync(path.join(folder, 'tasks.md'))) fail(`${feature} has no tasks.md yet: packets come from its tasks.`)
     const tasks = tasksOf(fs.readFileSync(path.join(folder, 'tasks.md'), 'utf8'))
-    const overview = path.join(folder, 'architecture-overview.md')
+    const overview = overviewFile(dir, readState(dir, feature))
     const systems = fs.existsSync(overview) ? systemsOf(fs.readFileSync(overview, 'utf8')) : []
     const order = repo => Number(systems.find(s => s.system === repo)?.order) || Infinity
     const repoOf = id => tasks.find(t => t.id === id)?.repos.join(', ') ?? 'unknown'
@@ -877,6 +962,18 @@ Ask the owner: run "sdlc ask ${feature}" and put its question to them with the q
       const waits = [...new Set(mine.flatMap(t => t.deps).filter(d => !mine.some(t => t.id === d)))].map(d => `${d} (${repoOf(d)})`)
       const deploy = systems.find(s => s.system === repo)?.order
       console.log(`Packet ${repo} (${deploy ? `deploy ${deploy}` : 'not in the systems table'})\n  tasks: ${mine.map(t => t.id).join(', ')}\n  scenarios: ${[...new Set(mine.flatMap(t => t.scenarios))].join(', ') || 'none named'}\n  waits on: ${waits.join(', ') || 'nothing in another repo'}`)
+    }
+  },
+
+  // One ticket per repo (plan-roadmap R5), plain markdown to copy into any tracker. Printed, never created.
+  tickets() {
+    need()
+    const file = path.join(dir, loadConfig(dir).specsDir, feature, 'tasks.md')
+    if (!fs.existsSync(file)) fail(`${feature} has no tasks.md yet: tickets come from its tasks.`)
+    const tasks = tasksOf(fs.readFileSync(file, 'utf8'))
+    for (const repo of [...new Set(tasks.flatMap(t => t.repos))]) {
+      const mine = tasks.filter(t => t.repos.includes(repo))
+      console.log(`## ${feature}: ${repo}\n\nSpec: ${loadConfig(dir).specsDir}/${feature}/prd.md\nAcceptance criteria: ${[...new Set(mine.flatMap(t => t.scenarios))].join(', ') || 'none named'} (${loadConfig(dir).specsDir}/${feature}/acceptance.feature)\n\n${mine.map(t => t.line).join('\n')}\n`)
     }
   },
 
@@ -1020,7 +1117,7 @@ Ask the owner: run "sdlc ask ${feature}" and put its question to them with the q
 
 // A person's own terminal, for when the chat hook is not there (issue #15). The same hook records the
 // verb with the same checks and the same git user.name; the pre-tool guard refuses these to agents.
-const HUMAN_VERBS = ['intent', 'autonomy', 'approve', 'reject', 'lane', 'hotfix', 'distrust', 'pause', 'resume', 'freeze', 'unfreeze', 'close']
+const HUMAN_VERBS = ['settle', 'intent', 'autonomy', 'approve', 'reject', 'lane', 'hotfix', 'distrust', 'pause', 'resume', 'freeze', 'unfreeze', 'close']
 if (HUMAN_VERBS.includes(cmd)) {
   const prompt = ['sdlc', cmd, feature, ...rest].filter(Boolean).join(' ')
   const hook = path.join(path.dirname(fileURLToPath(import.meta.url)), 'hooks', 'user-prompt.mjs')
@@ -1032,6 +1129,6 @@ if (HUMAN_VERBS.includes(cmd)) {
 }
 
 if (!commands[cmd]) {
-  fail(`${cmd ? `Unknown command: ${cmd}.\n` : ''}Usage: sdlc <init|bug|task|kind|request|advance|gate|tests|proof|spike|review|gherkin|api|packets|retry|status|outcome|trust|metrics|retro|incident|knowledge|init-repo> [feature] [...]\nA person, in their own terminal: sdlc <${HUMAN_VERBS.join('|')}> ...`)
+  fail(`${cmd ? `Unknown command: ${cmd}.\n` : ''}Usage: sdlc <init|bug|task|kind|request|cr|amend|advance|gate|tests|proof|conflict|spike|review|gherkin|api|packets|tickets|retry|status|outcome|trust|metrics|retro|incident|knowledge|init-repo> [feature] [...]\nA person, in their own terminal: sdlc <${HUMAN_VERBS.join('|')}> ...`)
 }
 commands[cmd]()

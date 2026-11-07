@@ -39,6 +39,16 @@ for (const q of questions) {
   record(answer(q) === 'Approve' ? `sdlc approve ${feature} ${stage}` : `sdlc reject ${feature} ${stage} ${plain(answer(q) === 'Send back' ? 'sent back from the question, no reason given' : answer(q))}`)
 }
 
+for (const q of questions) {
+  // Bound to the open conflict by when it was raised, as a gate question is by its fingerprint (review F4).
+  const conflict = q.question?.match(/\[conflict ([a-z0-9-]+) (AC-\d+) (\d+)\]$/)
+  const choice = { 'Change the test': 'change', 'Keep the test': 'keep' }[answer(q)]
+  if (!conflict || !choice) continue
+  const open = readState(dir, conflict[1])?.conflicts?.[conflict[2]]
+  if (open?.status !== 'open' || open.at.replace(/\D/g, '') !== conflict[3]) said.push(`The conflict on ${conflict[2]} for ${conflict[1]}: the question no longer matches what is open, so nothing was recorded. Run "sdlc ask ${conflict[1]}" again.`)
+  else record(`sdlc settle ${conflict[1]} ${conflict[2]} ${choice}`)
+}
+
 const intent = questions.filter(q => /\[intent [a-z0-9-]+\]$/.test(q.question ?? ''))
 if (intent.length) {
   const feature = intent[0].question.match(/\[intent ([a-z0-9-]+)\]$/)[1]

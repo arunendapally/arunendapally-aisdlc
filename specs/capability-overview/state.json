@@ -1,0 +1,118 @@
+{
+  "feature": "capability-overview",
+  "lane": "light",
+  "stage": 6,
+  "branch": "feature/capability-overview",
+  "createdAt": "2026-11-07T03:05:55.690Z",
+  "stages": {
+    "1": {
+      "enteredAt": "2026-11-07T03:05:55.690Z",
+      "leftAt": "2026-11-07T03:06:26.226Z"
+    },
+    "4": {
+      "enteredAt": "2026-11-07T03:06:26.226Z",
+      "leftAt": "2026-11-07T03:45:16.088Z"
+    },
+    "5": {
+      "enteredAt": "2026-11-07T03:45:16.088Z",
+      "leftAt": "2026-11-07T04:03:59.803Z"
+    },
+    "6": {
+      "enteredAt": "2026-11-07T04:03:59.803Z"
+    }
+  },
+  "gates": {
+    "1": {
+      "status": "approved",
+      "by": "checks: autonomy granted by Arun Endapally",
+      "requestedAt": "2026-11-07T03:06:26.217Z",
+      "approvedAt": "2026-11-07T03:06:26.217Z",
+      "auto": true,
+      "fingerprint": "006124cabc1fba7f"
+    },
+    "4": {
+      "status": "approved",
+      "by": "checks: autonomy granted by Arun Endapally",
+      "requestedAt": "2026-11-07T03:45:15.673Z",
+      "approvedAt": "2026-11-07T03:45:15.673Z",
+      "auto": true,
+      "fingerprint": "172ba90a0a83733c"
+    },
+    "5": {
+      "status": "approved",
+      "by": "checks: autonomy granted by Arun Endapally",
+      "requestedAt": "2026-11-07T04:03:59.054Z",
+      "approvedAt": "2026-11-07T04:03:59.054Z",
+      "auto": true,
+      "fingerprint": "9c5f482881bdced0"
+    }
+  },
+  "retries": {},
+  "kinds": [
+    "brownfield"
+  ],
+  "capability": "gates-and-names",
+  "updatedAt": "2026-11-07T04:03:59.803Z",
+  "revisions": {
+    "1": 1
+  },
+  "gateRuns": {
+    "4": {
+      "ok": true,
+      "count": 251,
+      "at": "2026-11-07T03:45:01.269Z",
+      "runs": 1,
+      "runtime": "v24.19.0"
+    },
+    "5": {
+      "ok": true,
+      "count": 252,
+      "at": "2026-11-07T04:03:54.316Z",
+      "runs": 1,
+      "runtime": "v24.19.0"
+    }
+  },
+  "baseline": 252,
+  "baselineRuntime": "v24.19.0",
+  "proofBase": "47df4d4d1f5972cd3dadc372d1fea4109a36bbf7",
+  "sizeChecked": 38,
+  "lastPacketHead": "66dd379",
+  "ledgerIds": [
+    "F1",
+    "F2"
+  ],
+  "riskTier": "medium",
+  "reviewedSha": "66dd3792a7fe3a070287d186d0b522245e89c187",
+  "reviewedFiles": [
+    "CHANGELOG.md",
+    "commands/define.md",
+    "commands/design.md",
+    "scripts/lib.mjs",
+    "scripts/review.mjs",
+    "scripts/sdlc.mjs",
+    "skills/org-ai-sdlc/SKILL.md",
+    "skills/org-ai-sdlc/templates/architecture-overview.md",
+    "specs/capability-overview/acceptance.feature",
+    "specs/capability-overview/facts.md",
+    "specs/capability-overview/pr.md",
+    "specs/capability-overview/prd.md",
+    "specs/capability-overview/review.md",
+    "specs/capability-overview/state.json",
+    "specs/capability-overview/tasks.md",
+    "specs/gates-and-names/architecture-overview.md",
+    "specs/gates-and-names/slices.md",
+    "tests/capability-overview.test.mjs",
+    "specs/capability-overview/review-packet.md"
+  ],
+  "reviewedHashes": {
+    "CHANGELOG.md": "b8616f361418160a",
+    "commands/define.md": "d729c92ebe6ef605",
+    "commands/design.md": "cbffc0b2a5e75d2b",
+    "scripts/lib.mjs": "a440024a3ec91d10",
+    "scripts/review.mjs": "a28fbcb6ab0b3d36",
+    "scripts/sdlc.mjs": "60948e41fe4ea8bd",
+    "skills/org-ai-sdlc/SKILL.md": "42700d9747539da8",
+    "skills/org-ai-sdlc/templates/architecture-overview.md": "6a2b5731fbdbaa81",
+    "tests/capability-overview.test.mjs": "2ce54473050ab9cf"
+  }
+}

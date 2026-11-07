@@ -14,7 +14,7 @@ These are checks a command or CI runs, so they hold whoever wrote the change.
 
 - **Every gate's checks.** `sdlc request <feature>` refuses a missing or empty section, an unmarked assumption, a requirement with no scenario, a red gate, a diff over the lane's limit, a failed or stale proof, an open finding, a release that is not on `main` and live, and so on. The agent runs the command; the command decides.
 - **The test proof.** `sdlc proof` runs the traced tests on the branch and on the base commit, and records their hashes, so a test that cannot fail, or one weakened between the two runs, is caught.
-- **Spec and plan drift.** A spec or plan changed after its approval sends the feature back to that stage on the next request.
+- **Spec and plan drift.** A spec or plan changed after its approval sends the feature back to that stage on the next request. Once Build has started, a spec change instead stops and asks the person: change request (`sdlc cr <feature> <new-slug>`, a linked feature with its own estimate) or amend (`sdlc amend <feature>`, back to Define).
 - **CI on the PR.** `check-pr-body.mjs` refuses a PR body without its sections and Pre-review lines; `check-pr-size.mjs` the size limit; `check-gates.mjs` a PR whose Build gate is not recorded as approved and confirmed by an approving review from a person who is not its author.
 - **Branch protection.** The ruleset in `templates/repo/.github/rulesets/main.json` requires a code owner's review, the last push approved, signed commits and linear history on `main`. GitHub enforces it, not the agent.
 

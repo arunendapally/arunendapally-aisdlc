@@ -11,8 +11,7 @@ import os from 'node:os'
 import path from 'node:path'
 import crypto from 'node:crypto'
 import { spawnSync } from 'node:child_process'
-import { fileURLToPath } from 'node:url'
-import { STAGES, stageSpec, git, gitOk, loadConfig, section, changedFiles, listFeatures, nextStage, writeState, matches, destructiveMigrations, designDoc } from './lib.mjs'
+import { STAGES, stageSpec, git, gitOk, loadConfig, section, changedFiles, listFeatures, nextStage, writeState, matches, destructiveMigrations, scaffoldFiles, designDoc } from './lib.mjs'
 import { matrix } from './testmatrix.mjs'
 import { check as knowledgeCheck, pages as knowledgePages } from './knowledge.mjs'
 import { parseFacts, factProblems } from './facts.mjs'
@@ -67,23 +66,6 @@ export function judgeProof(acs, run) {
   const pkg = run.output?.match(/Cannot find (?:module|package) '((?:@[\w.-]+\/)?[\w][\w.-]*)'/)?.[1]
   if (run.status !== 0 && pkg) return acs.map(ac => ({ ac, red: false, why: `the base run failed on a missing package (${pkg}), not on the code under test` }))
   return acs.map(ac => (run.status !== 0 ? { ac, red: true } : { ac, red: false, why: 'the run passed against the base code' }))
-}
-
-// The files "sdlc init-repo" copies from templates/repo, as repo paths: the scaffold, not product code.
-let scaffoldCache
-export function scaffoldFiles() {
-  if (scaffoldCache) return scaffoldCache
-  const root = path.join(path.dirname(fileURLToPath(import.meta.url)), '..', 'templates', 'repo')
-  const out = new Set()
-  const walk = rel => {
-    for (const e of fs.readdirSync(path.join(root, rel), { withFileTypes: true })) {
-      const from = path.join(rel, e.name)
-      if (e.isDirectory()) walk(from)
-      else out.add(from.split(path.sep).join('/'))
-    }
-  }
-  if (fs.existsSync(root)) walk('')
-  return (scaffoldCache = out)
 }
 
 // The criteria this branch adds: those the base commit's acceptance.feature does not already have.
@@ -172,6 +154,19 @@ export function runProof(dir, state, opts = {}, cfg = loadConfig(dir)) {
     fs.rmSync(tree, { recursive: true, force: true })
     fs.rmSync(report, { force: true })
   }
+}
+
+// The proved test files an agent may not change (test-lock): those of the last passing proof (state.lock,
+// which a failed or narrower proof never clears), none once a person approved a new spec version after
+// it (a Define gate passed on checks does not count: review F3), less a criterion's files whose conflict
+// a person settled as "change the test".
+export function lockedFiles(state) {
+  const p = state.lock
+  if (!p?.files || state.closedAt) return []
+  const g = state.gates?.[1]
+  if (g?.status === 'approved' && !g.auto && !String(g.by ?? '').startsWith('checks:') && g.approvedAt > p.at) return []
+  const freed = Object.values(state.conflicts ?? {}).filter(c => c.decision === 'change' && c.settledAt > p.at).flatMap(c => c.files)
+  return Object.keys(p.files).filter(f => !freed.includes(f))
 }
 
 // What the Verify gate requires of the proof. Without a proofCommand it only warns, and the PR must

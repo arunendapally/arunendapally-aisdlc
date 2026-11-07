@@ -114,9 +114,9 @@ export const DEFAULT_CONFIG = {
   deployPatterns: ['vercel\\b.*(--prod|--target[= ]production|\\bpromote\\b|\\balias\\b)', 'terraform\\s+apply', 'netlify\\s+deploy\\b.*--prod', 'fly(ctl)?\\s+deploy\\b',
     'firebase\\s+deploy\\b', 'wrangler\\s+(deploy|publish)\\b', '(npm|pnpm|yarn)\\s+(run\\s+)?deploy\\b', 'kubectl\\s+(apply|delete|rollout)', 'helm\\s+(install|upgrade)', 'npm\\s+publish',
     'gh\\s+pr\\s+merge', 'gh\\s+release\\s+create', 'gh\\s+(ruleset|secret|repo\\s+edit)\\b', 'gh\\s+api\\b.*(-X|--method)\\s*(?!GET\\b)[A-Z]+', 'git\\s+config\\b.*\\balias\\.',
-    '\\bsdlc\\s+(approve|reject|lane|hotfix|intent|autonomy|trust|distrust|resume|unfreeze|close)\\b',
+    '\\bsdlc\\s+(settle|approve|reject|lane|hotfix|intent|autonomy|trust|distrust|resume|unfreeze|close)\\b',
     // The same verbs through the CLI's terminal path, and the hook fed a prompt by hand, are a person's alone.
-    '\\bsdlc\\.mjs["\']?\\s+(approve|reject|lane|hotfix|intent|autonomy|distrust|resume|unfreeze|close)\\b', 'hooks[\\\\/]user-prompt\\.mjs'],
+    '\\bsdlc\\.mjs["\']?\\s+(settle|approve|reject|lane|hotfix|intent|autonomy|distrust|resume|unfreeze|close)\\b', 'hooks[\\\\/]user-prompt\\.mjs'],
   // Production is touched only by read-only probes: a command matching these must also be a probe.
   prodPatterns: ['\\b(aws|gcloud|az)\\b.*\\bprod(uction)?\\b', 'kubectl\\b.*--context[= ]\\S*prod'],
   // House-style text bans apply to these files. A repo can widen it, for example to "**".
@@ -288,6 +288,17 @@ export function missingHeadings(dir, state, stage = state.stage) {
   return problems
 }
 
+// A stage's "## Definition of done" items still open: each must be "- [x] ..." or "- N/A: <reason>".
+// A document with no such section (written before it existed) has nothing open.
+export function openDoneItems(text, doc) {
+  const body = section(text, '## Definition of done')
+  return (body ?? '').split(/\r?\n/).map(l => l.trim().replace(/^\* /, '- ')).filter(l => l.startsWith('- ')).flatMap(l => {
+    if (/^- \[x\] +\S/i.test(l) || /^- N\/A: *\S/i.test(l)) return []
+    if (/^- N\/A\b/i.test(l)) return [`${doc} "## Definition of done" has "${l.slice(2).trim()}" with no reason: write "- N/A: <reason>"`]
+    return [`${doc} "## Definition of done" item "${l.replace(/^- (\[.\] *)?/, '').trim()}" is open: tick it "- [x]" once done, or write "- N/A: <reason>"`]
+  })
+}
+
 // The text of a "## " section without template comments; null when the heading is absent.
 export function section(text, heading) {
   const lines = text.replace(/<!--[\s\S]*?-->/g, '').split(/\r?\n/)
@@ -295,6 +306,31 @@ export function section(text, heading) {
   if (at === -1) return null
   const end = lines.findIndex((l, i) => i > at && /^#{1,2} /.test(l))
   return lines.slice(at + 1, end === -1 ? undefined : end).join('\n').trim()
+}
+
+// A capability's roadmap (plan-roadmap): each slice line under "## Slices" with its horizon (now when
+// unwritten, PRD A2), whether it is an enabler, and how it goes live.
+export function slicesOf(text) {
+  return [...(section(text, '## Slices') ?? '').matchAll(/^\s*[-*]\s*([a-z0-9][a-z0-9-]*):\s*(.*)$/gm)].map(([, slug, line]) => ({
+    slug,
+    line,
+    horizon: line.match(/Horizon:\s*(now|next|later)\b/i)?.[1].toLowerCase() ?? 'now',
+    enabler: /Kind:\s*enabler\b/i.test(line),
+    goesLive: line.match(/Goes live:\s*([^.\n]+)/i)?.[1].trim() ?? '',
+  }))
+}
+
+// Going live only after another slice is a sequence, a coupling smell, so it must say why (R4).
+// "only" limits it to one slice, so one slice's gap blocks only that slice's Define (pre-review F1).
+export function roadmapProblems(text, only) {
+  const slices = slicesOf(text).filter(s => !only || s.slug === only)
+  return [
+    ...slices.filter(s => /^after\b/i.test(s.goesLive) && !/,\s*because\s+\S/i.test(s.goesLive))
+      .map(s => `${s.slug} goes live after another slice but gives no reason: write "Goes live: after <slug>, because <reason>"`),
+    // A mistyped horizon would otherwise read as now without a word (pre-review F2).
+    ...slices.filter(s => /Horizon:/i.test(s.line) && !/Horizon:\s*(now|next|later)\b/i.test(s.line))
+      .map(s => `${s.slug} has a Horizon that is not now, next or later`),
+  ]
 }
 
 // The person's intent, typed as "change: ...; smallest: ...; drop if: ..." (one per line works too).
@@ -348,7 +384,30 @@ export function changedFiles(dir, cfg = loadConfig(dir)) {
 
 export function changedLines(dir, cfg = loadConfig(dir)) {
   const harness = harnessFiles(dir, cfg)
-  return changedFiles(dir, cfg).filter(f => !matches(f.file, cfg.prLineExcludes) && !harness.has(f.file)).reduce((sum, f) => sum + f.lines, 0)
+  return changedFiles(dir, cfg).filter(f => !matches(f.file, cfg.prLineExcludes) && !harness.has(f.file) && !unmodifiedKit(dir, f.file)).reduce((sum, f) => sum + f.lines, 0)
+}
+
+// The files "sdlc init-repo" copies from templates/repo, as repo paths: the scaffold, not product code.
+const KIT = path.join(path.dirname(fileURLToPath(import.meta.url)), '..', 'templates', 'repo')
+let scaffoldCache
+export function scaffoldFiles() {
+  if (scaffoldCache) return scaffoldCache
+  const out = new Set()
+  const walk = rel => {
+    for (const e of fs.readdirSync(path.join(KIT, rel), { withFileTypes: true })) {
+      const from = path.join(rel, e.name)
+      if (e.isDirectory()) walk(from)
+      else out.add(from.split(path.sep).join('/'))
+    }
+  }
+  if (fs.existsSync(KIT)) walk('')
+  return (scaffoldCache = out)
+}
+
+// A kit file exactly as the plugin ships it is the plugin's code, not the change under review; edited, it counts.
+const kitText = file => fs.readFileSync(file, 'utf8').replace(/\r\n/g, '\n')
+function unmodifiedKit(dir, file) {
+  return scaffoldFiles().has(file) && fs.existsSync(path.join(dir, file)) && kitText(path.join(dir, file)) === kitText(path.join(KIT, file))
 }
 
 // The scripts the gate and proof commands run (directly, or through an npm script) are the harness the
@@ -412,6 +471,17 @@ export function designDoc(dir, state) {
   const folder = path.join(dir, loadConfig(dir).specsDir, state.feature)
   return !fs.existsSync(path.join(folder, 'design.md')) && fs.existsSync(path.join(folder, 'plan.md')) ? 'plan.md' : 'design.md'
 }
+
+// A feature in a capability shares the capability's architecture overview; one without keeps its own (capability-overview R2, A2).
+export const overviewFile = (dir, state) => path.join(dir, loadConfig(dir).specsDir, state.capability ?? state.feature, 'architecture-overview.md')
+// The overview's "## Decision log": | Date | Decision | Agreed by | Source | Changes |, read by cell position.
+export const decisionsOf = text => (section(text, '## Decision log') ?? '').split('\n').filter(l => /^\s*\|/.test(l) && !/^\s*\|[\s:|-]+$/.test(l)).slice(1)
+  .map(l => l.split('|').slice(1, -1).map(c => c.trim())).map(([date, decision, agreedBy, source, changes]) => ({ date, decision, agreedBy, source, changes }))
+// R4: a row with no one who agreed it, or no source, is not a record of an agreement.
+export const decisionProblems = text => decisionsOf(text).flatMap(d => {
+  const gaps = [!d.agreedBy && 'agreed by', !d.source && 'source'].filter(Boolean)
+  return gaps.length ? [`decision log row "${d.date} ${d.decision}" has no ${gaps.join(' and no ')}: name the person who agreed it ("unconfirmed" until they confirm) and quote or link the exchange`] : []
+})
 
 // Copy an artefact template into the feature folder; returns its repo-relative path.
 export function copyTemplate(dir, feature, name) {
