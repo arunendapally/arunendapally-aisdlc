@@ -1,0 +1,152 @@
+{
+  "feature": "branch-autonomy",
+  "lane": "full",
+  "stage": 6,
+  "branch": "feature/branch-autonomy",
+  "createdAt": "2026-11-06T05:56:55.367Z",
+  "stages": {
+    "1": {
+      "enteredAt": "2026-11-07T03:34:02.721Z",
+      "leftAt": "2026-11-07T03:34:19.248Z"
+    },
+    "3": {
+      "enteredAt": "2026-11-07T03:34:19.248Z",
+      "leftAt": "2026-11-07T03:35:01.669Z"
+    },
+    "4": {
+      "enteredAt": "2026-11-07T03:35:01.669Z",
+      "leftAt": "2026-11-07T03:48:39.561Z"
+    },
+    "5": {
+      "enteredAt": "2026-11-07T03:48:39.561Z",
+      "leftAt": "2026-11-07T04:03:04.002Z"
+    },
+    "6": {
+      "enteredAt": "2026-11-07T04:03:04.002Z"
+    }
+  },
+  "gates": {
+    "1": {
+      "status": "approved",
+      "by": "checks: autonomy granted by Arun Endapally",
+      "requestedAt": "2026-11-07T03:34:19.240Z",
+      "approvedAt": "2026-11-07T03:34:19.240Z",
+      "auto": true,
+      "fingerprint": "18b7ef6d39541cb0"
+    },
+    "3": {
+      "status": "approved",
+      "by": "checks: autonomy granted by Arun Endapally",
+      "requestedAt": "2026-11-07T03:35:01.664Z",
+      "approvedAt": "2026-11-07T03:35:01.664Z",
+      "auto": true,
+      "fingerprint": "a550b56f7140269b"
+    },
+    "4": {
+      "status": "approved",
+      "by": "checks: autonomy granted by Arun Endapally",
+      "requestedAt": "2026-11-07T03:48:38.019Z",
+      "approvedAt": "2026-11-07T03:48:38.019Z",
+      "auto": true,
+      "fingerprint": "ab4a55a89ae8efa1"
+    },
+    "5": {
+      "status": "approved",
+      "by": "checks: autonomy granted by Arun Endapally",
+      "requestedAt": "2026-11-07T04:03:03.032Z",
+      "approvedAt": "2026-11-07T04:03:03.032Z",
+      "auto": true,
+      "fingerprint": "ab4a55a89ae8efa1"
+    }
+  },
+  "retries": {},
+  "kinds": [
+    "brownfield"
+  ],
+  "capability": "gates-and-names",
+  "updatedAt": "2026-11-07T04:03:04.002Z",
+  "intent": {
+    "change": "Branch runs on its own",
+    "smallest": "Gates pass on checks",
+    "dropIf": "Bad PRs reach review",
+    "by": "Arun Endapally",
+    "at": "2026-11-06T06:51:47.825Z"
+  },
+  "revisions": {
+    "1": 3,
+    "3": 2
+  },
+  "gateRuns": {
+    "4": {
+      "ok": true,
+      "count": 259,
+      "at": "2026-11-07T03:45:58.091Z",
+      "runs": 1,
+      "runtime": "v24.19.0"
+    },
+    "5": {
+      "ok": true,
+      "count": 259,
+      "at": "2026-11-07T04:02:51.030Z",
+      "runs": 1,
+      "runtime": "v24.19.0"
+    }
+  },
+  "baseline": 259,
+  "baselineRuntime": "v24.19.0",
+  "proofBase": "c6b642df93e343271f99bf195e46ef68d394f9fb",
+  "sizeChecked": 63,
+  "lastPacketHead": "7ecc1e5",
+  "ledgerIds": [
+    "F1",
+    "F2",
+    "F3",
+    "F4",
+    "F5",
+    "F6",
+    "F7"
+  ],
+  "riskTier": "high",
+  "reviewRounds": 2,
+  "reviewedSha": "7ecc1e5624e0f7a2eded1eb0b961a7bffdd50db0",
+  "reviewedFiles": [
+    "CHANGELOG.md",
+    "commands/define.md",
+    "commands/design.md",
+    "docs/adr/0007-feature-branch-runs-on-checks-until-the-pr.md",
+    "scripts/lib.mjs",
+    "scripts/review.mjs",
+    "scripts/sdlc.mjs",
+    "skills/org-ai-sdlc/SKILL.md",
+    "specs/branch-autonomy/acceptance.feature",
+    "specs/branch-autonomy/facts.md",
+    "specs/branch-autonomy/plan.md",
+    "specs/branch-autonomy/pr.md",
+    "specs/branch-autonomy/prd.md",
+    "specs/branch-autonomy/review-packet.md",
+    "specs/branch-autonomy/review.md",
+    "specs/branch-autonomy/state.json",
+    "specs/branch-autonomy/tasks.md",
+    "templates/repo/.claude/rules/ai-sdlc.md",
+    "tests/branch-autonomy.test.mjs",
+    "tests/helpers.mjs",
+    "tests/hooks.test.mjs",
+    "specs/stage-names/review-packet.md",
+    "specs/stop-at-pr/review-packet.md",
+    "specs/test-lock/review-packet.md"
+  ],
+  "reviewedHashes": {
+    "CHANGELOG.md": "791f3573ca31a7a8",
+    "commands/define.md": "29940ea543387ab9",
+    "commands/design.md": "6a88dcc45e2e1b04",
+    "docs/adr/0007-feature-branch-runs-on-checks-until-the-pr.md": "9d8ea7b156e000b2",
+    "scripts/lib.mjs": "5fe227f2377916de",
+    "scripts/review.mjs": "580286ffd9c7daa6",
+    "scripts/sdlc.mjs": "c86e2e97ee4a24d6",
+    "skills/org-ai-sdlc/SKILL.md": "bc79e0de5dded668",
+    "templates/repo/.claude/rules/ai-sdlc.md": "f51853c71f56137f",
+    "tests/branch-autonomy.test.mjs": "5c658bad0b84bcaf",
+    "tests/helpers.mjs": "98862b8734cfb03e",
+    "tests/hooks.test.mjs": "da0440be4fff1ba8"
+  }
+}

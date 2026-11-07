@@ -37,6 +37,9 @@ beforeEach(() => {
   g('add', '.')
   g('commit', '-m', 'init')
   g('checkout', '-b', 'feature/demo')
+  // ADR-0007: a named Define and Design owner keeps the person's path these tests pin.
+  fs.mkdirSync(path.join(repo, '.ai-sdlc'), { recursive: true })
+  fs.writeFileSync(path.join(repo, '.ai-sdlc', 'config.json'), JSON.stringify({ gateOwners: { 1: ['Test Human'], 3: ['Test Human'] } }))
 })
 
 test('bash guard blocks the dangerous commands and allows normal work', () => {
@@ -165,7 +168,7 @@ test('agents cannot record human decisions through a shell', () => {
 })
 
 test('gate owners: only a listed owner can approve', () => {
-  fs.mkdirSync(path.join(repo, '.ai-sdlc'))
+  fs.mkdirSync(path.join(repo, '.ai-sdlc'), { recursive: true })
   fs.writeFileSync(path.join(repo, '.ai-sdlc', 'config.json'), JSON.stringify({ gateOwners: { 1: ['Alice'] } }))
   sdlc('init', 'demo')
   fill('prd.md', STAGES[1].headings)
@@ -174,7 +177,7 @@ test('gate owners: only a listed owner can approve', () => {
 })
 
 test('a repo config can add to the guards but never remove them', () => {
-  fs.mkdirSync(path.join(repo, '.ai-sdlc'))
+  fs.mkdirSync(path.join(repo, '.ai-sdlc'), { recursive: true })
   fs.writeFileSync(path.join(repo, '.ai-sdlc', 'config.json'), JSON.stringify({ denyPaths: [], deployPatterns: [], protectedBranches: [], mcpDenyPattern: 'nothing', mcpAskPattern: 'nothing' }))
   assert.equal(bash('terraform apply'), 'deny')
   assert.equal(bash('git push origin main'), 'deny')
@@ -319,7 +322,7 @@ test('splitting a command closes holes instead of opening them', () => {
 })
 
 test('the build gate records a baseline and refuses a request below it', () => {
-  fs.mkdirSync(path.join(repo, '.ai-sdlc'))
+  fs.mkdirSync(path.join(repo, '.ai-sdlc'), { recursive: true })
   const cfg = count => fs.writeFileSync(path.join(repo, '.ai-sdlc', 'config.json'), JSON.stringify({ gateCommand: `node -e "console.log('${count} passing')"` }))
   sdlc('init', 'demo')
   const s = state()

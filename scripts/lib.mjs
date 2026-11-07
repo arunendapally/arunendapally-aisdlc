@@ -448,6 +448,28 @@ export function autonomy(dir) {
   }
 }
 
+// ADR-0007: on the feature's own branch Define and Design pass on their checks, since the work ends in a PR
+// a person reviews (ADR-0008 covers Verify). Returns why a person keeps the gate, or null.
+export const BRANCH_AUTO = [1, 3]
+export function branchAutoBlock(dir, state, cfg, risky = null) {
+  const stage = state.stage
+  if (!BRANCH_AUTO.includes(stage)) return 'not a stage the branch rule covers'
+  if (!state.branch || state.branch === 'HEAD' || cfg.protectedBranches.includes(state.branch)) return 'the feature has no branch of its own'
+  if (state.gates[stage]) return `${STAGES[stage].name} is ${state.gates[stage].status}, so its person decides`
+  const owners = cfg.gateOwners[stage] ?? []
+  if (owners.length) return `gateOwners names ${owners.join(', ')} for ${STAGES[stage].name}`
+  if (isFrozen(dir)) return 'the error budget is frozen'
+  const file = path.join(dir, '.ai-sdlc', 'audit.jsonl')
+  const events = (fs.existsSync(file) ? fs.readFileSync(file, 'utf8').split(/\r?\n/) : []).filter(Boolean)
+    .map(l => { try { return JSON.parse(l) } catch { return {} } })
+  if (events.some(e => e.event === 'reject' && e.feature === state.feature && e.stage === stage)) return `a person sent ${STAGES[stage].name} back`
+  if (stage === 3 && (state.kinds ?? []).includes('data')) return 'data work keeps its DBA at Design'
+  if (stage === 3 && risky) return `Security and privacy touches ${risky}`
+  // Last, so the message names the switch only when the switch is what would pass the gate.
+  if (git('rev-parse --abbrev-ref HEAD', dir) !== state.branch) return `switch to ${state.branch} and request again to pass on checks`
+  return null
+}
+
 export function isFrozen(dir) {
   return fs.existsSync(path.join(dir, '.ai-sdlc', 'BUDGET_FROZEN'))
 }
