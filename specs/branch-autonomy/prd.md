@@ -42,11 +42,10 @@ Plan and Design wait for a named person; only Build passes on checks (F1, F2). R
 
 - R1. (must) Work on a feature branch passes the Plan gate on its checks, with no person asked, unless the repo names a person for Plan or a person already sent it back. Needs: which branch the work is on (F7).
 - R2. (must) Work on a feature branch in the full lane passes the Design gate on its checks, with no person asked, unless the repo names a person for Design, a person already sent it back, or the change touches stored data or security. Needs: which branch the work is on (F7).
-- R3. (must) The merge gate still waits for a person, so nothing reaches main without the PR review. Needs: nothing new (F6).
+- R3. (must) The plugin never merges or pushes to main; the PR review is the org's. Needs: nothing new (F6).
 - R4. (must) A spec or design edited after it passed on checks sends the work back to that gate, as it does after a person approves. Needs: what was checked when it passed (F3).
 - R5. (must) A gate that fails its checks on a branch stops with the reasons and is not passed by anyone else. Needs: nothing new.
 - R6. (should) The PR shows, for each gate that passed on checks, that it passed on checks and when. Needs: when each gate passed and by what (F3).
-- R7. (must) Release still waits for its owner. Needs: nothing new.
 
 ## Non-functional requirements
 
@@ -65,7 +64,8 @@ Plan and Design wait for a named person; only Build passes on checks (F1, F2). R
 
 - The "Checked by hand" line in the PR body: slice merge-is-hand-check (specs/gates-and-names/slices.md).
 - Renaming plan.md and Stage 1: slices design-rename and plan-roadmap.
-- Removing repo-wide autonomy: kept as it is for anyone who wants agents to merge.
+- Removing repo-wide autonomy: kept as it is.
+- Release: the plugin stops at a raised PR (ADR-0008).
 
 ## Outcome metric
 
@@ -78,10 +78,16 @@ Objective: a person is asked for a decision only at the PR (specs/gates-and-name
 ## Open questions
 
 - A1: who: Arun. Recommend: accept, and read the first three PRs for anything a Plan or Design person would have caught.
-- A2: who: Arun. Recommend: keep Release human (R7).
+- A2: settled by ADR-0008: Release is not the plugin's (R7 removed).
 - A3: who: Arun. Recommend: keep the intent question; it is the one input checks cannot make up.
 
 ## Changes since v1
 
 - Removed the constraint "ADR-0005 is superseded": it was the agent's triage note, not a person's, and the design review found nothing in ADR-0005 changes (ADR-0007 Review Q2, Q15).
 - R1 and R2 name when a person keeps the gate: a named gate owner, a person's send-back, and for Design, data or security work (ADR-0007 Review Q1, Q6, Q7, Q13).
+
+## Changes since v2
+
+- R3 now says the plugin never merges or pushes to main and the PR review is the org's: main's ADR-0008 ends every lane at Verify, which passes on its checks, and removes the merge command.
+- R7 is removed: Release is out of scope under ADR-0008. AC-7 goes with it; nothing is renumbered.
+- Stage 1 is now named Define (#56); "Plan" in R1, R4 and AC-1, AC-4, AC-5 means Define.

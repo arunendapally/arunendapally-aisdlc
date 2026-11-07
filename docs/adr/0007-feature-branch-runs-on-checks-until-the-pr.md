@@ -18,32 +18,33 @@ Only Build passes on checks in every lane (scripts/lib.mjs:28-30, F1); Plan and 
 
 Gates 1 and 3 pass on checks when requested on the feature's own branch, unless the repo names a person for that gate or the change is risky.
 
-- The stages are listed once, as BRANCH_AUTO = [1, 3] in scripts/lib.mjs. Verify (5) and Release (6) are never in it, and a test fails if any BRANCH_AUTO stage appears in neverTrust for any lane.
+- The stages are listed once, as BRANCH_AUTO = [1, 3] in scripts/lib.mjs (Define and Design). Verify passes on its checks and Release is out of the plugin under ADR-0008, so neither is in it; the person's review is the org's PR process. A test fails if any BRANCH_AUTO stage appears in neverTrust for any lane.
 - A gate passes on checks this way only when all of these hold: state.branch is set and is not a protected branch; git rev-parse --abbrev-ref HEAD equals state.branch exactly and is neither "HEAD" (detached) nor "" (git failed); the gate has no record yet at this stage, so a waiting or rejected gate keeps its person; .ai-sdlc/audit.jsonl holds no "reject" event for this feature and stage, so a person's send-back keeps its person after drift clears the gate record (scripts/sdlc.mjs:315); gateOwners lists no name for the stage; the error budget is not frozen; and, for gate 3, the feature is not kind data and its PRD's Security and privacy line is not risky (nonFunctionalProblems().risky).
 - When any condition fails, the gate waits for its person as today, and the message names the condition that kept the person; on a checkout other than state.branch it says "switch to <branch> and request again to pass on checks". A feature made before createFeature set state.branch (scripts/lib.mjs:422) waits for its person as today.
 - The gate is recorded by "checks: feature branch" with its fingerprint, so drift still sends the work back. Where more than one route applies, the label is the first of: "earned trust", "autonomy granted by <name>", "feature branch", as the Build gate already records it.
 - Every pass on checks is written to .ai-sdlc/audit.jsonl as event "auto" with feature, stage, revision and by.
 - The review packet lists, from audit.jsonl, every pass on checks for the feature with its time and revision, and every spec-drift and plan-drift event, so a spec or design revised during Build and passed again is shown. A second pass still needs "## Changes since vN" in the document (scripts/sdlc.mjs:327-331).
-- On the branch, a drift message says "Request gate N again: it passes on its checks on this branch", not "so a person approves".
+- On the branch, a drift message says "Request the <stage name> gate again: it passes on its checks on this branch", not "so a person approves".
 - The PR size check runs on these passes as on any automatic gate (scripts/sdlc.mjs:422).
 - The intent question stays a person's answer; Plan cannot pass without it.
 - Moving a light feature to the full lane stays a person's step unless repo autonomy is on, as today.
 - ADR-0005 stays accepted; nothing in it is superseded.
 
-Confirmed by: tests/branch-autonomy.test.mjs, which fails if gate 5 or 6 passes on checks; if gate 1 passes on main, detached HEAD, or with gateOwners naming a person; if a rejected or waiting gate is overwritten; if a gate a person rejected passes on checks after a PRD edit drifts the feature back; if gate 3 passes for kind data; if a frozen budget passes a gate; or if an automatic pass leaves no audit line.
+Confirmed by: tests/branch-autonomy.test.mjs, which fails if the branch rule covers Verify or Release, or if Verify merges or pushes to main; if gate 1 passes on main, detached HEAD, or with gateOwners naming a person; if a rejected or waiting gate is overwritten; if a gate a person rejected passes on checks after a PRD edit drifts the feature back; if gate 3 passes for kind data; if a frozen budget passes a gate; or if an automatic pass leaves no audit line.
 
 ## Consequences
 
 - Good: an ordinary feature runs from intent to PR with no person in between, and the PR is the one review.
 - Good: no new switch; a repo that wants a person at Plan or Design names them in gateOwners.
 - Downside: Plan and Design are no longer read by a person before Build; a wrong spec costs a Build before it is caught.
+- Since ADR-0008: Verify passes on its checks and the plugin stops at a raised PR, so the PR review, outside the plugin, is the one human gate after the intent; Release is not the plugin's.
 - Downside: data work, a risky Security and privacy line, and the light-to-full lane move keep their person, so those features still stop before the PR.
 - Downside: a branch already over the lane's code limit is refused at Plan or Design where a person's approval would not be.
 - Downside: an escaped bug resets the full:1 and full:3 streaks even for gates passed on checks (scripts/sdlc.mjs:52-64). This only tightens, so it stays.
 - Downside: once a person sends back gate 1 or 3, that stage keeps a person for the rest of the feature, even after the rework they asked for.
 - Risk: a gate left waiting from before this ships, then cleared by drift, re-passes on checks. It is a one-time case; a send-back is the decision this rule keeps.
 - Risk: state.branch is named by the agent at init, so any non-protected branch qualifies, a shared integration branch included. Work there still reaches main only through a PR; a repo that wants a person there lists the branch in protectedBranches.
-- Risk: PRs that a Plan or Design person would have stopped reach review. Revisit if the owner sends back a PR for a spec or design reason (the intent's "Drop if"), counted as gate 5 reject events in audit.jsonl on features with an "auto" event at gate 1 or 3, with the reason read by Arun for the first three PRs (PRD A1).
+- Risk: PRs that a Plan or Design person would have stopped reach review. Revisit if the owner sends back a PR for a spec or design reason (the intent's "Drop if"), counted as PRs sent back in the org's review for features with an "auto" event at gate 1 or 3 in audit.jsonl, with the reason read by Arun for the first three PRs (PRD A1).
 
 ## Review
 

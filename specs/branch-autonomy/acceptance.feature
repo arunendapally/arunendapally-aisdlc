@@ -24,10 +24,11 @@ Feature: Work on a feature branch runs on its own until the PR
     And the feature is at stage 4 (Build)
 
   @R3 @AC-3 @subsystem
-  Scenario: The merge gate still waits for a person
+  Scenario: Verify passes on its checks and nothing reaches main
     Given the feature is at stage 5 with every Verify check passing
     When the Verify gate is requested
-    Then the Verify gate is waiting on "CODEOWNER engineer"
+    Then the Verify gate is approved by "checks"
+    And main points at the same commit as before
 
   @R4 @AC-4 @subsystem
   Scenario: Editing a spec that passed on checks sends the work back to Plan
@@ -47,9 +48,3 @@ Feature: Work on a feature branch runs on its own until the PR
     Given the Plan gate passed on checks at "2026-11-06T06:00:00Z"
     When the PR body is built
     Then it says "Plan: passed on checks, 2026-11-06T06:00:00Z"
-
-  @R7 @AC-7 @subsystem
-  Scenario: Release still waits for its owner
-    Given the feature is at stage 6 with every Release check passing
-    When the Release gate is requested
-    Then the Release gate is waiting on "release owner"
