@@ -391,7 +391,7 @@ const commands = {
       else if (granted && !section(prdText, '## Intent')) missing.push('the PRD has no "## Intent" (change, smallest, drop if): with autonomy the agent writes it, and the request still checks it')
       else if (!granted && !state.intent) missing.push(`no intent from a person yet. Run "sdlc ask ${feature}" and ask its three questions with the question tool`)
       const slices = state.capability && path.join(dir, cfg.specsDir, state.capability, 'slices.md')
-      if (slices && fs.existsSync(slices)) missing.push(...roadmapProblems(fs.readFileSync(slices, 'utf8')).map(p => `${state.capability}/slices.md: ${p}`))
+      if (slices && fs.existsSync(slices)) missing.push(...roadmapProblems(fs.readFileSync(slices, 'utf8'), feature).map(p => `${state.capability}/slices.md: ${p}`))
       if (fs.existsSync(prd)) missing.push(...assumptionProblems(fs.readFileSync(prd, 'utf8')).map(p => `prd.md: ${p}`))
       // The same route as a high-risk path at Build: a person moves it, or autonomy does, since it only adds checks.
       const nfr = nonFunctionalProblems(prdText)
@@ -881,7 +881,7 @@ const commands = {
     const tasks = tasksOf(fs.readFileSync(file, 'utf8'))
     for (const repo of [...new Set(tasks.flatMap(t => t.repos))]) {
       const mine = tasks.filter(t => t.repos.includes(repo))
-      console.log(`## ${feature}: ${repo}\n\nSpec: specs/${feature}/prd.md\nAcceptance criteria: ${[...new Set(mine.flatMap(t => t.scenarios))].join(', ') || 'none named'} (specs/${feature}/acceptance.feature)\n\n${mine.map(t => t.line).join('\n')}\n`)
+      console.log(`## ${feature}: ${repo}\n\nSpec: ${loadConfig(dir).specsDir}/${feature}/prd.md\nAcceptance criteria: ${[...new Set(mine.flatMap(t => t.scenarios))].join(', ') || 'none named'} (${loadConfig(dir).specsDir}/${feature}/acceptance.feature)\n\n${mine.map(t => t.line).join('\n')}\n`)
     }
   },
 
