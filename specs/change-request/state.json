@@ -1,0 +1,19 @@
+{
+  "feature": "change-request",
+  "lane": "light",
+  "stage": 1,
+  "branch": "feature/change-request",
+  "createdAt": "2026-11-07T12:17:39.800Z",
+  "stages": {
+    "1": {
+      "enteredAt": "2026-11-07T12:17:39.800Z"
+    }
+  },
+  "gates": {},
+  "retries": {},
+  "kinds": [
+    "brownfield"
+  ],
+  "capability": "gates-and-names",
+  "updatedAt": "2026-11-07T12:17:39.802Z"
+}
