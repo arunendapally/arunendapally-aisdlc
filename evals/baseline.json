@@ -110,5 +110,9 @@
   {
     "name": "requirements-not-solutions",
     "passed": true
+  },
+  {
+    "name": "branch-deploy-is-a-preview",
+    "passed": true
   }
 ]
