@@ -1,0 +1,19 @@
+{
+  "feature": "trace-index",
+  "lane": "light",
+  "stage": 1,
+  "branch": "feature/trace-index",
+  "createdAt": "2026-11-07T13:32:41.761Z",
+  "stages": {
+    "1": {
+      "enteredAt": "2026-11-07T13:32:41.761Z"
+    }
+  },
+  "gates": {},
+  "retries": {},
+  "kinds": [
+    "brownfield"
+  ],
+  "capability": "gates-and-names",
+  "updatedAt": "2026-11-07T13:32:41.762Z"
+}
