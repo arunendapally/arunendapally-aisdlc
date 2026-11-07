@@ -1,7 +1,7 @@
 {
   "feature": "capability-overview",
   "lane": "light",
-  "stage": 4,
+  "stage": 5,
   "branch": "feature/capability-overview",
   "createdAt": "2026-11-07T03:05:55.690Z",
   "stages": {
@@ -10,7 +10,11 @@
       "leftAt": "2026-11-07T03:06:26.226Z"
     },
     "4": {
-      "enteredAt": "2026-11-07T03:06:26.226Z"
+      "enteredAt": "2026-11-07T03:06:26.226Z",
+      "leftAt": "2026-11-07T03:45:16.088Z"
+    },
+    "5": {
+      "enteredAt": "2026-11-07T03:45:16.088Z"
     }
   },
   "gates": {
@@ -21,6 +25,14 @@
       "approvedAt": "2026-11-07T03:06:26.217Z",
       "auto": true,
       "fingerprint": "006124cabc1fba7f"
+    },
+    "4": {
+      "status": "approved",
+      "by": "checks: autonomy granted by Arun Endapally",
+      "requestedAt": "2026-11-07T03:45:15.673Z",
+      "approvedAt": "2026-11-07T03:45:15.673Z",
+      "auto": true,
+      "fingerprint": "172ba90a0a83733c"
     }
   },
   "retries": {},
@@ -28,7 +40,7 @@
     "brownfield"
   ],
   "capability": "gates-and-names",
-  "updatedAt": "2026-11-07T03:31:36.122Z",
+  "updatedAt": "2026-11-07T03:45:16.089Z",
   "revisions": {
     "1": 1
   },
@@ -36,12 +48,13 @@
     "4": {
       "ok": true,
       "count": 251,
-      "at": "2026-11-07T03:31:35.753Z",
+      "at": "2026-11-07T03:45:01.269Z",
       "runs": 1,
       "runtime": "v24.19.0"
     }
   },
   "baseline": 251,
   "baselineRuntime": "v24.19.0",
-  "proofBase": "47df4d4d1f5972cd3dadc372d1fea4109a36bbf7"
+  "proofBase": "47df4d4d1f5972cd3dadc372d1fea4109a36bbf7",
+  "sizeChecked": 38
 }
