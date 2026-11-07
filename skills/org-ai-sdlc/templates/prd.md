@@ -1,11 +1,11 @@
 # PRD: <feature>
 
-<!-- Stage 1 Plan. Owner: product-owner agent. Gate: the product lead, asked with "sdlc ask <feature>"; under autonomy it passes on its checks.
+<!-- Define. Owner: product-owner agent. Gate: the product lead, asked with "sdlc ask <feature>"; under autonomy it passes on its checks.
      One approval covers this PRD and acceptance.feature; the approver judges it in two minutes.
      Requirements, not solutions: what people and the business need, and why, in words a user would
      recognise. A requirement stays true whatever we build; if it would change under a different design,
      it is design. No code, files, modules, APIs, tables, fields, frameworks, hosting or deploy mechanics:
-     those go in the design (plan.md, openapi.yaml, or "## Approach" in tasks.md in the light lane). A
+     those go in the design (design.md, openapi.yaml, or "## Approach" in tasks.md in the light lane). A
      solution a person has already chosen goes in "## Constraints", with who chose it.
      A required section with only a comment in it is empty, and the gate refuses it. Keep every "## " heading
      exactly as written; never start a line with "# " or "## " inside a section.

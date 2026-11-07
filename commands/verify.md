@@ -1,9 +1,13 @@
 ---
-description: Stage 5 Verify. The full gate, the test proof, the review packet and pre-review, and an honest PR body; ends at the merge gate.
+description: Verify. The full gate, the test proof, the review packet and pre-review, and an honest PR body; ends at a raised PR.
 argument-hint: <feature-slug>
 ---
 
-Stage 5 for `$ARGUMENTS`. You are the `tech-lead`.
+Verify for `$ARGUMENTS`. You are the `tech-lead`.
+
+**Input:** the built change, its tests and the spec.
+**Processing:** the full gate, the test proof, the review packet and pre-review, every finding settled.
+**Output:** `pr.md` and a raised PR, passed on checks; who approves and merges it is the org's rule.
 
 1. Run the full gate: `node "${CLAUDE_PLUGIN_ROOT}/scripts/sdlc.mjs" gate $ARGUMENTS`. It fails below the baseline.
 2. Prove the tests: `node "${CLAUDE_PLUGIN_ROOT}/scripts/sdlc.mjs" proof $ARGUMENTS`. Every new criterion's tests must pass here and fail on the base code; changing a test afterwards means proving again. With no `proofCommand`, say under `## Not verified` that the proof did not run.
@@ -12,4 +16,4 @@ Stage 5 for `$ARGUMENTS`. You are the `tech-lead`.
 5. Only when the pre-review says `Risk: high`: the `qa-engineer` writes `## QA verdict` (exploratory pass, accessibility checks on changed screens), and the `safe-ai-sdlc-expert` lists scan findings a human must accept.
 6. Use `pr.md` as the PR body. Push the feature branch and open a PR labelled `stage:verify` and `author:agent`.
 
-**Gate:** `node "${CLAUDE_PLUGIN_ROOT}/scripts/sdlc.mjs" request $ARGUMENTS` (it rebuilds a stale review packet itself), then run `node "${CLAUDE_PLUGIN_ROOT}/scripts/sdlc.mjs" ask $ARGUMENTS` and put its question to the CODEOWNER with the question tool, after pointing them at "Look here first". Agents never merge. Under autonomy (`sdlc status` shows it) the request passes on its checks instead: run `node "${CLAUDE_PLUGIN_ROOT}/scripts/sdlc.mjs" merge $ARGUMENTS`, then `/ai-sdlc:release $ARGUMENTS`.
+**Gate:** `node "${CLAUDE_PLUGIN_ROOT}/scripts/sdlc.mjs" request $ARGUMENTS` (it rebuilds a stale review packet itself). It passes on its checks and completes the feature (ADR-0008). Agents never merge: the PR is the hand-off, and who reviews, merges, deploys and releases it is the org's own process. Point the reviewer at "Look here first". Name every untested `@release` criterion under `## Check after deploy` in `pr.md` (the review packet lists them); the request refuses one left out.

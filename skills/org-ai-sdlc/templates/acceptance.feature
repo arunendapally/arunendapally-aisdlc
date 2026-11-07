@@ -1,4 +1,4 @@
-# Stage 1 Plan. Owner: qa-engineer agent. Gate: with prd.md, one approval. Check: sdlc gherkin <feature>.
+# Define. Owner: qa-engineer agent. Gate: with prd.md, one approval. Check: sdlc gherkin <feature>.
 # REPLACE THE EXAMPLE BELOW. It covers R1 and R2 of the PRD template's example; a real feature covers every R<n>.
 #
 # The gate refuses:

@@ -8,8 +8,8 @@ A small team gets from an idea to a raised PR with people deciding only at the i
 
 - branch-autonomy: work on a feature branch runs on its checks until the PR, and the PR review is the one human gate. Depends on: none. Status: started
 - merge-is-hand-check: the PR body no longer needs a "Checked by hand" line, because the merge review is the hand check. Depends on: none. Status: started
-- stop-at-pr: the plugin's work ends at a raised PR from a branch; approval, merge, deploy and release are the org's own process. Depends on: none. Status: planned
-- stage-names: every stage has a name (Plan, Define, Design, Build, Verify) with its input, processing and output, and the technical how lives in design.md. Depends on: stop-at-pr. Status: planned
+- stop-at-pr: the plugin's work ends at a raised PR from a branch; approval, merge, deploy and release are the org's own process. Depends on: none. Status: shipped
+- stage-names: every stage has a name (Plan, Define, Design, Build, Verify) with its input, processing and output, and the technical how lives in design.md. Depends on: stop-at-pr. Status: started
 - definition-of-done: each stage's document ends with a Definition of done checklist, and a stage is ready only when the previous stage's checklist is complete. Depends on: stage-names. Status: planned
 - plan-roadmap: Plan writes a roadmap (now, next, later) of slices with enablers first, tasks.md lists one ticket per repo, and every PR can go live on its own. Depends on: stage-names. Status: planned
 - decision-log: decisions about what (from meetings, emails and chats) go in a decision log, and decisions about how stay in ADRs. Depends on: stage-names. Status: planned

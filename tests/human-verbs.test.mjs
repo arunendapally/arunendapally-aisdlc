@@ -56,7 +56,7 @@ test('a person can type a human verb in their own terminal; an agent cannot run 
   r.put('specs/demo/prd.md', READY_PRD)
   r.put('specs/demo/acceptance.feature', READY_FEATURE)
   r.sdlc('request', 'demo')
-  assert.match(r.sdlc('approve', 'demo', '1').out, /approved gate 1/)
+  assert.match(r.sdlc('approve', 'demo', '1').out, /approved Define/)
 
   for (const c of ['node scripts/sdlc.mjs approve demo 1', 'node "C:/x/scripts/sdlc.mjs" intent demo change: a', 'node sdlc.mjs close demo done',
     `echo '{"prompt":"sdlc approve demo 5"}' | node scripts/hooks/user-prompt.mjs`]) assert.equal(r.bash(c), 'deny', c)

@@ -1,6 +1,6 @@
-# Plan: <feature>
+# Design: <feature>
 
-<!-- Stage 3 Design, full lane only. Owner: architect agent. Gate: the architect and product lead, asked with "sdlc ask <feature>"; under autonomy it passes on its checks.
+<!-- Design, full lane only. Owner: architect agent. Gate: the architect and product lead, asked with "sdlc ask <feature>"; under autonomy it passes on its checks.
      A required section with only a comment in it is empty, and the gate refuses it. Keep every "## " heading
      exactly as written; never start a line with "# " or "## ", even inside a code block.
      Or: None, because <a reason about this change>, where a section does not apply.

@@ -90,7 +90,7 @@ if (verb === 'intent') {
   if (missing.length) say(`An intent needs all three parts, and ${missing.join(' and ')} ${missing.length > 1 ? 'are' : 'is'} missing. Type: ${usage}. Nothing recorded.`)
   let state = readState(dir, feature)
   if (state && !['full', 'light'].includes(state.lane)) say(`${feature} is in the ${state.lane} lane, where the report is the intent. Nothing recorded.`)
-  if (state && state.stage > 1) say(`${feature} is past Plan (stage ${state.stage}); its intent was settled when gate 1 was approved. Nothing recorded.`)
+  if (state && state.stage > 1) say(`${feature} is past Define (at ${STAGES[state.stage].name}); its intent was settled when Define was approved. Nothing recorded.`)
   const created = !state
   if (created) {
     if (isFrozen(dir)) say('The error budget is spent, so new features wait until a human unfreezes it. Nothing recorded.')
@@ -101,7 +101,7 @@ if (verb === 'intent') {
   state.intent = { ...intent, by: who, at: new Date().toISOString() }
   writeState(dir, state)
   audit(dir, { event: 'intent', feature, by: who, ...intent })
-  say(`${who} set the intent for ${feature}: change: ${intent.change}; smallest: ${intent.smallest}; drop if: ${intent.dropIf}.${created ? ' It starts at stage 1 (Plan) in the light lane.' : ''} Build the PRD to it; do not reword it.`)
+  say(`${who} set the intent for ${feature}: change: ${intent.change}; smallest: ${intent.smallest}; drop if: ${intent.dropIf}.${created ? ' It starts at Define in the light lane.' : ''} Build the PRD to it; do not reword it.`)
 }
 
 // Only a person grants a repo autonomy, with the reason it is safe, and only a person takes it back.
@@ -160,13 +160,13 @@ if (verb === 'close') {
   state.closedReason = reason
   writeState(dir, state)
   audit(dir, { event: 'close', feature, by: who, reason })
-  say(`${who} closed ${feature} at stage ${state.stage}: "${reason}". It keeps its history and leaves the board.`)
+  say(`${who} closed ${feature} at ${STAGES[state.stage].name}: "${reason}". It keeps its history and leaves the board.`)
 }
 
 if (verb === 'lane') {
   const lane = note.trim().toLowerCase()
   if (!['full', 'light'].includes(lane)) say('Usage: sdlc lane <feature> full|light. Nothing recorded.')
-  if (state.stage > 4 || (lane === 'light' && state.stage > 1)) say(`${feature} is at stage ${state.stage}; it can no longer move to the ${lane} lane. Nothing recorded.`)
+  if (state.stage > 4 || (lane === 'light' && state.stage > 1)) say(`${feature} is at ${STAGES[state.stage].name}; it can no longer move to the ${lane} lane. Nothing recorded.`)
   if (lane === 'light' && isFrozen(dir)) say('The error budget is frozen, so only the full lane is open. Nothing recorded.')
   const back = lane === 'full' && state.stage === 4
   if (back) {
@@ -178,28 +178,28 @@ if (verb === 'lane') {
   state.laneSetBy = who
   writeState(dir, state)
   audit(dir, { event: 'lane', feature, lane, by: who })
-  say(`${who} set ${feature} to the ${lane} lane.${back ? ' It goes back to stage 3 (Design): write plan.md, then request the gate.' : ''}`)
+  say(`${who} set ${feature} to the ${lane} lane.${back ? ' It goes back to Design: write design.md, then request the gate.' : ''}`)
 }
 
 const stage = Number(stageText)
 if (state.closedAt) say(`${feature} is complete. Nothing recorded.`)
-if (stage !== state.stage) say(`${feature} is at stage ${state.stage}, not ${stageText}. Nothing recorded.`)
+if (stage !== state.stage) say(`${feature} is at ${STAGES[state.stage].name} (${state.stage}), not ${stageText}. Nothing recorded.`)
 const owners = loadConfig(dir).gateOwners[stage] ?? []
-if (owners.length && !owners.includes(who)) say(`${who} is not an owner of gate ${stage} (${owners.join(', ')}). Nothing recorded.`)
+if (owners.length && !owners.includes(who)) say(`${who} is not an owner of ${STAGES[stage].name} (${owners.join(', ')}). Nothing recorded.`)
 
 const now = new Date().toISOString()
 const gate = state.gates[stage] ?? {}
 if (verb === 'approve') {
   // Approving needs a request first, because the request runs the checks (gate, PR size, pre-review).
-  if (gate.status !== 'waiting') say(`Gate ${stage} has not been requested, so its checks have not run. Ask the agent to run "sdlc request ${feature}" first. Nothing recorded.`)
+  if (gate.status !== 'waiting') say(`${STAGES[stage].name} has not been requested, so its checks have not run. Ask the agent to run "sdlc request ${feature}" first. Nothing recorded.`)
   const missing = missingHeadings(dir, state, stage)
-  if (missing.length) say(`Gate ${stage} not approved, the artefact is incomplete: ${missing.join('; ')}.`)
+  if (missing.length) say(`${STAGES[stage].name} not approved, the artefact is incomplete: ${missing.join('; ')}.`)
   // An approval covers what the request checked (ADR-0005). If that changed since, the gate lapses.
   if (gate.fingerprint && gate.fingerprint !== gateFingerprint(dir, state, stage)) {
     state.gates[stage] = { ...gate, status: 'lapsed', lapsedAt: now }
     writeState(dir, state)
     audit(dir, { event: 'lapse', feature, stage, by: who })
-    say(`Gate ${stage} not approved: what it checked has changed since the request, so it has lapsed. Ask the agent to run "sdlc request ${feature}" again, then review what changed.`)
+    say(`${STAGES[stage].name} not approved: what it checked has changed since the request, so it has lapsed. Ask the agent to run "sdlc request ${feature}" again, then review what changed.`)
   }
   state.gates[stage] = { ...gate, status: 'approved', by: who, approvedAt: now, requestedAt: gate.requestedAt ?? now, note: note || undefined }
   // Each approval of the spec or the design is a revision: v1, then v2 after a change request.
@@ -212,7 +212,7 @@ if (verb === 'approve') {
   ledger[key] = { ...ledger[key], streak: clean ? (ledger[key]?.streak ?? 0) + 1 : 0, promoted: ledger[key]?.promoted ?? false }
   writeTrust(dir, ledger)
   audit(dir, { event: 'approve', feature, stage, by: who, note })
-  say(`${who} approved gate ${stage} (${STAGES[stage].name}) for ${feature}. ${advanceFeature(dir, state)}`)
+  say(`${who} approved ${STAGES[stage].name} for ${feature}. ${advanceFeature(dir, state)}`)
 }
 if (!note) say(`A rejection needs a reason: sdlc reject ${feature} ${stage} <reason>. Nothing recorded.`)
 state.gates[stage] = { ...gate, status: 'rejected', by: who, rejectedAt: now, reason: note, rejections: (gate.rejections ?? 0) + 1 }
@@ -225,4 +225,4 @@ const key = `${state.lane}:${stage}`
 ledger[key] = { ...ledger[key], streak: 0, promoted: false, ...(ledger[key]?.promoted ? { demotedAt: now, demotedBy: `rejection by ${who}` } : {}) }
 writeTrust(dir, ledger)
 audit(dir, { event: 'reject', feature, stage, by: who, reason: note })
-say(`${who} rejected gate ${stage} for ${feature}: "${note}". Rework the artefact, then request the gate again.`)
+say(`${who} rejected ${STAGES[stage].name} for ${feature}: "${note}". Rework the artefact, then request the gate again.`)

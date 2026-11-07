@@ -1,8 +1,8 @@
 # Architecture overview: <feature>
 
-<!-- Stage 3 Design, work across repos. Owner: architect agent. Gate: with plan.md; Build checks the table against tasks.md.
+<!-- Design, work across repos. Owner: architect agent. Gate: with design.md; Build checks the table against tasks.md.
      Write it before tasks.md when the tasks touch more than one repo or system; one repo needs none (its
-     Level 1 view goes in plan.md "## C4 views" when the context changes). Design refuses a change type
+     Level 1 view goes in design.md "## C4 views" when the context changes). Design refuses a change type
      outside the four below. Build refuses a repo that a task names in its repos list with no row here,
      and a new or modified row that no task changes.
      The table is read by cell position:
@@ -15,7 +15,7 @@
      - Deploy order: a bare number (1 goes first) or n/a. Any text after the number breaks the order.
      - Keep one table in the section and no other line that starts with "|".
      Tie each impact to its source (openapi.yaml, db-design.md, file:line); end one you could not check
-     with [unconfirmed]. Levels 2 and 3 of C4 belong in plan.md, not here. -->
+     with [unconfirmed]. Levels 2 and 3 of C4 belong in design.md, not here. -->
 
 ## System context
 

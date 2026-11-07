@@ -34,7 +34,7 @@
     },
     {
       "say": "sdlc approve demo 1",
-      "out": "approved gate 1"
+      "out": "approved Define"
     },
     {
       "state": [
@@ -55,7 +55,7 @@
         "demo"
       ],
       "ok": false,
-      "out": "goes back to stage 1",
+      "out": "goes back to Define",
       "why": "an agent edited the approved spec during Build"
     },
     {
@@ -90,7 +90,7 @@
     },
     {
       "say": "sdlc approve demo 1",
-      "out": "approved gate 1"
+      "out": "approved Define"
     }
   ]
 }

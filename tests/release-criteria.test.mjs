@@ -50,7 +50,7 @@ test('merge-is-hand-check AC-1: a @manual criterion needs no "Checked by hand" l
   r.setState('demo', { stage: 5, stages: { 5: { enteredAt: new Date().toISOString() } } })
   r.put('specs/demo/pr.md', '## Summary\n\nx\n\n## Test results\n\nSuite: 1 passed\n\n## Pre-review\n\nRisk: medium\n\n## Not verified\n\nx\n')
   const out = r.sdlc('request', 'demo').out
-  assert.match(out, /Gate 5/, out)
+  assert.match(out, /Verify/, out)
   assert.doesNotMatch(out, /AC-2/)
 })
 
@@ -59,7 +59,7 @@ test('merge-is-hand-check AC-2: the packet lists the criteria a person checks be
   const text = packetText({ feature: 'demo', lane: 'light', head: 'abc1234', files: [], code: 0, tests: 0, deletedTests: [], untested: rows, lenses: [], newDeps: [], oversized: null, codeLines: 0, criteria: 3, last: null, sinceLast: null })
   assert.match(text, /## Check by hand before merging\n\nYour merge records that you checked these\..*\n\n- AC-2 Usable by keyboard/)
   assert.doesNotMatch(text.split('## Check by hand before merging')[0], /AC-2/, 'not repeated under criteria with no test')
-  assert.match(text, /AC-3 \(e2e, at release/)
+  assert.match(text, /## Check after deploy\n\n- AC-3 \(e2e\): Live/)
 })
 
 test('merge-is-hand-check AC-3: an untested criterion that is not @manual is still refused', () => {
@@ -94,12 +94,14 @@ test('V5: a proof whose only new criteria are by hand or at release passes, and 
   assert.match(out.out, /Nothing for the proof to run .*AC-1 \(by hand\)/)
 })
 
-test('V4, V5: the tags go on a scenario, on an e2e criterion, one at a time; a lane with no Release cannot use @release', () => {
+test('V4, V5: the tags go on a scenario, on an e2e criterion, one at a time; in every lane the PR body names a @release criterion (ADR-0008)', () => {
   const errors = text => lint(text).errors.map(e => e.message).join('\n')
   assert.match(errors('@manual\nFeature: F\n\n  @R1 @AC-1 @e2e\n  Scenario: S\n    Given a\n    When b\n    Then c\n'), /never on a Feature or Rule/)
   assert.match(errors('Feature: F\n\n  @R1 @AC-1 @unit @manual\n  Scenario: S\n    Given a\n    When b\n    Then c\n'), /a unit, subsystem or API criterion has a test/)
   assert.match(errors('Feature: F\n\n  @R1 @AC-1 @e2e @manual @release\n  Scenario: S\n    Given a\n    When b\n    Then c\n'), /both @release and @manual/)
   const r = setup()
   r.setState('demo', { stage: 5, lane: 'bug' })
-  assert.match(r.sdlc('request', 'demo').out, /AC-3 is tagged @release, but the bug lane has no Release/)
+  const out = r.sdlc('request', 'demo').out
+  assert.doesNotMatch(out, /has no Release/)
+  assert.match(out, /AC-3 is tagged @release with no test: name it under "## Check after deploy" in bug\.md/)
 })

@@ -25,6 +25,6 @@ test('status shows each capability with its slices and how far each has got', ()
   r.sdlc('init', 'cart-save', '--capability', 'checkout')
   const out = r.sdlc('status').out
   assert.match(out, /Capability checkout: Shoppers pay in one step\./)
-  assert.match(out, /\n  cart-save: stage 1 Plan \(light lane\)/)
+  assert.match(out, /\n  cart-save: Define \(light lane\)/)
   assert.match(out, /\n  pay-later: not started \(planned\), depends on cart-save/)
 })
