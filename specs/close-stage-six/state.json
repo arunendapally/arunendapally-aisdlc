@@ -1,0 +1,34 @@
+{
+  "feature": "close-stage-six",
+  "lane": "full",
+  "stage": 3,
+  "branch": "feature/close-stage-six",
+  "createdAt": "2026-11-07T14:03:19.499Z",
+  "stages": {
+    "1": {
+      "enteredAt": "2026-11-07T14:03:19.499Z",
+      "leftAt": "2026-11-07T14:04:43.883Z"
+    },
+    "3": {
+      "enteredAt": "2026-11-07T14:04:43.883Z"
+    }
+  },
+  "gates": {
+    "1": {
+      "status": "approved",
+      "by": "checks: autonomy granted by Arun Endapally",
+      "requestedAt": "2026-11-07T14:04:43.880Z",
+      "approvedAt": "2026-11-07T14:04:43.880Z",
+      "auto": true,
+      "fingerprint": "47356c41f01163ad"
+    }
+  },
+  "retries": {},
+  "kinds": [
+    "brownfield"
+  ],
+  "updatedAt": "2026-11-07T14:04:43.884Z",
+  "revisions": {
+    "1": 1
+  }
+}
