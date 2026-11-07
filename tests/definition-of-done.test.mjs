@@ -66,3 +66,15 @@ test('definition-of-done AC-6: a document without a checklist is not refused for
   assert.doesNotMatch(out, /Definition of done/)
   assert.deepEqual(openDoneItems('## Problem\n\nFilled.\n', 'prd.md'), [])
 })
+
+// Pre-review F1 and F2: every stage's request checks its own document, and "*" or indented items count too.
+for (const [stage, doc] of [[3, 'design.md'], [4, 'tasks.md'], [5, 'pr.md']]) {
+  test(`definition-of-done: an open item stops the ${doc} stage too`, () => {
+    const r = makeRepo()
+    r.say(GRANT)
+    r.sdlc('init', 'demo', '--full')
+    r.setState('demo', { stage, stages: { [stage]: { enteredAt: new Date().toISOString() } } })
+    r.put(`specs/demo/${doc}`, `${DOD}\n\n  * [ ] Tests failed first, then pass\n`)
+    assert.match(r.sdlc('request', 'demo').out, /item "Tests failed first, then pass" is open/)
+  })
+}
