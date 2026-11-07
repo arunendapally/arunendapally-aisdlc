@@ -310,9 +310,16 @@ export function slicesOf(text) {
 }
 
 // Going live only after another slice is a sequence, a coupling smell, so it must say why (R4).
-export function roadmapProblems(text) {
-  return slicesOf(text).filter(s => /^after\b/i.test(s.goesLive) && !/,\s*because\s+\S/i.test(s.goesLive))
-    .map(s => `${s.slug} goes live after another slice but gives no reason: write "Goes live: after <slug>, because <reason>"`)
+// "only" limits it to one slice, so one slice's gap blocks only that slice's Define (pre-review F1).
+export function roadmapProblems(text, only) {
+  const slices = slicesOf(text).filter(s => !only || s.slug === only)
+  return [
+    ...slices.filter(s => /^after\b/i.test(s.goesLive) && !/,\s*because\s+\S/i.test(s.goesLive))
+      .map(s => `${s.slug} goes live after another slice but gives no reason: write "Goes live: after <slug>, because <reason>"`),
+    // A mistyped horizon would otherwise read as now without a word (pre-review F2).
+    ...slices.filter(s => /Horizon:/i.test(s.line) && !/Horizon:\s*(now|next|later)\b/i.test(s.line))
+      .map(s => `${s.slug} has a Horizon that is not now, next or later`),
+  ]
 }
 
 // The person's intent, typed as "change: ...; smallest: ...; drop if: ..." (one per line works too).

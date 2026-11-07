@@ -77,3 +77,11 @@ test('plan-roadmap AC-6: the Plan command states its input, processing and outpu
   const text = fs.readFileSync(path.join(plugin, 'commands', 'plan.md'), 'utf8')
   for (const h of ['**Input:**', '**Processing:**', '**Output:**']) assert.ok(text.includes(h), h)
 })
+
+// Pre-review F1 and F2: one slice's gap blocks only that slice, and a mistyped horizon is named.
+test('plan-roadmap: a slice is checked on its own line, and a mistyped horizon is named', () => {
+  const roadmap = '## Slices\n\n- save-list: a. Horizon: soon. Goes live: compatible. Status: planned\n- save-share: b. Goes live: after save-list. Status: planned\n'
+  assert.deepEqual(lib.roadmapProblems(roadmap, 'save-list'), ['save-list has a Horizon that is not now, next or later'])
+  assert.equal(lib.roadmapProblems(roadmap, 'save-share').length, 1)
+  assert.equal(lib.roadmapProblems(roadmap).length, 2)
+})
