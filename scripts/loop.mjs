@@ -11,7 +11,7 @@ import os from 'node:os'
 import path from 'node:path'
 import crypto from 'node:crypto'
 import { spawnSync } from 'node:child_process'
-import { STAGES, stageSpec, git, gitOk, loadConfig, section, changedFiles, listFeatures, nextStage, writeState, matches, destructiveMigrations, scaffoldFiles, designDoc } from './lib.mjs'
+import { STAGES, git, gitOk, loadConfig, section, changedFiles, listFeatures, nextStage, writeState, matches, destructiveMigrations, scaffoldFiles, designDoc } from './lib.mjs'
 import { matrix } from './testmatrix.mjs'
 import { check as knowledgeCheck, pages as knowledgePages } from './knowledge.mjs'
 import { parseFacts, factProblems } from './facts.mjs'
@@ -381,13 +381,6 @@ export function advanceFeature(dir, state) {
   if (next === undefined) {
     state.closedAt = now
     if (state.lane === 'hotfix') state.postmortemDue = new Date(Date.now() + cfg.postmortemDays * 864e5).toISOString()
-    // What shipped and what was live when it did, so the next release can check it is still there.
-    if (state.stage === 6) {
-      const artefact = path.join(dir, cfg.specsDir, state.feature, stageSpec(state, 6).artefact)
-      state.releasedSha = cfg.protectedBranches.map(b => landedOn(dir, releaseSha(dir, state), b)).find(Boolean) ?? releaseSha(dir, state)
-      const live = fs.existsSync(artefact) ? liveShaIn(fs.readFileSync(artefact, 'utf8')) : null
-      if (live && !/unknown/i.test(live)) state.liveSha = live
-    }
     // The feature closes at its PR (ADR-0008); its outcome, from the PRD, is a follow-up with an owner and a date.
     const prd = path.join(dir, cfg.specsDir, state.feature, 'prd.md')
     const outcome = fs.existsSync(prd) ? outcomeFollowUp(state, fs.readFileSync(prd, 'utf8'), cfg) : null

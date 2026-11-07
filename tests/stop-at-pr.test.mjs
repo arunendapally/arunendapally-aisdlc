@@ -87,8 +87,7 @@ test('stop-at-pr AC-6: a failing Verify still stops with the reasons', () => {
   assert.equal(r.state('demo').closedAt, undefined)
 })
 
-// Not a criterion: the plan leaves how a feature already at Release closes to a follow-up; this only
-// stops "advance" from sending it back to stage 1.
+// A feature already at Release closes on advance (close-stage-six), never back to stage 1.
 test('stop-at-pr: a feature left at stage 6 closes on advance, never back to Plan', () => {
   const r = makeRepo()
   r.sdlc('init', 'demo', '--full')
@@ -109,6 +108,7 @@ for (const [verb, ac] of [['request', 'AC-1'], ['advance', 'AC-2']]) {
     assert.equal(out.status, 0, out.out)
     assert.match(out.out, /demo is complete\. Outcome follow-up: Priya reads "share of saved items bought"/)
     assert.ok(r.state('demo').closedAt)
+    assert.equal(r.state('demo').releasedSha, undefined, 'no release ran, so none is recorded')
     assert.match(r.sdlc('status').out, /demo: complete \(full lane\)/)
   })
 }
