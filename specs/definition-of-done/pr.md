@@ -5,7 +5,7 @@ Spec: specs/definition-of-done/prd.md (R1 to R4). Not in this PR: the Plan stage
 
 ## Test results
 
-Suite: 255 passed, 0 failed, 0 skipped (baseline 246 on main), sdlc gate on this branch
+Suite: 258 passed, 0 failed, 0 skipped (baseline 246 on main), sdlc gate on this branch
 Evals: green via sdlc gate on this branch
 Proof: not run, no proofCommand; the new tests failed on the base before the change, and disabling the checker or its call made them fail
 Criteria: 6 of 6 traced (tests/definition-of-done.test.mjs)
@@ -15,7 +15,7 @@ Removed, skipped or quarantined: none
 ## Pre-review
 
 Risk: medium, because it is code (the floor) in the gate path that refuses a stage request, with no data, auth or contract change; a false refusal blocks work, a false pass only lets an open checklist through.
-Open findings: 3 (F1 minor, F2 and F3 nits; see review.md)
+Open findings: 0 (F1 fixed in 88c8f88, F2 in e3e42f4, F3 in f640d99)
 Look here first: scripts/sdlc.mjs:340 (the stage list and the artefact it reads decide which gates enforce the checklist; only Define is exercised by a test), skills/org-ai-sdlc/templates/prd.md:130 and design.md:123 (whether these checklist items are the right ones per stage is a product call)
 Lenses run: correctness, simplicity, tests
 Revert: git revert of the merge commit; no data or state to back out, and documents that carry a checklist keep passing on the old code because it ignores the section.
