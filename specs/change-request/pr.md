@@ -14,7 +14,13 @@ Removed, skipped or quarantined: none; tests/review.test.mjs and tests/autonomy.
 
 ## Pre-review
 
-Pending: the pre-reviewer writes this section.
+Risk: medium, because it changes request (gate) code with tests that fail on the base; no high-risk path, data or migration, and the new verbs only reuse the existing back-to-Define path or create a feature.
+Open findings: 0 (F1 fixed in 22245d7; F2 wontfix, guidance by Arun's ruling)
+Look here first: scripts/sdlc.mjs:337 (the Build-or-later guard only catches Define drift; design drift at Build still goes back silently, which matches R1 but confirm it is intended), scripts/sdlc.mjs:557 (cr and amend are agent verbs; the person's choice is not recorded, see F2)
+Lenses run: correctness, simplicity, tests, golden eval and edited tests
+Revert: git revert of the merge commit; no data to back out (a feature created by sdlc cr stays as a folder to delete by hand)
+Checked mechanically: AC-1 to AC-6 walked through the code; tests/change-request, review and autonomy tests pass (24 of 24); eval 25 and the two edited tests keep every old assertion and add a check that the stage stays at Build; cr and amend do not exist on the base, so AC-4 and AC-5 fail there; no new dependency; no secrets
+Could not check: the question in a live question-tool session; the full suite and evals (relied on the PR's reported run); that the packet's "AC-2 has no test" is only the test name "AC-1 to AC-3" (AC-2 strings are asserted)
 
 ## Not verified
 

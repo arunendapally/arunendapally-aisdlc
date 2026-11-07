@@ -26,7 +26,7 @@ function changedAfterDefine(full = false) {
   return r
 }
 
-test('AC-1 to AC-3: a spec change at Build stops with the question, the reasons and the effort change', () => {
+test('AC-1, AC-2, AC-3: a spec change at Build stops with the question, the reasons and the effort change', () => {
   const r = changedAfterDefine()
   const { status, out } = r.sdlc('request', 'save-list')
   assert.equal(status, 1)
