@@ -1,10 +1,11 @@
-# Architecture overview: <feature>
+# Architecture overview: <capability>
 
-<!-- Design, work across repos. Owner: architect agent. Gate: with design.md; Build checks the table against tasks.md.
-     Write it before tasks.md when the tasks touch more than one repo or system; one repo needs none (its
-     Level 1 view goes in design.md "## C4 views" when the context changes). Design refuses a change type
-     outside the four below. Build refuses a repo that a task names in its repos list with no row here,
-     and a new or modified row that no task changes.
+<!-- One per capability, beside slices.md: "sdlc init <feature> --capability <capability>" starts it, and
+     every feature in the capability is checked against it. A feature with no capability keeps its own,
+     needed only when its tasks touch more than one repo. Owner: architect agent. Define refuses a feature
+     whose capability overview has no system context; Build checks the table against tasks.md. Design
+     refuses a change type outside the four below. Build refuses a repo that a task names in its repos
+     list with no row here and, in a feature's own overview, a new or modified row that no task changes.
      The table is read by cell position:
      - System / repo: the repo name exactly as tasks.md writes it. Backticks are fine; "Web app" does not
        match the repo web.
@@ -19,9 +20,9 @@
 
 ## System context
 
-<!-- C4 Level 1, required by this process, not checked by the gate: the people and systems around this
-     change, as Mermaid. One element per row of the table below, named exactly as in the table, plus the
-     people and external systems they talk to. Mark each row's system "(new)", "(modified)",
+<!-- C4 Level 1, required for every capability, one repo included; Define refuses it empty: the people and
+     systems around this capability, as Mermaid. One element per row of the table below, named exactly as
+     in the table, plus the people and external systems they talk to. Mark each row's system "(new)", "(modified)",
      "(config-only)" or "(verify)". Example:
 
 ```mermaid
@@ -59,3 +60,20 @@ C4Context
 - After 1, before 2: /saved-items is live and unused; web is unchanged. Rolling back 1 removes the routes, which nothing calls yet.
 - After 2: web shows the save button. Rolling back 2 hides it; 1 stays.
      Or: None, because every system here ships in one release. -->
+
+## Decision log
+
+<!-- What was agreed after a PRD was signed off, in meetings, emails and chats. The PRD stays as signed; a
+     row here records the later agreement. Define and Verify refuse a row with no Agreed by or Source.
+     - Date: when it was agreed, YYYY-MM-DD.
+     - Agreed by: the named person and their role. An agent drafting a row from a conversation writes
+       "unconfirmed" until a named person confirms it; the review packet lists those rows. Never name a
+       person who did not agree it.
+     - Source: quote or link the exchange (meeting notes, email, chat).
+     - Changes: the features and requirement ids it affects, or none.
+     Example:
+| 2026-11-07 | Offline mode moves to the next slice | Ana Ruiz (product owner) | sync call notes, "offline waits" | save-list R4 out of scope |
+-->
+
+| Date | Decision | Agreed by | Source | Changes |
+|---|---|---|---|---|

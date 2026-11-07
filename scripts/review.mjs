@@ -6,7 +6,7 @@
 //   retro learns from what only humans found.
 import fs from 'node:fs'
 import path from 'node:path'
-import { git, loadConfig, matches, changedFiles, designDoc } from './lib.mjs'
+import { git, loadConfig, matches, changedFiles, designDoc, overviewFile, decisionsOf } from './lib.mjs'
 import { matrix, levels, levelOf } from './testmatrix.mjs'
 
 // A test file is one the test matrix gives a level, or anything in a test folder (helpers, fixtures).
@@ -154,7 +154,11 @@ export function packet(dir, state) {
   const last = state.lastPacketHead && git(`cat-file -t ${state.lastPacketHead}`, dir) === 'commit' ? state.lastPacketHead : null
   const sinceLast = last ? git(`diff --name-only ${last}`, dir).split('\n').filter(f => f && !f.startsWith(`${cfg.specsDir}/`)) : null
 
-  return { feature: state.feature, lane: state.lane, head: git('rev-parse --short HEAD', dir), files: rows, code: code.length, tests: tests.length, deletedTests, untested, lenses, newDeps, oversized, codeLines, criteria, last, sinceLast }
+  // capability-overview R5: a decision no named person has confirmed is for the human reviewer to see.
+  const overview = overviewFile(dir, state)
+  const unconfirmed = fs.existsSync(overview) ? decisionsOf(fs.readFileSync(overview, 'utf8')).filter(d => /^unconfirmed$/i.test(d.agreedBy)) : []
+
+  return { unconfirmed, feature: state.feature, lane: state.lane, head: git('rev-parse --short HEAD', dir), files: rows, code: code.length, tests: tests.length, deletedTests, untested, lenses, newDeps, oversized, codeLines, criteria, last, sinceLast }
 }
 
 export function packetText(p) {
@@ -198,6 +202,7 @@ export function packetText(p) {
     '',
     // ADR-0008: only the deployed build can show a @release criterion, and the deploy is the org's.
     ...(afterDeploy.length ? ['## Check after deploy', '', ...afterDeploy.map(s => `- ${s.ac} (${s.level}): ${s.name}`), ''] : []),
+    ...(p.unconfirmed?.length ? ['## Unconfirmed decisions', '', ...p.unconfirmed.map(d => `- ${d.date}: ${d.decision} (source: ${d.source}; changes: ${d.changes || 'none named'})`), ''] : []),
     ...(p.deletedTests.length ? ['## Deleted tests', '', ...p.deletedTests.map(f => `- \`${f}\`: say why in the PR, or restore it`), ''] : []),
     '## All files',
     '',

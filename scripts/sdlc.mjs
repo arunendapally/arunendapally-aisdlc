@@ -7,7 +7,7 @@ import { fileURLToPath } from 'node:url'
 import { spawnSync } from 'node:child_process'
 import { STAGES, root, git, loadConfig, readState, writeState, listFeatures, missingHeadings, isFrozen, destructiveMigrations,
   stageSpec, section, matches, changedFiles, changedLines, createFeature, copyTemplate, TEMPLATES, overdueGates, overduePostmortems,
-  KINDS, trustedGates, promotable, readTrust, writeTrust, lessonPaid, lessonProblem, lessonsOwed, audit, withIntent, INTENT_PARTS, autonomy, designDoc } from './lib.mjs'
+  KINDS, trustedGates, promotable, readTrust, writeTrust, lessonPaid, lessonProblem, lessonsOwed, audit, withIntent, INTENT_PARTS, autonomy, designDoc, overviewFile, decisionProblems } from './lib.mjs'
 import { check, conformance, OKF_VERSION, relevant, writeIndex } from './knowledge.mjs'
 import { collect, analyze, report, approvalSignals, approvalLines } from './retro.mjs'
 import { lint, requirementsFrom } from './gherkin.mjs'
@@ -118,7 +118,7 @@ const fieldWarnings = state => {
   return missing.length ? [`field names not defined in openapi.yaml: ${missing.map(m => `${m.name} (${m.where})`).join(', ')}. Use the contract's names, or add them to it`] : []
 }
 // Work across repos (issue #27 d, #26 packets). Each task names its repos ("repos: [web]", this repo when
-// absent); a feature-level architecture-overview.md declares the systems under change before tasks exist.
+// absent); architecture-overview.md (the capability's, or the feature's own) declares the systems under change.
 const thisRepo = () => path.basename(git('remote get-url origin', dir) || dir).replace(/\.git$/, '')
 const tasksOf = text => [...(section(text, '## Tasks') ?? '').matchAll(TASK_LINE)].map(([, id, rest]) => ({
   id,
@@ -133,12 +133,13 @@ const systemProblems = state => {
   const folder = path.join(dir, loadConfig(dir).specsDir, state.feature)
   const tasks = fs.existsSync(path.join(folder, 'tasks.md')) ? tasksOf(fs.readFileSync(path.join(folder, 'tasks.md'), 'utf8')) : []
   const repos = [...new Set(tasks.flatMap(t => t.repos))]
-  const file = path.join(folder, 'architecture-overview.md')
-  if (!fs.existsSync(file)) return repos.length > 1 ? [`tasks.md names more than one repo (${repos.join(', ')}): write specs/${state.feature}/architecture-overview.md from the plugin's architecture-overview.md template, with a "## Systems under change" table, before the tasks are built`] : []
+  const file = overviewFile(dir, state)
+  if (!fs.existsSync(file)) return repos.length > 1 ? [`tasks.md names more than one repo (${repos.join(', ')}): write ${path.relative(dir, file).split(path.sep).join('/')} from the plugin's architecture-overview.md template, with a "## Systems under change" table, before the tasks are built`] : []
   const systems = systemsOf(fs.readFileSync(file, 'utf8'))
   const problems = systems.filter(s => !CHANGE_TYPES.includes(s.type)).map(s => `architecture-overview.md: ${s.system} has change type "${s.type}": use new, modified, config-only or consumer-only (verify)`)
   for (const t of tasks) for (const repo of t.repos.filter(r => !systems.some(s => s.system === r))) problems.push(`architecture-overview.md: ${t.id} changes ${repo}, which is not in "## Systems under change"`)
-  for (const s of systems.filter(s => ['new', 'modified'].includes(s.type) && !tasks.some(t => t.repos.includes(s.system)))) problems.push(`architecture-overview.md: ${s.system} is ${s.type}, but no task in tasks.md changes it`)
+  // A capability's systems are changed across its features, so one feature need not change them all.
+  for (const s of systems.filter(s => !state.capability && ['new', 'modified'].includes(s.type) && !tasks.some(t => t.repos.includes(s.system)))) problems.push(`architecture-overview.md: ${s.system} is ${s.type}, but no task in tasks.md changes it`)
   return problems
 }
 // The Analyze gate needs acceptance.feature: valid Gherkin that covers every PRD requirement.
@@ -252,6 +253,7 @@ const commands = {
     const feat = copyTemplate(dir, feature, 'acceptance.feature')
     // The script writes the line: the PRD itself waits for the person's intent.
     if (capability) fs.writeFileSync(path.join(dir, prd), fs.readFileSync(path.join(dir, prd), 'utf8').replace(/^(# PRD: .*\n)/, `$1\nCapability: ${capability} (${slices})\n`))
+    if (capability) copyTemplate(dir, capability, 'architecture-overview.md')
     scaffoldKinds(state)
     console.log(`Created ${feature} at Define, ${lane} lane${kindNote()}. Write ${prd} and ${feat}; one approval covers both.`)
   },
@@ -407,6 +409,9 @@ const commands = {
       if (scenarios > cfg.sliceScenarios) warnings.push(`${scenarios} scenarios is more than one slice usually holds (${cfg.sliceScenarios}). Consider splitting the feature now: each slice is built and reviewed as one PR of at most ${cfg.maxPrLines[state.lane] ?? cfg.maxPrLines.full} code lines.`)
       const kinds = state.kinds ?? []
       if (kinds.includes('brownfield') || kinds.includes('data') || fs.existsSync(path.join(dir, cfg.specsDir, feature, 'facts.md'))) missing.push(...factsGateProblems(dir, state))
+      const overview = fs.existsSync(overviewFile(dir, state)) ? fs.readFileSync(overviewFile(dir, state), 'utf8') : ''
+      if (state.capability && !section(overview, '## System context')) missing.push(`${cfg.specsDir}/${state.capability}/architecture-overview.md has no "## System context": draw the capability's C4 Level 1 there (template: architecture-overview.md)`)
+      missing.push(...decisionProblems(overview).map(p => `architecture-overview.md: ${p}`))
     }
     if (state.stage === 3) {
       missing.push(...boardProblems(dir, feature))
@@ -468,6 +473,7 @@ const commands = {
       // Remember every finding id the gate has seen, so a row cannot be deleted instead of closed.
       const findings = parseLedger(fs.readFileSync(ledger, 'utf8'))
       missing.push(...ledgerProblems(dir, findings, state.ledgerIds ?? [], { strictFixes: highRisk }).map(p => `review.md: ${p}`))
+      if (fs.existsSync(overviewFile(dir, state))) missing.push(...decisionProblems(fs.readFileSync(overviewFile(dir, state), 'utf8')).map(p => `architecture-overview.md: ${p}`))
       state.ledgerIds = [...new Set([...(state.ledgerIds ?? []), ...findings.map(f => f.id)])]
       writeState(dir, state)
       if (fs.existsSync(path.join(folder, 'acceptance.feature'))) {
@@ -851,7 +857,7 @@ const commands = {
     const folder = path.join(dir, loadConfig(dir).specsDir, feature)
     if (!fs.existsSync(path.join(folder, 'tasks.md'))) fail(`${feature} has no tasks.md yet: packets come from its tasks.`)
     const tasks = tasksOf(fs.readFileSync(path.join(folder, 'tasks.md'), 'utf8'))
-    const overview = path.join(folder, 'architecture-overview.md')
+    const overview = overviewFile(dir, readState(dir, feature))
     const systems = fs.existsSync(overview) ? systemsOf(fs.readFileSync(overview, 'utf8')) : []
     const order = repo => Number(systems.find(s => s.system === repo)?.order) || Infinity
     const repoOf = id => tasks.find(t => t.id === id)?.repos.join(', ') ?? 'unknown'

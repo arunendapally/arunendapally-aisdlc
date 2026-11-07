@@ -1,19 +1,47 @@
 {
   "feature": "capability-overview",
   "lane": "light",
-  "stage": 1,
+  "stage": 4,
   "branch": "feature/capability-overview",
   "createdAt": "2026-11-07T03:05:55.690Z",
   "stages": {
     "1": {
-      "enteredAt": "2026-11-07T03:05:55.690Z"
+      "enteredAt": "2026-11-07T03:05:55.690Z",
+      "leftAt": "2026-11-07T03:06:26.226Z"
+    },
+    "4": {
+      "enteredAt": "2026-11-07T03:06:26.226Z"
     }
   },
-  "gates": {},
+  "gates": {
+    "1": {
+      "status": "approved",
+      "by": "checks: autonomy granted by Arun Endapally",
+      "requestedAt": "2026-11-07T03:06:26.217Z",
+      "approvedAt": "2026-11-07T03:06:26.217Z",
+      "auto": true,
+      "fingerprint": "006124cabc1fba7f"
+    }
+  },
   "retries": {},
   "kinds": [
     "brownfield"
   ],
   "capability": "gates-and-names",
-  "updatedAt": "2026-11-07T03:05:55.693Z"
+  "updatedAt": "2026-11-07T03:31:36.122Z",
+  "revisions": {
+    "1": 1
+  },
+  "gateRuns": {
+    "4": {
+      "ok": true,
+      "count": 251,
+      "at": "2026-11-07T03:31:35.753Z",
+      "runs": 1,
+      "runtime": "v24.19.0"
+    }
+  },
+  "baseline": 251,
+  "baselineRuntime": "v24.19.0",
+  "proofBase": "47df4d4d1f5972cd3dadc372d1fea4109a36bbf7"
 }
