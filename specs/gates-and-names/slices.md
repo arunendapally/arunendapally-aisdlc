@@ -14,4 +14,4 @@ A small team gets from an idea to a raised PR with people deciding only at the i
 - plan-roadmap: Plan writes a roadmap (now, next, later) of slices with enablers first, tasks.md lists one ticket per repo, and every PR can go live on its own. Depends on: stage-names. Status: planned
 - decision-log: decisions about what (from meetings, emails and chats) go in a decision log, and decisions about how stay in ADRs. Depends on: stage-names. Status: planned
 - trace-index: a generated index traces each requirement to its scenarios, tests, ADRs and decisions, and back. Depends on: decision-log. Status: planned
-- test-lock: tests proven red are locked against the builder, and a test that conflicts with the spec is escalated, not edited. Depends on: none. Status: planned
+- test-lock: tests proven red are locked against the builder, and a test that conflicts with the spec is escalated, not edited. Depends on: none. Status: started

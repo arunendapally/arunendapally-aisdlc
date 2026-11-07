@@ -156,6 +156,19 @@ export function runProof(dir, state, opts = {}, cfg = loadConfig(dir)) {
   }
 }
 
+// The proved test files an agent may not change (test-lock): those of the last passing proof (state.lock,
+// which a failed or narrower proof never clears), none once a person approved a new spec version after
+// it (a Define gate passed on checks does not count: review F3), less a criterion's files whose conflict
+// a person settled as "change the test".
+export function lockedFiles(state) {
+  const p = state.lock
+  if (!p?.files || state.closedAt) return []
+  const g = state.gates?.[1]
+  if (g?.status === 'approved' && !g.auto && !String(g.by ?? '').startsWith('checks:') && g.approvedAt > p.at) return []
+  const freed = Object.values(state.conflicts ?? {}).filter(c => c.decision === 'change' && c.settledAt > p.at).flatMap(c => c.files)
+  return Object.keys(p.files).filter(f => !freed.includes(f))
+}
+
 // What the Verify gate requires of the proof. Without a proofCommand it only warns, and the PR must
 // say the proof did not run.
 export function proofProblems(dir, state, artefactText, cfg = loadConfig(dir)) {

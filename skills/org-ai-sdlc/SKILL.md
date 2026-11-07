@@ -48,6 +48,7 @@ Build and Verify pass on checks in every lane. Every lane ends at a raised PR (A
 - `sdlc.mjs gate <slug>` runs the full gate. The first run in Build is the baseline.
 - Two different loops (ADR-0004):
   - **A failed check** (a red gate after a real change): `sdlc.mjs retry <slug> <goal>`; past the cap (3), ESCALATE. Never loosen the goal.
+  - **A test that contradicts the spec:** proved tests are locked; raise `sdlc.mjs conflict <slug> <AC-n> <reason>` and `sdlc ask <slug>`; only a person settles it (`sdlc settle`). It is an answer, not a retry.
   - **A refusal** (a guard or a person said no): it is an answer. Do not retry, rephrase, script or reroute it; give the user the command once and stop. After the second refusal the hook holds the session to reading until the user replies.
 - Read what governs first: the implementation before the documents and schemas around it, and large files in slices (the hook refuses a full read of a big file).
 - Commit `specs/<slug>/` after every gate decision so other sessions and CI see the same state.

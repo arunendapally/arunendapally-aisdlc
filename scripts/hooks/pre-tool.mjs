@@ -70,8 +70,8 @@ if (tool.startsWith('mcp__') && new RegExp(cfg.mcpDenyPattern, 'i').test(tool) &
   deny(`${tool} looks like it merges, deploys or changes settings. That is a human action; add it to mcpAllow in .ai-sdlc/config.json only if it is safe.`, 'mcp')
 }
 // A gate or intent question is the person's to answer: one that arrives already answered is the agent's.
-if (tool === 'AskUserQuestion' && ti.answers && Object.keys(ti.answers).length && (ti.questions ?? []).some(q => /\[(gate|intent) [a-z0-9-]+[^\]]*\]$/.test(q.question ?? ''))) {
-  deny('A gate or intent question is answered by the person, never filled in by an agent. Ask it without answers.', 'answer-for-person')
+if (tool === 'AskUserQuestion' && ti.answers && Object.keys(ti.answers).length && (ti.questions ?? []).some(q => /\[(gate|intent|conflict) [a-z0-9-]+[^\]]*\]$/.test(q.question ?? ''))) {
+  deny('A gate, intent or conflict question is answered by the person, never filled in by an agent. Ask it without answers.', 'answer-for-person')
 }
 // A tool that runs a command elsewhere (a terminal, a remote shell) runs it all the same.
 if (tool.startsWith('mcp__') && typeof ti.command === 'string' && !cfg.mcpAllow.includes(tool)) {
@@ -131,6 +131,23 @@ if (cd) {
 const atCfg = at === dir ? cfg : loadConfig(at)
 const branch = git('rev-parse --abbrev-ref HEAD', at)
 const onProtected = atCfg.protectedBranches.includes(branch)
+// A proved test is locked against the agent (test-lock): it changes only through a conflict a person settles.
+const proved = listFeatures(dir).find(s => s.branch === branch && s.lock)
+const locked = proved ? (await import('../loop.mjs')).lockedFiles(proved) : []
+const testLock = target => {
+  const hit = locked.find(f => f.toLowerCase() === relPath(dir, target).toLowerCase())
+  if (hit) deny(`${hit} is a test the proof of ${proved.feature} locked: make the code pass it. If it contradicts the spec, run "sdlc conflict ${proved.feature} <AC-n> <reason>", then "sdlc ask ${proved.feature}"; only a person settles it.`, 'test-lock')
+}
+// The files a shell segment writes, moves or deletes (review F2): a redirect's target, sed -i, cp or
+// Copy-Item's destination, and every argument of mv, rm, tee, touch, truncate and their PowerShell names.
+const unquote = a => a.replace(/^["']|["']$/g, '')
+const shellWrites = t => {
+  const out = [...t.matchAll(/(?:^|[^<>])>>?\s*("[^"]+"|'[^']+'|[^\s;&|]+)/g)].map(m => unquote(m[1]))
+  const w = t.trim().split(/\s+/).map(unquote)
+  if (/^(mv|rm|tee|touch|truncate|Move-Item|Remove-Item|Set-Content|Add-Content|Out-File)$/i.test(w[0]) || (w[0] === 'sed' && w.some(a => /^(-i|--in-place)/.test(a)))) out.push(...w.slice(1))
+  if (/^(cp|Copy-Item)$/i.test(w[0])) out.push(w.at(-1))
+  return out
+}
 
 if (tool === 'Bash' || tool === 'PowerShell') {
   const c = ti.command ?? ''
@@ -202,6 +219,8 @@ if (tool === 'Bash' || tool === 'PowerShell') {
   }
   for (const p of parts) {
     const target = writeTarget(p)
+    if (target) testLock(target)
+    for (const t of shellWrites(p.text)) testLock(t)
     if (target && (matches(target, cfg.denyPaths) || matches(target, cfg.askPaths))) deny(`${target} is a guardrail, CI or ownership file: a shell write to it is never allowed. Use the Write tool, which asks a human.`, 'guardrail-command')
     if (guardrail.test(code(p)) && !exempt(p)) deny('Commands may not touch feature state, guardrails, settings, CI or ownership files. To read a feature\'s state, run "sdlc status <feature> --json" or use the Read tool. Otherwise use sdlc.mjs, or ask a human.', 'guardrail-command')
   }
@@ -228,6 +247,7 @@ const rel = relPath(dir, file).toLowerCase()
 const content = [ti.content, ti.new_string, ...(ti.edits ?? []).map(e => e.new_string), ti.new_source].filter(Boolean).join('\n')
 
 if (rel.startsWith('..')) process.exit(0)
+testLock(file)
 if (matches(rel, cfg.denyPaths) || matches(rel, [`${cfg.specsDir}/*/state.json`])) deny(`${rel} is a guardrail or secrets file. Agents cannot change their own limits.`, 'guardrail-file')
 if (SECRET.test(content)) deny(`The new content of ${rel} looks like a secret. Use the secret store and reference it by name.`, 'secret')
 const banned = matches(rel, cfg.bannedTextPaths) && cfg.bannedText.find(t => content.includes(t))

@@ -34,7 +34,7 @@ if (fs.existsSync(denialsFile)) {
   }
 }
 
-const VERBS = 'approve|reject|lane|hotfix|intent|autonomy|trust|distrust|pause|resume|freeze|unfreeze|close'
+const VERBS = 'settle|approve|reject|lane|hotfix|intent|autonomy|trust|distrust|pause|resume|freeze|unfreeze|close'
 const m = text.match(new RegExp(`^sdlc\\s+(${VERBS})\\b\\s*(\\S+)?\\s*(\\d)?\\s*(.*)$`, 'is'))
 if (!m) {
   // A command anywhere else in the message is not recorded, and the person is told so, never left
@@ -179,6 +179,17 @@ if (verb === 'lane') {
   writeState(dir, state)
   audit(dir, { event: 'lane', feature, lane, by: who })
   say(`${who} set ${feature} to the ${lane} lane.${back ? ' It goes back to Design: write design.md, then request the gate.' : ''}`)
+}
+
+// Only a person settles a conflict between a proved test and the spec (test-lock): change the test, or keep it.
+if (verb === 'settle') {
+  const [ac, choice] = `${stageText ?? ''}${note}`.trim().split(/\s+/)
+  const conflict = state.conflicts?.[ac?.toUpperCase()]
+  if (conflict?.status !== 'open' || !['change', 'keep'].includes(choice)) say(`Usage: sdlc settle ${feature} <AC-n> change|keep, for an open conflict. Nothing recorded.`)
+  state.conflicts[ac.toUpperCase()] = { ...conflict, status: 'settled', decision: choice, by: who, settledAt: new Date().toISOString() }
+  writeState(dir, state)
+  audit(dir, { event: 'settle', feature, ac: ac.toUpperCase(), decision: choice, by: who })
+  say(`${who} settled the conflict on ${ac.toUpperCase()} for ${feature}: ${choice === 'change' ? 'change the test to match the spec, then run sdlc proof again' : 'keep the test; make the code pass it'}.`)
 }
 
 const stage = Number(stageText)

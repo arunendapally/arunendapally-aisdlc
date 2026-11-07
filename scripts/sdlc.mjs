@@ -18,7 +18,7 @@ import { factsGateProblems, assumptionProblems } from './facts.mjs'
 import { erProblems, openapiProblems, breakingChanges, undefinedFields } from './contracts.mjs'
 import { solutionWarnings } from './solutions.mjs'
 import { parseSpecKit, prdFromSpecKit, featureFromSpecKit } from './speckit.mjs'
-import { runProof, proofProblems, releaseProblems, advanceFeature, overdueOutcomes, riskTier, gateFingerprint, unreviewedChanges, contentHashes, readTriggers, addTrigger, clearTriggers, repeatedFindings } from './loop.mjs'
+import { runProof, lockedFiles, sha256, proofProblems, releaseProblems, advanceFeature, overdueOutcomes, riskTier, gateFingerprint, unreviewedChanges, contentHashes, readTriggers, addTrigger, clearTriggers, repeatedFindings } from './loop.mjs'
 
 const dir = root()
 const [cmd, feature, ...rest] = process.argv.slice(2)
@@ -357,6 +357,8 @@ const commands = {
       const text = fs.existsSync(path.join(dir, cfg.specsDir, feature, doc)) ? fs.readFileSync(path.join(dir, cfg.specsDir, feature, doc), 'utf8') : ''
       if (!section(text, `## Changes since v${revision}`)) missing.push(`${doc} was approved as v${revision}: add "## Changes since v${revision}" saying what changed and why (the change request), so v${revision + 1} can be approved`)
     }
+    // A conflict between a proved test and the spec waits for a person (test-lock).
+    for (const [ac, c] of Object.entries(state.conflicts ?? {})) if (c.status === 'open') missing.push(`the conflict on ${ac} waits for a person: run sdlc ask ${feature} and put its question`)
     if ([4, 5].includes(state.stage) && !(state.kinds ?? []).includes('data')) {
       const schema = changedFiles(dir, cfg).filter(f => matches(f.file, ['**/migrations/**', '**/*.sql', '**/schema.prisma'])).map(f => f.file)
       if (schema.length) missing.push(`${schema.join(', ')} change the schema: this is data work. Run "sdlc kind ${feature} data" (its pre-review runs the data lens); it starts db-design.md, and its "## Data impact" is part of the spec, so filling it sends the spec back to Define for approval`)
@@ -566,6 +568,20 @@ Ask the owner: run "sdlc ask ${feature}" and put its question to them with the q
   // marker binds the question to this feature, gate and fingerprint, so a stale one records nothing.
   ask() {
     const state = need()
+    const open = Object.entries(state.conflicts ?? {}).find(([, c]) => c.status === 'open')
+    if (open) {
+      return console.log(JSON.stringify({
+        questions: [{
+          header: `Conflict ${open[0]}`,
+          question: `The builder says the test for ${open[0]} of ${feature} contradicts the spec: "${open[1].reason}". Change the test, or keep it? [conflict ${feature} ${open[0]} ${open[1].at.replace(/\D/g, '')}]`,
+          multiSelect: false,
+          options: [
+            { label: 'Change the test', description: 'The spec is right: the builder may change this test, then prove it again.' },
+            { label: 'Keep the test', description: 'The test is right: the code must meet it.' },
+          ],
+        }],
+      }, null, 2))
+    }
     const gate = state.gates[state.stage]
     if (gate?.status === 'waiting') {
       const spec = stageSpec(state, state.stage)
@@ -739,6 +755,7 @@ Ask the owner: run "sdlc ask ${feature}" and put its question to them with the q
       const wait = gate?.status === 'waiting' ? `, waiting on ${stageSpec(s).owner} for ${hours(gate.requestedAt)}h${deadline}` : ''
       const revisions = Object.entries(s.revisions ?? {}).map(([n, v]) => `${STAGES[n].name} v${v}`).join(', ')
       console.log(`${s.feature}: ${STAGES[s.stage].name} (${s.lane} lane)${s.spike ? ', SPIKE' : ''}, gate ${gate?.status ?? 'not requested'}${wait}${revisions ? ` [${revisions}]` : ''}`)
+      for (const [ac, c] of Object.entries(s.conflicts ?? {})) if (c.status === 'open') console.log(`  conflict on ${ac} waiting for a person: ${c.reason}`)
       if (s.lastRefusal?.stage === s.stage) console.log(`  last request refused ${hours(s.lastRefusal.at)}h ago: ${s.lastRefusal.reasons.join('; ')}`)
     }
     for (const t of readTriggers(dir)) console.log(`RETRO DUE: ${t.reason}. Run: sdlc retro`)
@@ -760,12 +777,34 @@ Ask the owner: run "sdlc ask ${feature}" and put its question to them with the q
     const files = flag('files')?.split(',').map(f => f.trim()).filter(Boolean)
     if (!fs.existsSync(path.join(dir, cfg.specsDir, feature, 'acceptance.feature')) && !files?.length) fail(`${feature} has no acceptance.feature: name the tests to prove with --files a,b`)
     const base = flag('base') ?? (state.lane === 'hotfix' ? state.proofBase : undefined)
+    // A proved test changes only through a conflict a person settled (test-lock). The old proof stays.
+    const changed = lockedFiles(state).filter(f => !fs.existsSync(path.join(dir, f)) || sha256(fs.readFileSync(path.join(dir, f), 'utf8')) !== state.lock.files[f])
+    if (changed.length) fail(`${changed.join(', ')} changed after the proof, and no conflict a person settled covers it. Restore it (git checkout -- ${changed.join(' ')}), or if it contradicts the spec, run "sdlc conflict ${feature} <AC-n> <reason>" and wait for the person.`)
     const result = runProof(dir, state, { files, base }, cfg)
     state.proof = result
+    // Only a passing proof moves the lock, and files still locked stay locked (review F1).
+    if (result.ok && Object.keys(result.files ?? {}).length) {
+      const kept = Object.fromEntries(lockedFiles(state).map(f => [f, state.lock.files[f]]))
+      state.lock = { files: { ...kept, ...result.files }, at: result.at }
+    }
     writeState(dir, state)
     if (!result.ok) fail(`Proof FAILED${result.base ? ` against ${result.base}` : ''}:\n- ${result.problems.join('\n- ')}`)
     if (!result.acs.length) return console.log(`Nothing for the proof to run against ${result.base}: every new criterion is proved another way.${result.due ? ` ${result.due.join(', ')}.` : ''}${result.skipped ? ` Left to their own run (proofSkipLevels): ${result.skipped.join(', ')}.` : ''}`)
     console.log(`Proof passed against ${result.base}: ${result.acs.join(', ')} ${result.perTest ? 'each failed' : 'failed'} on the base code and pass here. Locked ${Object.keys(result.files).length} test file(s); changing one means proving again.${result.untested ? ` Not proved, no test traces them: ${result.untested.join(', ')}.` : ''}${result.skipped ? ` Not proved, ${result.skipLevels.join(' and ')} tests are left to their own run (proofSkipLevels): ${result.skipped.join(', ')}.` : ''}${result.due ? ` Proved another way: ${result.due.join(', ')}.` : ''}${result.greenfield ? ' Greenfield: the base commit has no code, so the tests failed there because the code is missing, not because they check its behaviour. Review the tests for what they assert.' : ''}`)
+  },
+
+  // A test that contradicts the spec is an answer, not a failed check (test-lock): it waits for a person,
+  // who settles it with "sdlc ask". Retries are left alone. "sdlc conflict <feature> <AC-n> <reason>"
+  conflict() {
+    const state = need()
+    const ac = rest[0]?.toUpperCase()
+    const reason = rest.slice(1).join(' ').trim()
+    const row = matrix(dir, feature).rows.find(r => r.ac === ac)
+    if (!row || !reason) fail(`Usage: sdlc conflict ${feature} <AC-n> <reason>, for a criterion in acceptance.feature.`)
+    state.conflicts = { ...state.conflicts, [ac]: { status: 'open', reason, files: row.tests.map(t => t.replace(/ \([^)]*\)$/, '')), at: new Date().toISOString() } }
+    writeState(dir, state)
+    audit(dir, { event: 'conflict', feature, ac, reason })
+    console.log(`Conflict on ${ac} recorded; it waits for a person. Run "sdlc ask ${feature}" and put its question. Do not change the test.`)
   },
 
   // A spike may skip the red-first habit inside a slice, never the proof; its code cannot merge.
@@ -1019,7 +1058,7 @@ Ask the owner: run "sdlc ask ${feature}" and put its question to them with the q
 
 // A person's own terminal, for when the chat hook is not there (issue #15). The same hook records the
 // verb with the same checks and the same git user.name; the pre-tool guard refuses these to agents.
-const HUMAN_VERBS = ['intent', 'autonomy', 'approve', 'reject', 'lane', 'hotfix', 'distrust', 'pause', 'resume', 'freeze', 'unfreeze', 'close']
+const HUMAN_VERBS = ['settle', 'intent', 'autonomy', 'approve', 'reject', 'lane', 'hotfix', 'distrust', 'pause', 'resume', 'freeze', 'unfreeze', 'close']
 if (HUMAN_VERBS.includes(cmd)) {
   const prompt = ['sdlc', cmd, feature, ...rest].filter(Boolean).join(' ')
   const hook = path.join(path.dirname(fileURLToPath(import.meta.url)), 'hooks', 'user-prompt.mjs')
@@ -1031,6 +1070,6 @@ if (HUMAN_VERBS.includes(cmd)) {
 }
 
 if (!commands[cmd]) {
-  fail(`${cmd ? `Unknown command: ${cmd}.\n` : ''}Usage: sdlc <init|bug|task|kind|request|advance|gate|tests|proof|spike|review|gherkin|api|packets|retry|status|outcome|trust|metrics|retro|incident|knowledge|init-repo> [feature] [...]\nA person, in their own terminal: sdlc <${HUMAN_VERBS.join('|')}> ...`)
+  fail(`${cmd ? `Unknown command: ${cmd}.\n` : ''}Usage: sdlc <init|bug|task|kind|request|advance|gate|tests|proof|conflict|spike|review|gherkin|api|packets|retry|status|outcome|trust|metrics|retro|incident|knowledge|init-repo> [feature] [...]\nA person, in their own terminal: sdlc <${HUMAN_VERBS.join('|')}> ...`)
 }
 commands[cmd]()

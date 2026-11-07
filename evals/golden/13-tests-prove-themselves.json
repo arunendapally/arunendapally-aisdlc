@@ -1,6 +1,6 @@
 {
   "name": "tests-prove-themselves",
-  "promise": "A feature's tests count only if they pass on the branch and fail against the base code; a test that passes either way proves nothing.",
+  "promise": "A feature's tests count only if they pass on the branch and fail against the base code; a test that passes either way proves nothing. A proved test is locked: an agent's edit is refused, a test changed anyway is never proved, and one a person lets change must still fail on the base code.",
   "steps": [
     {
       "config": {
@@ -48,11 +48,33 @@
       ]
     },
     {
+      "sdlc": [
+        "proof",
+        "demo",
+        "--files",
+        "tests/none.test.cjs"
+      ],
+      "ok": false,
+      "why": "a failed proof the agent runs does not drop the lock"
+    },
+    {
+      "tool": [
+        "Write",
+        {
+          "file_path": "tests/demo.test.cjs",
+          "content": "require('node:test').test('demo AC-1 greets', () => {})\n"
+        }
+      ],
+      "expect": "deny",
+      "reason": "locked",
+      "why": "the agent's edit to a proved test is refused by the lock"
+    },
+    {
       "put": [
         "tests/demo.test.cjs",
         "require('node:test').test('demo AC-1 greets', () => {})\n"
       ],
-      "why": "a test weakened so it passes on any code"
+      "why": "changed anyway, as a person or a session in bypass mode could"
     },
     {
       "sdlc": [
@@ -60,7 +82,47 @@
         "demo"
       ],
       "ok": false,
-      "out": "passed against the base code"
+      "out": "changed after the proof"
+    },
+    {
+      "sdlc": [
+        "proof",
+        "demo"
+      ],
+      "ok": false,
+      "out": "changed after the proof",
+      "why": "still refused: the changed test is never proved"
+    },
+    {
+      "state": [
+        "demo",
+        "proof.ok",
+        false
+      ],
+      "why": "the changed test never becomes a passing proof"
+    },
+    {
+      "sdlc": [
+        "conflict",
+        "demo",
+        "AC-1",
+        "the spec allows any greeting"
+      ],
+      "ok": true
+    },
+    {
+      "say": "sdlc settle demo AC-1 change",
+      "out": "settled the conflict",
+      "why": "a person lets the test change"
+    },
+    {
+      "sdlc": [
+        "proof",
+        "demo"
+      ],
+      "ok": false,
+      "out": "passed against the base code",
+      "why": "the weakened test passes on the base code too, so it proves nothing"
     },
     {
       "state": [
