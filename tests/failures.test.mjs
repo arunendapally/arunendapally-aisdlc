@@ -147,7 +147,7 @@ test('lesson owed: an escaped bug cannot merge until a trap names it with a guar
   r.put('standards/traps.md', '### Retries charged twice\n- **What happened:** x.\n- **Source:** another-bug\n- **Guard now:** the idempotency test in tests/charge.test.ts.\n')
   assert.match(r.sdlc('request', 'double-charge').out, /a lesson is owed/, 'a trap about something else does not pay it')
   r.put('standards/traps.md', '### Retries charged twice\n- **What happened:** x.\n- **Source:** double-charge\n- **Guard now:** the idempotency test in tests/charge.test.ts.\n')
-  assert.match(r.sdlc('request', 'double-charge').out, /waiting on/)
+  assert.match(r.sdlc('request', 'double-charge').out, /passed on checks/)
   r.sdlc('init', 'calm', '--full')
   assert.equal(r.state('calm').lessonOwed, undefined, 'a feature with no escape owes nothing')
 })

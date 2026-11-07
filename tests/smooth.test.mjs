@@ -41,12 +41,15 @@ test('F-18 the baseline ratchets to the most tests the feature has passed', () =
 test('F-19 a review fix may take a PR a little over the limit once its size passed at Verify; the count is shown first', () => {
   const r = verifyRepo(190)
   assert.match(r.sdlc('gate', 'demo').out, /PR size: 1\d\d of 200 code lines/)
-  assert.match(r.sdlc('request', 'demo').out, /waiting on/)
+  // Verify passes on checks (ADR-0008), so the review's finding is what refuses the first request.
+  r.fill('specs/demo/bug.md', BUG, PRE.replace('Open findings: 0', 'Open findings: 1'))
+  assert.match(r.sdlc('request', 'demo').out, /open findings/)
+  r.fill('specs/demo/bug.md', BUG, PRE)
   r.put('src/total.ts', 'x\n'.repeat(215))
   r.sdlc('gate', 'demo')
   const out = r.sdlc('request', 'demo').out
   assert.match(out, /over the bug lane limit of 200, within the room for review fixes/)
-  assert.match(out, /waiting on/)
+  assert.match(out, /passed on checks/)
   r.put('src/total.ts', 'x\n'.repeat(260))
   r.sdlc('gate', 'demo')
   assert.match(r.sdlc('request', 'demo').out, /over the bug lane limit of 200\. Split it/)

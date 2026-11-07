@@ -11,7 +11,7 @@ import os from 'node:os'
 import path from 'node:path'
 import crypto from 'node:crypto'
 import { spawnSync } from 'node:child_process'
-import { STAGES, stageSpec, git, gitOk, loadConfig, section, changedFiles, listFeatures, nextStage, writeState, matches, destructiveMigrations, scaffoldFiles } from './lib.mjs'
+import { STAGES, stageSpec, git, gitOk, loadConfig, section, changedFiles, listFeatures, nextStage, writeState, matches, destructiveMigrations, scaffoldFiles, designDoc } from './lib.mjs'
 import { matrix } from './testmatrix.mjs'
 import { check as knowledgeCheck, pages as knowledgePages } from './knowledge.mjs'
 import { parseFacts, factProblems } from './facts.mjs'
@@ -289,7 +289,7 @@ export function rememberWarnings(dir, state, changed, cfg = loadConfig(dir)) {
   }
 
   // ADRs the change supersedes must say so.
-  const texts = [path.join(dir, cfg.specsDir, state.feature, 'plan.md'), ...changed.filter(f => /^docs\/adr\/.+\.md$/.test(f)).map(f => path.join(dir, f))]
+  const texts = [path.join(dir, cfg.specsDir, state.feature, designDoc(dir, state)), ...changed.filter(f => /^docs\/adr\/.+\.md$/.test(f)).map(f => path.join(dir, f))]
     .filter(f => fs.existsSync(f)).map(f => fs.readFileSync(f, 'utf8'))
   const superseded = [...new Set(texts.flatMap(t => [...t.matchAll(/\bsupersedes?\s+ADR-(\d{1,4})\b/gi)].map(m => m[1].padStart(4, '0'))))]
   for (const id of superseded) {
@@ -375,9 +375,9 @@ export function advanceFeature(dir, state) {
       const live = fs.existsSync(artefact) ? liveShaIn(fs.readFileSync(artefact, 'utf8')) : null
       if (live && !/unknown/i.test(live)) state.liveSha = live
     }
-    // The feature closes at release; its outcome is a follow-up with an owner and a date.
-    const release = path.join(dir, cfg.specsDir, state.feature, 'release.md')
-    const outcome = fs.existsSync(release) ? outcomeFollowUp(state, fs.readFileSync(release, 'utf8'), cfg) : null
+    // The feature closes at its PR (ADR-0008); its outcome, from the PRD, is a follow-up with an owner and a date.
+    const prd = path.join(dir, cfg.specsDir, state.feature, 'prd.md')
+    const outcome = fs.existsSync(prd) ? outcomeFollowUp(state, fs.readFileSync(prd, 'utf8'), cfg) : null
     if (outcome) state.outcome = outcome
     writeState(dir, state)
     const proofNote = cfg.proofCommand ? `, and the test proof: sdlc proof ${state.feature} --files <repro tests>` : ''
@@ -388,7 +388,7 @@ export function advanceFeature(dir, state) {
   state.stage = next
   state.stages[state.stage] = { enteredAt: now }
   writeState(dir, state)
-  return `${state.feature} is now at stage ${state.stage} (${STAGES[state.stage].name}).`
+  return `${state.feature} is now at ${STAGES[state.stage].name}.`
 }
 
 // The risk tier of a change (ADR-0005), set by what it touches, never by who wrote it. The pre-review's
@@ -401,7 +401,7 @@ export function riskTier(dir, all, preText = '', cfg = loadConfig(dir)) {
   // The plugin's own state and settings are not part of the change: agents cannot write them at all.
   const files = all.filter(f => !f.startsWith('.ai-sdlc/'))
   const high = files.filter(f => matches(f, [...cfg.highRiskPaths, ...cfg.askPaths, ...ALWAYS_A_PERSON]))
-  if (high.length) why.push(`${high.slice(0, 3).join(', ')} ${high.length > 1 ? 'are' : 'is'} on a path that always needs a person`)
+  if (high.length) why.push(`${high.slice(0, 3).join(', ')} ${high.length > 1 ? 'are' : 'is'} on a high-risk path, so the org's review rules decide who looks`)
   const destructive = destructiveMigrations(dir, cfg)
   if (destructive.length) why.push(`${destructive.join(', ')} alters or drops data`)
   const code = files.filter(f => !matches(f, DOCS_ONLY))
@@ -426,7 +426,7 @@ export function gateFingerprint(dir, state, stage, cfg = loadConfig(dir)) {
   // Nothing when the feature has no db-design.md, so other features hash exactly as before.
   const db = (...hs) => (state.dataDoc ? hs.map(h => `${h}\n${section(read('db-design.md'), h) ?? ''}`).join('\n') : '')
   if (stage === 1) return sha256(read('prd.md') + read('acceptance.feature') + intent + db('## Data impact'))
-  if (stage === 3) return sha256(read('plan.md') + db('## Data model', '## Migration plan (expand-contract)'))
+  if (stage === 3) return sha256(read(designDoc(dir, state)) + db('## Data model', '## Migration plan (expand-contract)'))
   const files = changedFiles(dir, cfg).map(f => f.file).filter(f => !f.startsWith(`${cfg.specsDir}/`) && !f.startsWith('.ai-sdlc/')).sort()
   const hashes = contentHashes(dir, files)
   return sha256(files.map(f => `${f}:${hashes[f] ?? 'deleted'}`).join('\n'))

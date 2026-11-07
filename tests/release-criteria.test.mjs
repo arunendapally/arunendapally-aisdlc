@@ -75,12 +75,14 @@ test('V5: a proof whose only new criteria are by hand or at release passes, and 
   assert.match(out.out, /Nothing for the proof to run .*AC-1 \(by hand\)/)
 })
 
-test('V4, V5: the tags go on a scenario, on an e2e criterion, one at a time; a lane with no Release cannot use @release', () => {
+test('V4, V5: the tags go on a scenario, on an e2e criterion, one at a time; in every lane the PR body names a @release criterion (ADR-0008)', () => {
   const errors = text => lint(text).errors.map(e => e.message).join('\n')
   assert.match(errors('@manual\nFeature: F\n\n  @R1 @AC-1 @e2e\n  Scenario: S\n    Given a\n    When b\n    Then c\n'), /never on a Feature or Rule/)
   assert.match(errors('Feature: F\n\n  @R1 @AC-1 @unit @manual\n  Scenario: S\n    Given a\n    When b\n    Then c\n'), /a unit, subsystem or API criterion has a test/)
   assert.match(errors('Feature: F\n\n  @R1 @AC-1 @e2e @manual @release\n  Scenario: S\n    Given a\n    When b\n    Then c\n'), /both @release and @manual/)
   const r = setup()
   r.setState('demo', { stage: 5, lane: 'bug' })
-  assert.match(r.sdlc('request', 'demo').out, /AC-3 is tagged @release, but the bug lane has no Release/)
+  const out = r.sdlc('request', 'demo').out
+  assert.doesNotMatch(out, /has no Release/)
+  assert.match(out, /AC-3 is tagged @release with no test: name it under "## Check after deploy" in bug\.md/)
 })

@@ -6,7 +6,7 @@
 //   retro learns from what only humans found.
 import fs from 'node:fs'
 import path from 'node:path'
-import { git, loadConfig, matches, changedFiles } from './lib.mjs'
+import { git, loadConfig, matches, changedFiles, designDoc } from './lib.mjs'
 import { matrix, levels, levelOf } from './testmatrix.mjs'
 
 // A test file is one the test matrix gives a level, or anything in a test folder (helpers, fixtures).
@@ -78,7 +78,7 @@ export function packet(dir, state) {
   const base = cfg.protectedBranches.map(b => git(`merge-base ${b} HEAD`, dir)).find(Boolean)
   const allChanged = changedFiles(dir, cfg)
   // The ER diagram lives in db-design.md (the data contract); a plan.md change still counts for old features.
-  const planChanged = allChanged.some(f => f.file === `${cfg.specsDir}/${state.feature}/${state.dataDoc ? 'db-design.md' : 'plan.md'}`)
+  const planChanged = allChanged.some(f => f.file === `${cfg.specsDir}/${state.feature}/${state.dataDoc ? 'db-design.md' : designDoc(dir, state)}`)
   const files = allChanged.filter(f => !f.file.startsWith('.ai-sdlc/') && (!f.file.startsWith(`${cfg.specsDir}/`) || CONTRACT.test(f.file)))
   const added = base ? addedLines(dir, base) : {}
   const testLevels = levels(dir)
@@ -158,6 +158,8 @@ export function packet(dir, state) {
 }
 
 export function packetText(p) {
+  const untested = p.untested.filter(s => s.due !== 'release')
+  const afterDeploy = p.untested.filter(s => s.due === 'release')
   const lines = [
     `<!-- built at ${p.head} -->`,
     `# Review packet: ${p.feature} (${p.lane} lane)`,
@@ -192,8 +194,10 @@ export function packetText(p) {
     '',
     '## Criteria with no test',
     '',
-    ...(p.untested.length ? p.untested.map(s => `- ${s.ac} (${s.level}${s.due === 'release' ? ', at release: a probe proves it' : s.due === 'manual' ? ', by hand: judge whether a test was possible' : ''}): ${s.name}`) : ['- None: every criterion in acceptance.feature is tested at its level.']),
+    ...(untested.length ? untested.map(s => `- ${s.ac} (${s.level}${s.due === 'manual' ? ', by hand: judge whether a test was possible' : ''}): ${s.name}`) : ['- None: every criterion in acceptance.feature is tested at its level.']),
     '',
+    // ADR-0008: only the deployed build can show a @release criterion, and the deploy is the org's.
+    ...(afterDeploy.length ? ['## Check after deploy', '', ...afterDeploy.map(s => `- ${s.ac} (${s.level}): ${s.name}`), ''] : []),
     ...(p.deletedTests.length ? ['## Deleted tests', '', ...p.deletedTests.map(f => `- \`${f}\`: say why in the PR, or restore it`), ''] : []),
     '## All files',
     '',

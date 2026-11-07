@@ -3,8 +3,8 @@
 Status: proposed
 Date: <YYYY-MM-DD>
 
-<!-- Stage 3 Design. Owner: architect agent. Gate: with plan.md, the architect and product lead, asked with "sdlc ask <feature>".
-     One ADR per new datastore, dependency, service or breaking contract; name it in plan.md
+<!-- Design. Owner: architect agent. Gate: with design.md, the architect and product lead, asked with "sdlc ask <feature>".
+     One ADR per new datastore, dependency, service or breaking contract; name it in design.md
      "## Decisions" as "- ADR-NNNN: <one line>". Keep it to one screen.
      A required section with only a comment in it is empty, and the gate refuses it. Keep every "## " heading
      exactly as written. The gate checks: the status line above, at the start of its line; Context,

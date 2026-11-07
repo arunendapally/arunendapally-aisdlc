@@ -22,7 +22,7 @@ test('only a person sets the intent, in three parts, while the feature is at Pla
   assert.match(fs.readFileSync(path.join(r.repo, '.ai-sdlc', 'audit.jsonl'), 'utf8'), /"event":"intent"/)
 
   r.setState('demo', { stage: 4 })
-  assert.match(r.say(INTENT), /past Plan.*Nothing recorded/)
+  assert.match(r.say(INTENT), /past Define.*Nothing recorded/)
 })
 
 test('an agent cannot write the PRD before the person has typed the intent', () => {

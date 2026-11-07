@@ -6,7 +6,7 @@
 import path from 'node:path'
 import { spawnSync } from 'node:child_process'
 import { fileURLToPath } from 'node:url'
-import { root, readState, readStdin } from '../lib.mjs'
+import { STAGES, root, readState, readStdin } from '../lib.mjs'
 
 const input = readStdin()
 if (input.tool_name !== 'AskUserQuestion' || input.agent_id) process.exit(0)
@@ -33,7 +33,7 @@ for (const q of questions) {
   const [, feature, stage, fp] = gate
   const current = readState(dir, feature)?.gates?.[stage]
   if (current?.status !== 'waiting' || !current.fingerprint?.startsWith(fp)) {
-    said.push(`Gate ${stage} for ${feature}: the question no longer matches what is waiting, so nothing was recorded. Run "sdlc ask ${feature}" again.`)
+    said.push(`${STAGES[stage]?.name ?? `Gate ${stage}`} for ${feature}: the question no longer matches what is waiting, so nothing was recorded. Run "sdlc ask ${feature}" again.`)
     continue
   }
   record(answer(q) === 'Approve' ? `sdlc approve ${feature} ${stage}` : `sdlc reject ${feature} ${stage} ${plain(answer(q) === 'Send back' ? 'sent back from the question, no reason given' : answer(q))}`)
