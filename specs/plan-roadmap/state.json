@@ -1,7 +1,7 @@
 {
   "feature": "plan-roadmap",
   "lane": "light",
-  "stage": 4,
+  "stage": 5,
   "branch": "feature/plan-roadmap",
   "createdAt": "2026-11-07T04:05:48.992Z",
   "stages": {
@@ -10,7 +10,11 @@
       "leftAt": "2026-11-07T04:06:31.086Z"
     },
     "4": {
-      "enteredAt": "2026-11-07T04:06:31.086Z"
+      "enteredAt": "2026-11-07T04:06:31.086Z",
+      "leftAt": "2026-11-07T04:42:24.280Z"
+    },
+    "5": {
+      "enteredAt": "2026-11-07T04:42:24.280Z"
     }
   },
   "gates": {
@@ -21,6 +25,14 @@
       "approvedAt": "2026-11-07T04:06:31.081Z",
       "auto": true,
       "fingerprint": "081d856a572e6693"
+    },
+    "4": {
+      "status": "approved",
+      "by": "checks: autonomy granted by Arun Endapally",
+      "requestedAt": "2026-11-07T04:42:23.914Z",
+      "approvedAt": "2026-11-07T04:42:23.914Z",
+      "auto": true,
+      "fingerprint": "44d3f8ff4ac377ac"
     }
   },
   "retries": {},
@@ -28,7 +40,7 @@
     "brownfield"
   ],
   "capability": "gates-and-names",
-  "updatedAt": "2026-11-07T04:42:10.379Z",
+  "updatedAt": "2026-11-07T04:42:24.280Z",
   "revisions": {
     "1": 1
   },
@@ -43,5 +55,6 @@
   },
   "baseline": 253,
   "baselineRuntime": "v24.19.0",
-  "proofBase": "47df4d4d1f5972cd3dadc372d1fea4109a36bbf7"
+  "proofBase": "47df4d4d1f5972cd3dadc372d1fea4109a36bbf7",
+  "sizeChecked": 58
 }
