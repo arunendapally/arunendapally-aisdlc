@@ -6,6 +6,7 @@ argument-hint: <feature-slug>
 Design for `$ARGUMENTS` (the light lane skips it; its design is `## Approach` in `tasks.md`).
 
 **Input:** the approved `prd.md`, `acceptance.feature` and `facts.md`.
+**Ready when:** the Define definition of done in `prd.md` is complete.
 **Processing:** decide how it is built, each significant decision an ADR with two options, cross-questioned by another discipline.
 **Output:** `design.md`, ADRs in `docs/adr/` and, for api work, `openapi.yaml`, approved at the Design gate.
 

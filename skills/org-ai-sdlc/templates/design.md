@@ -119,3 +119,11 @@ session, never from the request; tests/lists/api.test.ts "another shopper's list
 
 <!-- Only when they apply: "## Changes since v1" (the gate needs it once this plan was approved: what changed
      and the change request behind it; v2 after two approvals), "## Screens" and "## Accessibility checks" (UI). -->
+
+## Definition of done
+
+<!-- Tick each item ("- [x]") once done, or write "- N/A: <reason>". The gate refuses an open item or a bare N/A. -->
+- [ ] Each ADR reviewed
+- [ ] API contract written, if the change has an API
+- [ ] Data design done, if the change touches data
+- [ ] Every threat model row proved by a test or check

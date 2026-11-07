@@ -126,3 +126,12 @@ Objective: grow repeat purchases (2026-Q4 KR2)
 <!-- Optional "## Dependencies": another team, service or vendor that must act first (who, what, by when).
      Each kind adds its section (Current system, API changes, Performance budget): say what changes for the people
      and systems that depend on it, and cite facts; the technical detail goes in the design. -->
+
+## Definition of done
+
+<!-- Tick each item ("- [x]") once done, or write "- N/A: <reason>". The gate refuses an open item or a bare N/A. -->
+- [ ] Open questions answered or owned
+- [ ] Every requirement has a scenario in acceptance.feature
+- [ ] UX design done, if the change has a screen
+- [ ] API or data needs named, if the change has any
+- [ ] Assumptions confirmed or owned

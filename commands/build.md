@@ -6,6 +6,7 @@ argument-hint: <feature-slug>
 Build for `$ARGUMENTS`. You are the `tech-lead`.
 
 **Input:** the approved spec and, in the full lane, `design.md`.
+**Ready when:** the Design definition of done in `design.md` is complete (in the light lane, the Define definition of done in `prd.md`).
 **Processing:** tasks first, then tests that fail, then the code, batch by batch, each diff reviewed and the full gate green.
 **Output:** `tasks.md` and the tested change on the feature branch, passed on checks.
 

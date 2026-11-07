@@ -59,3 +59,10 @@ Safari and Firefox: e2e ran in Chromium only.
 <!-- Optional: needed when a criterion is tagged @release and has no test. Name each one for a person to
      check on the deployed build; the gate refuses a PR that leaves one out. Example:
 AC-3 (e2e): the live page shows the new price -->
+
+## Definition of done
+
+<!-- Tick each item ("- [x]") once done, or write "- N/A: <reason>". The gate refuses an open item or a bare N/A. -->
+- [ ] Pre-review has no open findings
+- [ ] Not verified is honest
+- [ ] PR raised from the feature branch

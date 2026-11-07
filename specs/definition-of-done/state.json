@@ -1,19 +1,35 @@
 {
   "feature": "definition-of-done",
   "lane": "light",
-  "stage": 1,
+  "stage": 4,
   "branch": "feature/definition-of-done",
   "createdAt": "2026-11-07T04:04:35.241Z",
   "stages": {
     "1": {
-      "enteredAt": "2026-11-07T04:04:35.241Z"
+      "enteredAt": "2026-11-07T04:04:35.241Z",
+      "leftAt": "2026-11-07T04:05:03.237Z"
+    },
+    "4": {
+      "enteredAt": "2026-11-07T04:05:03.237Z"
     }
   },
-  "gates": {},
+  "gates": {
+    "1": {
+      "status": "approved",
+      "by": "checks: autonomy granted by Arun Endapally",
+      "requestedAt": "2026-11-07T04:05:03.233Z",
+      "approvedAt": "2026-11-07T04:05:03.233Z",
+      "auto": true,
+      "fingerprint": "7e037b541ff5bc4a"
+    }
+  },
   "retries": {},
   "kinds": [
     "brownfield"
   ],
   "capability": "gates-and-names",
-  "updatedAt": "2026-11-07T04:04:35.242Z"
+  "updatedAt": "2026-11-07T04:05:03.237Z",
+  "revisions": {
+    "1": 1
+  }
 }
