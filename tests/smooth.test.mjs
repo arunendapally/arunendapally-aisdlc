@@ -3,6 +3,8 @@
 // refusals that left no trace and no next step.
 import { test } from 'node:test'
 import assert from 'node:assert/strict'
+import fs from 'node:fs'
+import path from 'node:path'
 import { makeRepo, switchableGate } from './helpers.mjs'
 
 const hoursAgo = h => new Date(Date.now() - h * 36e5).toISOString()
@@ -66,6 +68,24 @@ test('F-26 the scripts the gate and proof commands run do not count toward PR si
   assert.equal(changedLines(r.repo), before, 'the gate script (through npm) and the proof script do not count')
   r.put('tools/other.mjs', 'x\n'.repeat(5))
   assert.ok(changedLines(r.repo) >= before + 5, 'other tooling still counts')
+})
+
+// The kit "sdlc init-repo" writes is the plugin's code, not the change under review: unmodified, it
+// does not count; edited, it does.
+test('the unmodified init-repo kit does not count toward PR size, an edited kit file does', async () => {
+  const { changedLines } = await import('../scripts/lib.mjs')
+  const r = makeRepo('task/repo-setup')
+  assert.equal(r.sdlc('init-repo').status, 0)
+  assert.equal(changedLines(r.repo), 0, 'a branch that only adds the kit has nothing to review line by line')
+  r.git('add', '.')
+  r.git('commit', '-m', 'kit')
+  assert.equal(changedLines(r.repo), 0, 'committed, the kit still does not count')
+  const owners = '.github/CODEOWNERS'
+  r.put(owners, fs.readFileSync(path.join(r.repo, owners), 'utf8').replace(/\r?\n/g, '\r\n'))
+  assert.equal(changedLines(r.repo), 0, 'a kit file checked out with CRLF line endings is still the kit')
+  const file = '.github/workflows/ai-sdlc-gate.yml'
+  r.put(file, `${fs.readFileSync(path.join(r.repo, file), 'utf8')}# edited\n`)
+  assert.ok(changedLines(r.repo) > 0, 'an edited kit file counts')
 })
 
 test('F-20 and F-21 a refused request leaves a trace in status, and says what to do under autonomy', () => {
