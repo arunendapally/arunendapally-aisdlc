@@ -292,7 +292,7 @@ export function missingHeadings(dir, state, stage = state.stage) {
 // A document with no such section (written before it existed) has nothing open.
 export function openDoneItems(text, doc) {
   const body = section(text, '## Definition of done')
-  return (body ?? '').split(/\r?\n/).filter(l => l.startsWith('- ')).flatMap(l => {
+  return (body ?? '').split(/\r?\n/).map(l => l.trim().replace(/^\* /, '- ')).filter(l => l.startsWith('- ')).flatMap(l => {
     if (/^- \[x\] +\S/i.test(l) || /^- N\/A: *\S/i.test(l)) return []
     if (/^- N\/A\b/i.test(l)) return [`${doc} "## Definition of done" has "${l.slice(2).trim()}" with no reason: write "- N/A: <reason>"`]
     return [`${doc} "## Definition of done" item "${l.replace(/^- (\[.\] *)?/, '').trim()}" is open: tick it "- [x]" once done, or write "- N/A: <reason>"`]
