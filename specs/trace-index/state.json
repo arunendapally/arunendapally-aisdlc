@@ -1,19 +1,47 @@
 {
   "feature": "trace-index",
   "lane": "light",
-  "stage": 1,
+  "stage": 4,
   "branch": "feature/trace-index",
   "createdAt": "2026-11-07T13:32:41.761Z",
   "stages": {
     "1": {
-      "enteredAt": "2026-11-07T13:32:41.761Z"
+      "enteredAt": "2026-11-07T13:32:41.761Z",
+      "leftAt": "2026-11-07T13:33:11.431Z"
+    },
+    "4": {
+      "enteredAt": "2026-11-07T13:33:11.431Z"
     }
   },
-  "gates": {},
+  "gates": {
+    "1": {
+      "status": "approved",
+      "by": "checks: autonomy granted by Arun Endapally",
+      "requestedAt": "2026-11-07T13:33:11.426Z",
+      "approvedAt": "2026-11-07T13:33:11.426Z",
+      "auto": true,
+      "fingerprint": "674fdcde7678b2a2"
+    }
+  },
   "retries": {},
   "kinds": [
     "brownfield"
   ],
   "capability": "gates-and-names",
-  "updatedAt": "2026-11-07T13:32:41.762Z"
+  "updatedAt": "2026-11-07T14:02:45.849Z",
+  "revisions": {
+    "1": 1
+  },
+  "gateRuns": {
+    "4": {
+      "ok": true,
+      "count": 307,
+      "at": "2026-11-07T14:02:45.713Z",
+      "runs": 1,
+      "runtime": "v24.19.0"
+    }
+  },
+  "baseline": 307,
+  "baselineRuntime": "v24.19.0",
+  "proofBase": "1af03e7a6b4e58eefc558af18b2c4d2193537e92"
 }
