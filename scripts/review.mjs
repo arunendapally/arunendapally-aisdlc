@@ -208,10 +208,12 @@ export function packetText(p) {
     '',
     '## Criteria with no test',
     '',
-    ...(untested.length ? untested.map(s => `- ${s.ac} (${s.level}${s.due === 'manual' ? ', by hand: judge whether a test was possible' : ''}): ${s.name}`) : ['- None: every criterion in acceptance.feature is tested at its level.']),
+    ...(untested.some(s => s.due !== 'manual') ? untested.filter(s => s.due !== 'manual').map(s => `- ${s.ac} (${s.level}): ${s.name}`) : ['- None: every criterion in acceptance.feature is tested at its level, or listed below for a person.']),
     '',
     // ADR-0008: only the deployed build can show a @release criterion, and the deploy is the org's.
     ...(afterDeploy.length ? ['## Check after deploy', '', ...afterDeploy.map(s => `- ${s.ac} (${s.level}): ${s.name}`), ''] : []),
+    // The merge is the hand check: no line in the PR body records it (merge-is-hand-check).
+    ...(untested.some(s => s.due === 'manual') ? ['## Check by hand before merging', '', 'Your merge records that you checked these. Judge too whether a test was possible.', '', ...untested.filter(s => s.due === 'manual').map(s => `- ${s.ac} ${s.name} (${s.level})`), ''] : []),
     ...(p.deletedTests.length ? ['## Deleted tests', '', ...p.deletedTests.map(f => `- \`${f}\`: say why in the PR, or restore it`), ''] : []),
     '## All files',
     '',

@@ -1,0 +1,135 @@
+{
+  "feature": "merge-is-hand-check",
+  "lane": "light",
+  "stage": 6,
+  "branch": "feature/merge-is-hand-check",
+  "createdAt": "2026-11-06T09:33:57.943Z",
+  "stages": {
+    "1": {
+      "enteredAt": "2026-11-06T09:33:57.943Z",
+      "leftAt": "2026-11-06T09:34:39.867Z"
+    },
+    "4": {
+      "enteredAt": "2026-11-06T09:34:39.867Z",
+      "leftAt": "2026-11-06T09:58:33.244Z"
+    },
+    "5": {
+      "enteredAt": "2026-11-06T09:58:33.244Z",
+      "leftAt": "2026-11-06T14:30:27.826Z"
+    },
+    "6": {
+      "enteredAt": "2026-11-06T14:30:27.826Z"
+    }
+  },
+  "gates": {
+    "1": {
+      "status": "approved",
+      "by": "checks: autonomy granted by Arun Endapally",
+      "requestedAt": "2026-11-06T09:34:39.861Z",
+      "approvedAt": "2026-11-06T09:34:39.861Z",
+      "auto": true,
+      "fingerprint": "ed30ad451b617a40"
+    },
+    "4": {
+      "status": "approved",
+      "by": "checks: autonomy granted by Arun Endapally",
+      "requestedAt": "2026-11-06T09:58:31.705Z",
+      "approvedAt": "2026-11-06T09:58:31.705Z",
+      "auto": true,
+      "fingerprint": "f742719015045bae"
+    },
+    "5": {
+      "status": "approved",
+      "by": "checks: autonomy granted by Arun Endapally",
+      "requestedAt": "2026-11-06T14:30:27.147Z",
+      "approvedAt": "2026-11-06T14:30:27.147Z",
+      "auto": true,
+      "fingerprint": "e0af64bf44befe8b"
+    }
+  },
+  "retries": {},
+  "kinds": [
+    "brownfield"
+  ],
+  "capability": "gates-and-names",
+  "updatedAt": "2026-11-06T19:31:02.340Z",
+  "revisions": {
+    "1": 1
+  },
+  "gateRuns": {
+    "4": {
+      "ok": true,
+      "count": 231,
+      "at": "2026-11-06T09:58:23.136Z",
+      "runs": 1,
+      "runtime": "v24.19.0"
+    },
+    "5": {
+      "ok": true,
+      "count": 231,
+      "at": "2026-11-06T14:30:11.282Z",
+      "runs": 1,
+      "runtime": "v24.19.0"
+    },
+    "6": {
+      "ok": true,
+      "count": 248,
+      "at": "2026-11-06T19:31:02.236Z",
+      "runs": 1,
+      "runtime": "v24.19.0"
+    }
+  },
+  "baseline": 248,
+  "baselineRuntime": "v24.19.0",
+  "proofBase": "c6b642df93e343271f99bf195e46ef68d394f9fb",
+  "sizeChecked": 34,
+  "lastPacketHead": "a341dd5",
+  "ledgerIds": [
+    "F1",
+    "F2"
+  ],
+  "riskTier": "high",
+  "reviewRounds": 1,
+  "reviewedSha": "a341dd50a2dce8aa6e713c322ccdd7e0ff6f8f19",
+  "reviewedFiles": [
+    ".ai-sdlc/.gitignore",
+    ".ai-sdlc/AUTONOMY",
+    ".ai-sdlc/autonomy.json",
+    ".ai-sdlc/config.json",
+    ".github/pull_request_template.md",
+    "CHANGELOG.md",
+    "docs/org-ai-sdlc-process.md",
+    "scripts/gherkin.mjs",
+    "scripts/review.mjs",
+    "scripts/sdlc.mjs",
+    "scripts/testmatrix.mjs",
+    "skills/org-ai-sdlc/SKILL.md",
+    "skills/org-ai-sdlc/templates/acceptance.feature",
+    "skills/org-ai-sdlc/templates/pr.md",
+    "specs/gates-and-names/slices.md",
+    "specs/merge-is-hand-check/acceptance.feature",
+    "specs/merge-is-hand-check/facts.md",
+    "specs/merge-is-hand-check/pr.md",
+    "specs/merge-is-hand-check/prd.md",
+    "specs/merge-is-hand-check/review-packet.md",
+    "specs/merge-is-hand-check/review.md",
+    "specs/merge-is-hand-check/state.json",
+    "specs/merge-is-hand-check/tasks.md",
+    "templates/repo/.github/pull_request_template.md",
+    "tests/release-criteria.test.mjs"
+  ],
+  "reviewedHashes": {
+    ".github/pull_request_template.md": "3ba7cd47c78902da",
+    "CHANGELOG.md": "416358bc1016f6dd",
+    "docs/org-ai-sdlc-process.md": "57d8f526b97ae55c",
+    "scripts/gherkin.mjs": "70955a57618691fb",
+    "scripts/review.mjs": "49e2973e9626a422",
+    "scripts/sdlc.mjs": "1f12b6a4c2fff950",
+    "scripts/testmatrix.mjs": "a99349f5bee79d81",
+    "skills/org-ai-sdlc/SKILL.md": "80264d64b1cb5095",
+    "skills/org-ai-sdlc/templates/acceptance.feature": "b83202dc3d0a54e1",
+    "skills/org-ai-sdlc/templates/pr.md": "3ba7cd47c78902da",
+    "templates/repo/.github/pull_request_template.md": "3ba7cd47c78902da",
+    "tests/release-criteria.test.mjs": "66753ddead7f99b3"
+  }
+}

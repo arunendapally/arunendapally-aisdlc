@@ -13,7 +13,7 @@ import { collect, analyze, report, approvalSignals, approvalLines } from './retr
 import { lint, requirementsFrom } from './gherkin.mjs'
 import { packet, packetText, parseLedger, ledgerProblems } from './review.mjs'
 import { boardProblems } from './design-review.mjs'
-import { matrix, matrixText, manualProblems } from './testmatrix.mjs'
+import { matrix, matrixText } from './testmatrix.mjs'
 import { factsGateProblems, assumptionProblems } from './facts.mjs'
 import { erProblems, openapiProblems, breakingChanges, undefinedFields } from './contracts.mjs'
 import { solutionWarnings } from './solutions.mjs'
@@ -488,7 +488,6 @@ const commands = {
         missing.push(...matrix(dir, feature).problems.map(p => `test matrix: ${p}`))
         const prFile = path.join(folder, spec.artefact)
         const prText = fs.existsSync(prFile) ? fs.readFileSync(prFile, 'utf8') : ''
-        missing.push(...manualProblems(dir, feature, prText).map(p => `test matrix: ${p}`))
         // ADR-0008: only the deployed build can show a @release criterion, so the PR names it for a person.
         const after = (section(prText, '## Check after deploy') ?? '').replace(/<!--[\s\S]*?-->/g, '')
         missing.push(...matrix(dir, feature).rows.filter(r => r.due === 'release' && !r.traced && !new RegExp(`\\b${r.ac}\\b`).test(after))
