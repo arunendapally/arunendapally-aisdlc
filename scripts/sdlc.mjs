@@ -14,6 +14,7 @@ import { lint, requirementsFrom } from './gherkin.mjs'
 import { packet, packetText, parseLedger, ledgerProblems } from './review.mjs'
 import { boardProblems } from './design-review.mjs'
 import { matrix, matrixText } from './testmatrix.mjs'
+import { trace, traceText, traceBack } from './trace.mjs'
 import { factsGateProblems, assumptionProblems } from './facts.mjs'
 import { erProblems, openapiProblems, breakingChanges, undefinedFields } from './contracts.mjs'
 import { solutionWarnings } from './solutions.mjs'
@@ -987,6 +988,18 @@ Ask the owner: run "sdlc ask ${feature}" and put its question to them with the q
     if (m.problems.length) fail(`${m.problems.length} criteria are not tested at their level.`)
   },
 
+  // The requirements index (trace-index): "sdlc trace <capability>", or "sdlc trace --file <path>" backwards.
+  trace() {
+    if (feature === '--file') {
+      const ref = (rest[0] ?? '').replace(/\\/g, '/').replace(/^\.\//, '')
+      if (!ref) fail('Usage: sdlc trace --file <test file | ADR | "decision:<date> <text>">')
+      const ids = traceBack(dir, ref)
+      return console.log(ids.length ? `${ref} traces to ${ids.join(', ')}` : `${ref} traces to no requirement.`)
+    }
+    if (!feature || !fs.existsSync(path.join(dir, loadConfig(dir).specsDir, feature, 'slices.md'))) fail('Usage: sdlc trace <capability>, a folder with slices.md; or sdlc trace --file <path>')
+    console.log(traceText(trace(dir, feature)) || `${feature} has no requirements yet.`)
+  },
+
   // Build the review packet (the shared map of the change) and start the findings ledger.
   review() {
     const state = need()
@@ -1129,6 +1142,6 @@ if (HUMAN_VERBS.includes(cmd)) {
 }
 
 if (!commands[cmd]) {
-  fail(`${cmd ? `Unknown command: ${cmd}.\n` : ''}Usage: sdlc <init|bug|task|kind|request|cr|amend|advance|gate|tests|proof|conflict|spike|review|gherkin|api|packets|tickets|retry|status|outcome|trust|metrics|retro|incident|knowledge|init-repo> [feature] [...]\nA person, in their own terminal: sdlc <${HUMAN_VERBS.join('|')}> ...`)
+  fail(`${cmd ? `Unknown command: ${cmd}.\n` : ''}Usage: sdlc <init|bug|task|kind|request|cr|amend|advance|gate|tests|trace|proof|conflict|spike|review|gherkin|api|packets|tickets|retry|status|outcome|trust|metrics|retro|incident|knowledge|init-repo> [feature] [...]\nA person, in their own terminal: sdlc <${HUMAN_VERBS.join('|')}> ...`)
 }
 commands[cmd]()

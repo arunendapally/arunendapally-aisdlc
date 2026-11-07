@@ -16,7 +16,8 @@ Date: <YYYY-MM-DD>
 ## Context
 
 <!-- The forces, as facts, not the answer: what is true today (file:line or a fact F<n>), the requirement
-     that forces a choice (R ids), and the limits. End a claim you could not check with [unconfirmed]. Example:
+     that forces a choice (R ids), and the limits. End a claim you could not check with [unconfirmed].
+     Name each requirement it serves as "<feature>/R<n>" (such as save-list/R1), so "sdlc trace" links it. Example:
 R1 needs a saved list per shopper, read on every list page (about 40 requests a second at peak
 [unconfirmed]). The cart already runs on Postgres 15 with daily backups (infra/db.tf:12). The team
 runs no other datastore. -->
