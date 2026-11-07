@@ -5,7 +5,7 @@
 import fs from 'node:fs'
 import path from 'node:path'
 import { spawnSync } from 'node:child_process'
-import { root, git, loadConfig, isPaused, isProbe, readState, listFeatures, matches, relPath, readStdin, audit, autonomy } from '../lib.mjs'
+import { STAGES, root, git, loadConfig, isPaused, isProbe, readState, listFeatures, matches, relPath, readStdin, audit, autonomy } from '../lib.mjs'
 import { segments } from '../segments.mjs'
 
 const SECRET = /(AKIA[0-9A-Z]{16}|-----BEGIN [A-Z ]*PRIVATE KEY-----|ghp_[A-Za-z0-9]{36}|github_pat_[A-Za-z0-9_]{40,}|xox[baprs]-[A-Za-z0-9-]{10,}|sk-[A-Za-z0-9_-]{32,})/
@@ -259,10 +259,10 @@ if (skips) ask(`${rel} adds a skipped test. A skip needs a quarantine entry with
 if (matches(rel, cfg.scriptPaths) && cfg.deployPatterns.some(p => new RegExp(p, 'i').test(content))) ask(`${rel} would run a merge, deploy or human decision when executed. A human must approve it.`, 'deploy-in-script')
 
 // Stage gates on the artefact chain: each artefact needs the gate before it.
-const spec = rel.match(new RegExp(`^${cfg.specsDir}/([^/]+)/(plan|tasks)\\.md$`))
+const spec = rel.match(new RegExp(`^${cfg.specsDir}/([^/]+)/(plan|design|tasks)\\.md$`))
 if (spec) {
   const state = readState(dir, spec[1])
-  if (state && state.stage < 3 && state.gates[1]?.status !== 'approved') deny(`${spec[2]}.md waits for gate 1 (the PRD and acceptance.feature) to be approved first.`, 'artefact-order')
+  if (state && state.stage < 3 && state.gates[1]?.status !== 'approved') deny(`${spec[2]}.md waits for Define (the PRD and acceptance.feature) to be approved first.`, 'artefact-order')
 }
 // The PRD is built to the person's intent, so it waits for them to type one. Never suggest the words.
 const prd = rel.match(new RegExp(`^${cfg.specsDir}/([^/]+)/prd\\.md$`))
@@ -274,7 +274,7 @@ if (prd) {
 // Code on a feature branch waits until the feature reaches Build.
 const feature = listFeatures(dir).find(s => s.branch === branch)
 const isDoc = rel.startsWith(`${cfg.specsDir}/`) || rel.startsWith('docs/') || rel.endsWith('.md')
-if (feature && feature.stage < 4 && !isDoc) deny(`${feature.feature} is at stage ${feature.stage}. Code waits for stage 4 (Build).`, 'code-before-build')
+if (feature && feature.stage < 4 && !isDoc) deny(`${feature.feature} is at ${STAGES[feature.stage].name}. Code waits for Build.`, 'code-before-build')
 if (feature?.lane === 'bug' && matches(rel, cfg.bugForbidPaths)) deny(`${rel} is out of scope for a bug fix (dependencies, schema, CI or infrastructure). Open a feature with /ai-sdlc:start instead.`, 'bug-scope')
 if (feature?.lane === 'hotfix' && matches(rel, cfg.bugForbidPaths)) ask(`${rel} changes dependencies, schema, CI or infrastructure inside a hotfix. The on-call engineer must approve this edit.`, 'hotfix-scope')
 

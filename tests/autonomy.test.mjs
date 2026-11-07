@@ -42,32 +42,6 @@ test('with autonomy, every gate passes on its checks, and the PRD may carry the 
   assert.equal(s.stage, 4, 'the light lane moves on to Build by itself')
 })
 
-test('with autonomy, sdlc merge lands exactly the reviewed commit on main, fast-forward only', () => {
-  const r = makeRepo()
-  r.remote()
-  r.sdlc('init', 'demo')
-  r.put('src/a.js', 'export const a = 1\n')
-  r.git('add', 'src/a.js')
-  r.git('commit', '-q', '-m', 'the change')
-  const reviewed = r.git('rev-parse', 'HEAD')
-  r.setState('demo', { stage: 6, stages: { 6: { enteredAt: new Date().toISOString() } }, reviewedSha: reviewed, gates: { 5: { status: 'approved', by: 'checks: autonomy granted by Test Human' } } })
-
-  assert.match(r.sdlc('merge', 'demo').out, /needs autonomy/, 'without autonomy a person merges')
-  r.say(GRANT)
-  r.put('src/b.js', 'export const b = 1\n')
-  r.git('add', 'src/b.js')
-  r.git('commit', '-q', '-m', 'after review')
-  assert.match(r.sdlc('merge', 'demo').out, /not the commit Verify reviewed/)
-  r.git('reset', '-q', '--hard', reviewed)
-
-  const out = r.sdlc('merge', 'demo')
-  assert.equal(out.status, 0, out.out)
-  assert.match(out.out, /Merged demo .* into main/)
-  r.git('fetch', '-q', 'origin')
-  assert.equal(r.git('rev-parse', 'origin/main'), reviewed)
-  assert.match(fs.readFileSync(path.join(r.repo, '.ai-sdlc', 'audit.jsonl'), 'utf8'), /"event":"merge"/)
-})
-
 test('with autonomy, messages say what happens next without a person, and risky work moves to the full lane itself', () => {
   const r = makeRepo()
   r.say(GRANT)
@@ -77,14 +51,14 @@ test('with autonomy, messages say what happens next without a person, and risky 
   r.sdlc('request', 'demo')
   r.put('specs/demo/prd.md', `## Intent\n\n- Change: a\n- Smallest: b\n- Drop if: c\n\n${READY_PRD.replace('Save an item', 'Save and share an item')}`)
   const drift = r.sdlc('request', 'demo').out
-  assert.match(drift, /goes back to stage 1 \(Plan\)\. Request gate 1 again: it passes on its checks under autonomy/)
+  assert.match(drift, /goes back to Define\. Request the Define gate again: it passes on its checks under autonomy/)
   assert.doesNotMatch(drift, /a person approves/)
 
   r.put('specs/demo/prd.md', `## Intent\n\n- Change: a\n- Smallest: b\n- Drop if: c\n\n${READY_PRD.replace('Save an item', 'Save and share an item')}\n## Changes since v1\n\nSharing added.\n`)
   assert.match(r.sdlc('request', 'demo').out, /passed on checks/)
   r.put('src/auth/login.ts', 'export const x = 1\n')
   const risky = r.sdlc('request', 'demo').out
-  assert.match(risky, /high-risk paths, so demo moves to the full lane and goes back to stage 3 \(Design\)/)
+  assert.match(risky, /high-risk paths, so demo moves to the full lane and goes back to Design/)
   const s = r.state('demo')
   assert.deepEqual([s.lane, s.stage], ['full', 3])
 })

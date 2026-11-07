@@ -3,4 +3,5 @@
 .ai-sdlc/denials.json
 .ai-sdlc/retro-due.json
 .ai-sdlc/PAUSED
+.ai-sdlc/AUTONOMY
 node_modules/

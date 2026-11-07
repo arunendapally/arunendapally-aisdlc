@@ -40,7 +40,7 @@ test('retro: each kind of evidence becomes a ranked proposal that names the plug
   const res = retro(r)
 
   const theme = res.proposals.find(p => p.kind === 'rejection-theme')
-  assert.match(theme.title, /Gate 5 keeps rejecting work for "pagination"/)
+  assert.match(theme.title, /Verify keeps rejecting work for "pagination"/)
   assert.equal(theme.evidence.length, 2)
   assert.equal(theme.change.target, 'templates/repo/standards/code-review-checklist.md')
 
@@ -49,7 +49,7 @@ test('retro: each kind of evidence becomes a ranked proposal that names the plug
   assert.equal(esc.change.target, 'commands/build.md')
 
   const wait = res.proposals.find(p => p.kind === 'gate-wait')
-  assert.match(wait.title, /Gate full:5 waits a median/)
+  assert.match(wait.title, /Verify \(full lane\) waits a median/)
 
   assert.match(res.proposals.find(p => p.kind === 'guard-friction').title, /fired 6 times/)
   const escape = res.proposals.find(p => p.kind === 'escape')
