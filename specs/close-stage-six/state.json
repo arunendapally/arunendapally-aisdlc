@@ -1,7 +1,7 @@
 {
   "feature": "close-stage-six",
   "lane": "full",
-  "stage": 5,
+  "stage": 6,
   "branch": "feature/close-stage-six",
   "createdAt": "2026-11-07T14:03:19.499Z",
   "stages": {
@@ -18,7 +18,11 @@
       "leftAt": "2026-11-07T14:18:42.933Z"
     },
     "5": {
-      "enteredAt": "2026-11-07T14:18:42.933Z"
+      "enteredAt": "2026-11-07T14:18:42.933Z",
+      "leftAt": "2026-11-07T14:41:08.629Z"
+    },
+    "6": {
+      "enteredAt": "2026-11-07T14:41:08.629Z"
     }
   },
   "gates": {
@@ -45,13 +49,21 @@
       "approvedAt": "2026-11-07T14:18:42.481Z",
       "auto": true,
       "fingerprint": "e7867c96e08b8e5d"
+    },
+    "5": {
+      "status": "approved",
+      "by": "checks: autonomy granted by Arun Endapally",
+      "requestedAt": "2026-11-07T14:41:08.078Z",
+      "approvedAt": "2026-11-07T14:41:08.078Z",
+      "auto": true,
+      "fingerprint": "a7244cc0a207caaa"
     }
   },
   "retries": {},
   "kinds": [
     "brownfield"
   ],
-  "updatedAt": "2026-11-07T14:18:42.933Z",
+  "updatedAt": "2026-11-07T14:41:08.629Z",
   "revisions": {
     "1": 1,
     "3": 1
@@ -63,10 +75,69 @@
       "at": "2026-11-07T14:18:28.029Z",
       "runs": 1,
       "runtime": "v24.19.0"
+    },
+    "5": {
+      "ok": true,
+      "count": 304,
+      "at": "2026-11-07T14:40:37.046Z",
+      "runs": 1,
+      "runtime": "v24.19.0"
     }
   },
   "baseline": 304,
   "baselineRuntime": "v24.19.0",
   "proofBase": "1af03e7a6b4e58eefc558af18b2c4d2193537e92",
-  "sizeChecked": 311
+  "sizeChecked": 311,
+  "lastPacketHead": "a78e4c4",
+  "ledgerIds": [
+    "F1",
+    "F2",
+    "F3"
+  ],
+  "riskTier": "high",
+  "reviewedSha": "a78e4c4d5205af5d1dd7544155fa24060b33b5cb",
+  "reviewedFiles": [
+    "CHANGELOG.md",
+    "evals/baseline.json",
+    "evals/golden/14-release-needs-tested-rollback.json",
+    "evals/golden/22-release-is-on-main-and-live.json",
+    "evals/golden/31-branch-deploy-is-a-preview.json",
+    "scripts/loop.mjs",
+    "scripts/sdlc.mjs",
+    "specs/branch-autonomy/state.json",
+    "specs/capability-overview/state.json",
+    "specs/change-request/state.json",
+    "specs/close-stage-six/acceptance.feature",
+    "specs/close-stage-six/facts.md",
+    "specs/close-stage-six/plan.md",
+    "specs/close-stage-six/prd.md",
+    "specs/close-stage-six/state.json",
+    "specs/close-stage-six/tasks.md",
+    "specs/definition-of-done/state.json",
+    "specs/merge-is-hand-check/state.json",
+    "specs/plan-roadmap/state.json",
+    "specs/stage-names/state.json",
+    "specs/stop-at-pr/state.json",
+    "specs/test-lock/state.json",
+    "tests/review.test.mjs",
+    "tests/stop-at-pr.test.mjs",
+    "specs/close-stage-six/pr.md",
+    "specs/close-stage-six/review-packet.md",
+    "specs/close-stage-six/review.md",
+    "specs/plan-roadmap/review-packet.md",
+    "specs/remove-release/state.json",
+    "specs/remove-release/task.md",
+    "specs/stage-names/review-packet.md",
+    "specs/stop-at-pr/review-packet.md",
+    "specs/test-lock/review-packet.md"
+  ],
+  "reviewedHashes": {
+    "CHANGELOG.md": "9d4f0b586cb4e11b",
+    "evals/baseline.json": "175af2cde196cf57",
+    "evals/golden/31-branch-deploy-is-a-preview.json": "ca02191303c69084",
+    "scripts/loop.mjs": "b0097c4f4d8b223b",
+    "scripts/sdlc.mjs": "6c689acbe353d546",
+    "tests/review.test.mjs": "80dd590ef960abce",
+    "tests/stop-at-pr.test.mjs": "2bedac935d60e8c4"
+  }
 }
