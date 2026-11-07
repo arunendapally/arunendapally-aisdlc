@@ -5,7 +5,7 @@ Spec: specs/test-lock/prd.md (R1 to R5). Not in this PR: locking tests before an
 
 ## Test results
 
-Suite: 240 passed, 0 failed, 0 skipped (baseline 229 on main), sdlc gate on this commit
+Suite: 247 passed after merging main (#54, #56), sdlc gate on this commit, sdlc gate on this commit
 Evals: green via sdlc gate on this commit; eval 13 now checks the lock refusal and that a failed proof keeps the lock (791e775, reason in the commit message)
 Proof: not run, no proofCommand; all 7 new tests failed on the base code, and each guard was broken once on purpose to see its test fail
 Criteria: 5 of 5 traced (tests/test-lock.test.mjs)
