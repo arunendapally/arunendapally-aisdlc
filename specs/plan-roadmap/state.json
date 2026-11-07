@@ -18,7 +18,8 @@
       "leftAt": "2026-11-07T12:29:54.774Z"
     },
     "6": {
-      "enteredAt": "2026-11-07T12:29:54.774Z"
+      "enteredAt": "2026-11-07T12:29:54.774Z",
+      "leftAt": "2026-11-07T13:51:28.288Z"
     }
   },
   "gates": {
@@ -52,7 +53,7 @@
     "brownfield"
   ],
   "capability": "gates-and-names",
-  "updatedAt": "2026-11-07T12:29:54.774Z",
+  "updatedAt": "2026-11-07T13:51:29.069Z",
   "revisions": {
     "1": 1
   },
@@ -119,5 +120,14 @@
     "skills/org-ai-sdlc/templates/tasks.md": "cd377259df70b8e2",
     "tests/plan-roadmap.test.mjs": "13d341d4ddeb07d2",
     "tests/slices.test.mjs": "4eb11e493b365033"
+  },
+  "closedAt": "2026-11-07T13:51:28.288Z",
+  "releasedSha": "8912b7a2e6b7576c39d71ce3cfa423028e5674c4",
+  "outcome": {
+    "metric": "slices in dogfood capabilities that go live on their own (compatible or flagged)",
+    "owner": "Arun, plugin owner",
+    "due": "2026-11-14T13:51:29.069Z",
+    "status": "open",
+    "openedAt": "2026-11-07T13:51:29.069Z"
   }
 }
