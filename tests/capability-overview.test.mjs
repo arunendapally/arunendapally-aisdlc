@@ -60,6 +60,15 @@ test('capability-overview AC-4: a decision row must say who agreed it and where'
   assert.deepEqual(decisionProblems(OVERVIEW({ decisions: ['2026-11-07 | Offline mode moves to next | unconfirmed | chat, "move it" | R4'] })), [])
 })
 
+test('capability-overview AC-4: the Verify request also refuses a decision row with no one who agreed it', () => {
+  const r = capabilityRepo()
+  r.put('specs/saved-items/architecture-overview.md', OVERVIEW({ decisions: ['2026-11-07 | Offline mode moves to next | | | R4 out of scope'] }))
+  r.setState('save-list', { stage: 5, stages: { 5: { enteredAt: new Date().toISOString() } } })
+  r.put('specs/save-list/pr.md', '## Summary\n\nx\n\n## Test results\n\nSuite: 1 passed\n\n## Pre-review\n\nRisk: medium\nOpen findings: 0\n\n## Not verified\n\nx\n')
+  r.put('specs/save-list/review.md', '# Review: save-list\n')
+  assert.match(r.sdlc('request', 'save-list').out, /architecture-overview\.md: .*has no agreed by and no source/)
+})
+
 test('capability-overview AC-5: an unconfirmed decision is shown in the review packet', () => {
   const r = capabilityRepo()
   r.put('specs/saved-items/architecture-overview.md', OVERVIEW({ decisions: ['2026-11-07 | Offline mode moves to next | unconfirmed | chat, "move it" | save-list R4', '2026-11-06 | Keep the cart API | Ana (architect) | email | none'] }))
