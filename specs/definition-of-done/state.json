@@ -1,7 +1,7 @@
 {
   "feature": "definition-of-done",
   "lane": "light",
-  "stage": 5,
+  "stage": 6,
   "branch": "feature/definition-of-done",
   "createdAt": "2026-11-07T04:04:35.241Z",
   "stages": {
@@ -14,7 +14,11 @@
       "leftAt": "2026-11-07T04:32:49.847Z"
     },
     "5": {
-      "enteredAt": "2026-11-07T04:32:49.847Z"
+      "enteredAt": "2026-11-07T04:32:49.847Z",
+      "leftAt": "2026-11-07T12:15:48.166Z"
+    },
+    "6": {
+      "enteredAt": "2026-11-07T12:15:48.166Z"
     }
   },
   "gates": {
@@ -33,6 +37,14 @@
       "approvedAt": "2026-11-07T04:32:48.221Z",
       "auto": true,
       "fingerprint": "d71f9411a816e3f9"
+    },
+    "5": {
+      "status": "approved",
+      "by": "checks: autonomy granted by Arun Endapally",
+      "requestedAt": "2026-11-07T12:15:47.212Z",
+      "approvedAt": "2026-11-07T12:15:47.212Z",
+      "auto": true,
+      "fingerprint": "856148ee08b01291"
     }
   },
   "retries": {},
@@ -40,7 +52,7 @@
     "brownfield"
   ],
   "capability": "gates-and-names",
-  "updatedAt": "2026-11-07T04:44:11.260Z",
+  "updatedAt": "2026-11-07T12:15:48.166Z",
   "revisions": {
     "1": 1
   },
@@ -64,7 +76,7 @@
   "baselineRuntime": "v24.19.0",
   "proofBase": "47df4d4d1f5972cd3dadc372d1fea4109a36bbf7",
   "sizeChecked": 16,
-  "lastPacketHead": "d3a2e69",
+  "lastPacketHead": "45ffc93",
   "ledgerIds": [
     "F1",
     "F2",
@@ -72,11 +84,49 @@
   ],
   "riskTier": "high",
   "reviewRounds": 1,
-  "lastRefusal": {
-    "stage": 5,
-    "at": "2026-11-07T04:44:11.260Z",
-    "reasons": [
-      "the pre-review says \"Risk: medium\", but the change is high: .github/pull_request_template.md is on a path that always needs a person"
-    ]
+  "reviewedSha": "45ffc93f65467165926042858364314b0062704a",
+  "reviewedFiles": [
+    ".github/pull_request_template.md",
+    "CHANGELOG.md",
+    "commands/build.md",
+    "commands/define.md",
+    "commands/design.md",
+    "commands/verify.md",
+    "scripts/lib.mjs",
+    "scripts/sdlc.mjs",
+    "skills/org-ai-sdlc/SKILL.md",
+    "skills/org-ai-sdlc/templates/design.md",
+    "skills/org-ai-sdlc/templates/pr.md",
+    "skills/org-ai-sdlc/templates/prd.md",
+    "skills/org-ai-sdlc/templates/tasks.md",
+    "specs/definition-of-done/acceptance.feature",
+    "specs/definition-of-done/facts.md",
+    "specs/definition-of-done/pr.md",
+    "specs/definition-of-done/prd.md",
+    "specs/definition-of-done/review.md",
+    "specs/definition-of-done/state.json",
+    "specs/definition-of-done/tasks.md",
+    "specs/gates-and-names/slices.md",
+    "templates/repo/.github/pull_request_template.md",
+    "tests/definition-of-done.test.mjs",
+    "specs/capability-overview/review-packet.md",
+    "specs/definition-of-done/review-packet.md"
+  ],
+  "reviewedHashes": {
+    ".github/pull_request_template.md": "6ddf39706c53fbb2",
+    "CHANGELOG.md": "ff591a65d16ba227",
+    "commands/build.md": "ab3677b711de5235",
+    "commands/define.md": "fbdc11b8c69e654a",
+    "commands/design.md": "71845ab8ed336c77",
+    "commands/verify.md": "1ca2e6fdda87df28",
+    "scripts/lib.mjs": "9b44289f348c207b",
+    "scripts/sdlc.mjs": "b92ef7ada4c5d9d0",
+    "skills/org-ai-sdlc/SKILL.md": "727ca53e9fd2a386",
+    "skills/org-ai-sdlc/templates/design.md": "bfec314aea9f0c4b",
+    "skills/org-ai-sdlc/templates/pr.md": "6ddf39706c53fbb2",
+    "skills/org-ai-sdlc/templates/prd.md": "478aca4a8e0a759e",
+    "skills/org-ai-sdlc/templates/tasks.md": "3b8a7a0c08a714b7",
+    "templates/repo/.github/pull_request_template.md": "6ddf39706c53fbb2",
+    "tests/definition-of-done.test.mjs": "fda55fa72ffaf9ba"
   }
 }

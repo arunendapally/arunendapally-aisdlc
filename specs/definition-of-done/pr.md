@@ -14,7 +14,7 @@ Removed, skipped or quarantined: none
 
 ## Pre-review
 
-Risk: high, because .github/pull_request_template.md is on a path that always needs a person; otherwise because it is code (the floor) in the gate path that refuses a stage request, with no data, auth or contract change; a false refusal blocks work, a false pass only lets an open checklist through.
+Risk: high, because .github/pull_request_template.md is on a path that always needs a person; otherwise it is code (the floor) in the gate path that refuses a stage request, with no data, auth or contract change; a false refusal blocks work, a false pass only lets an open checklist through.
 Open findings: 0 (F1 fixed in 88c8f88, F2 in e3e42f4, F3 in f640d99)
 Look here first: scripts/sdlc.mjs:340 (the stage list and the artefact it reads decide which gates enforce the checklist; only Define is exercised by a test), skills/org-ai-sdlc/templates/prd.md:130 and design.md:123 (whether these checklist items are the right ones per stage is a product call)
 Lenses run: correctness, simplicity, tests
