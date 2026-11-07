@@ -1,13 +1,17 @@
 ---
-description: Stage 3 Design, full lane only. The plan, contracts and an ADR per significant decision, each cross-questioned by another discipline; ends at the architect and product lead's gate.
+description: Design, full lane only. The design, contracts and an ADR per significant decision, each cross-questioned by another discipline; ends at the architect and product lead's gate.
 argument-hint: <feature-slug>
 ---
 
-Stage 3 for `$ARGUMENTS` (the light lane skips it).
+Design for `$ARGUMENTS` (the light lane skips it; its design is `## Approach` in `tasks.md`).
 
-1. `architect`: `specs/$ARGUMENTS/plan.md` from the template, and an ADR in `docs/adr/` for each new datastore, dependency, service or breaking contract. Each ADR weighs at least two options.
+**Input:** the approved `prd.md`, `acceptance.feature` and `facts.md`.
+**Processing:** decide how it is built, each significant decision an ADR with two options, cross-questioned by another discipline.
+**Output:** `design.md`, ADRs in `docs/adr/` and, for api work, `openapi.yaml`, approved at the Design gate.
+
+1. `architect`: `specs/$ARGUMENTS/design.md` from the template, and an ADR in `docs/adr/` for each new datastore, dependency, service or breaking contract. Each ADR weighs at least two options.
 2. Only what the change needs:
-   - data work: the `dba` draws the ER diagram of the change in `specs/$ARGUMENTS/db-design.md` `## Data model` and writes its migration plan (expand-contract); `plan.md` `## Data model` says "See db-design.md.";
+   - data work: the `dba` draws the ER diagram of the change in `specs/$ARGUMENTS/db-design.md` `## Data model` and writes its migration plan (expand-contract); `design.md` `## Data model` says "See db-design.md.";
    - API work: `node "${CLAUDE_PLUGIN_ROOT}/scripts/sdlc.mjs" api $ARGUMENTS` starts `openapi.yaml`; declare any breaking change in `## Contracts`;
    - a new or changed container: update the C4 model in `docs/architecture/workspace.dsl`;
    - a screen: the `ux-designer` designs it from the product's real components, with its accessibility checks;

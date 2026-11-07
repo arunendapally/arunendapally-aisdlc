@@ -22,7 +22,7 @@ These are checks a command or CI runs, so they hold whoever wrote the change.
 
 These live in the hooks, which only Claude Code runs. Without them, they become conventions the agent may or may not follow.
 
-- **Only a person approves a gate.** In Claude Code, the prompt hook records `sdlc approve` only when a person typed it, and the pre-tool hook refuses an agent that tries. With another agent, nothing stops it from running the approval from its shell or editing `state.json`. What remains: CI's `check-gates.mjs` and the ruleset still need a human review on GitHub before anything merges, so a forged approval cannot reach `main`; it can still skip a person at Plan and Design.
+- **Only a person approves a gate.** In Claude Code, the prompt hook records `sdlc approve` only when a person typed it, and the pre-tool hook refuses an agent that tries. With another agent, nothing stops it from running the approval from its shell or editing `state.json`. What remains: CI's `check-gates.mjs` and the ruleset still need a human review on GitHub before anything merges, so a forged approval cannot reach `main`; it can still skip a person at Define and Design.
 - **The guardrail files.** The pre-tool hook refuses agent writes to `.ai-sdlc/`, `state.json`, settings, CI workflows and CODEOWNERS, and pushes to `main`, force pushes and deploy commands. Elsewhere, use the agent's own permission settings and GitHub's branch protection.
 - **The refusal loop.** Counting refusals and holding the session after the second one is a hook.
 - **Reading what governs first.** The hook that refuses a whole read of a large file.

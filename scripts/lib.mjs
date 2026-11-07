@@ -7,43 +7,44 @@ import { fileURLToPath } from 'node:url'
 // ADR-0003: one spec gate (the PRD plus acceptance.feature), Design only in the full lane, Build on
 // checks in every lane. Stage numbers keep their old meaning; there is no stage 2 any more.
 export const STAGES = {
-  1: { name: 'Plan', artefact: 'prd.md', owner: 'product lead',
+  1: { name: 'Define', artefact: 'prd.md', owner: 'product lead',
     headings: ['## Problem', '## Users and jobs', '## Questions asked', '## Assumptions', '## Requirements', '## Non-functional requirements', '## Never', '## Out of scope', '## Outcome metric', '## Open questions'] },
-  3: { name: 'Design', artefact: 'plan.md', owner: 'architect + product lead',
+  3: { name: 'Design', artefact: 'design.md', owner: 'architect + product lead',
     headings: ['## Decisions', '## Data model', '## Contracts', '## Threat model', '## Error handling', '## Data and tenancy', '## Test plan', '## Run it'] },
   4: { name: 'Build', artefact: 'tasks.md', owner: 'checks (gate green, small diff)',
     headings: ['## Tasks'] },
-  5: { name: 'Verify', artefact: 'pr.md', owner: 'CODEOWNER engineer',
+  5: { name: 'Verify', artefact: 'pr.md', owner: 'checks (gate green, review clean)',
     headings: ['## Summary', '## Test results', '## Pre-review', '## Not verified'] },
   6: { name: 'Release', artefact: 'release.md', owner: 'release owner',
     headings: ['## Rollout', '## Rollback (tested)', '## Probes'] },
 }
 
 // Which stages each lane runs. Bug and hotfix lanes keep one document for the whole run,
-// which is also the PR body. Build passes on checks in every lane.
+// which is also the PR body. ADR-0008: every lane ends at Verify, and Build and Verify pass on checks;
+// who approves and merges the PR is the org's rule, not the plugin's.
 const BUG_BUILD = ['## Repro', '## Expected and actual', '## Root cause', '## Fix']
 const HOTFIX_BUILD = ['## Incident', '## Fix', '## Rollback']
 const SMALL_VERIFY = ['## Test results', '## Pre-review', '## Not verified']
 export const LANES = {
-  full: { stages: [1, 3, 4, 5, 6], auto: [4] },
-  // The light lane has no plan.md, so its design is "## Approach" in tasks.md (requirements, not solutions).
-  light: { stages: [1, 4, 5, 6], auto: [4], headings: { 4: ['## Approach', '## Tasks'] } },
+  full: { stages: [1, 3, 4, 5], auto: [4, 5] },
+  // The light lane has no design.md, so its design is "## Approach" in tasks.md (requirements, not solutions).
+  light: { stages: [1, 4, 5], auto: [4, 5], headings: { 4: ['## Approach', '## Tasks'] } },
   bug: {
-    stages: [4, 5], auto: [4], artefact: 'bug.md', branch: 'bug',
+    stages: [4, 5], auto: [4, 5], artefact: 'bug.md', branch: 'bug',
     headings: { 4: BUG_BUILD, 5: [...BUG_BUILD, ...SMALL_VERIFY] },
-    owners: { 4: 'checks (repro red, gate green, small diff)', 5: 'CODEOWNER engineer' },
+    owners: { 4: 'checks (repro red, gate green, small diff)' },
   },
   hotfix: {
-    stages: [4, 5, 6], auto: [4], artefact: 'hotfix.md', branch: 'hotfix',
+    stages: [4, 5], auto: [4, 5], artefact: 'hotfix.md', branch: 'hotfix',
     headings: { 4: HOTFIX_BUILD, 5: [...HOTFIX_BUILD, ...SMALL_VERIFY], 6: [...HOTFIX_BUILD, ...SMALL_VERIFY, '## Probes', '## Follow-up'] },
-    owners: { 4: 'checks (gate green, small diff)', 5: 'on-call engineer (CODEOWNER)', 6: 'incident commander' },
+    owners: { 4: 'checks (gate green, small diff)' },
   },
 }
 
 LANES.task = {
-  stages: [4, 5], auto: [4], artefact: 'task.md', branch: 'task',
+  stages: [4, 5], auto: [4, 5], artefact: 'task.md', branch: 'task',
   headings: { 4: ['## Change', '## Why', '## Behaviour change'], 5: ['## Change', '## Why', '## Behaviour change', ...SMALL_VERIFY] },
-  owners: { 4: 'checks (gate green, small diff)', 5: 'CODEOWNER engineer' },
+  owners: { 4: 'checks (gate green, small diff)' },
 }
 
 // What kind of work it is adds sections (and owners) to whatever lane it runs in.
@@ -63,7 +64,7 @@ export const KINDS = {
     artefact: 'db-design.md',
     headings: { 1: ['## Data impact'], 3: ['## Data model', '## Migration plan (expand-contract)'], 4: ['## Rehearsal', '## Down migration'], 6: ['## Backout'] },
     legacy: { 1: ['## Data impact'], 3: ['## Migration plan (expand-contract)', '## Rehearsal'], 4: ['## Down migration'], 6: ['## Backout'] },
-    owners: { 3: 'DBA', 5: 'DBA', 6: 'DBA' },
+    owners: { 3: 'DBA' },
   },
 }
 
@@ -268,11 +269,12 @@ const HINTS = {
 // not count; write "None, because ..." when a section does not apply).
 export function missingHeadings(dir, state, stage = state.stage) {
   const { artefact, headings, docs } = stageSpec(state, stage)
+  const main = artefact === 'design.md' ? designDoc(dir, state) : artefact
   const problems = []
-  for (const [doc, due] of [[artefact, headings], ...Object.entries(docs ?? {})]) {
+  for (const [doc, due] of [[main, headings], ...Object.entries(docs ?? {})]) {
     const file = path.join(dir, loadConfig(dir).specsDir, state.feature, doc)
     if (!fs.existsSync(file)) {
-      problems.push(doc === artefact ? `${doc} does not exist` : `${doc} does not exist: start it from the template with "sdlc kind ${state.feature} data"`)
+      problems.push(doc === main ? `${doc} does not exist` : `${doc} does not exist: start it from the template with "sdlc kind ${state.feature} data"`)
       continue
     }
     const text = fs.readFileSync(file, 'utf8')
@@ -405,6 +407,12 @@ export function overduePostmortems(dir, now = Date.now()) {
 
 export const TEMPLATES = path.join(path.dirname(fileURLToPath(import.meta.url)), '..', 'skills', 'org-ai-sdlc', 'templates')
 
+// The design is design.md; a feature whose design was already in plan.md keeps it (stage-names R4).
+export function designDoc(dir, state) {
+  const folder = path.join(dir, loadConfig(dir).specsDir, state.feature)
+  return !fs.existsSync(path.join(folder, 'design.md')) && fs.existsSync(path.join(folder, 'plan.md')) ? 'plan.md' : 'design.md'
+}
+
 // Copy an artefact template into the feature folder; returns its repo-relative path.
 export function copyTemplate(dir, feature, name) {
   const to = path.join(dir, loadConfig(dir).specsDir, feature, name)
@@ -440,21 +448,21 @@ export function autonomy(dir) {
   }
 }
 
-// ADR-0007: on the feature's own branch Plan and Design pass on their checks, since the work ends in a PR
-// a person reviews. Verify (5) and Release (6) are never here. Returns why a person keeps the gate, or null.
+// ADR-0007: on the feature's own branch Define and Design pass on their checks, since the work ends in a PR
+// a person reviews (ADR-0008 covers Verify). Returns why a person keeps the gate, or null.
 export const BRANCH_AUTO = [1, 3]
 export function branchAutoBlock(dir, state, cfg, risky = null) {
   const stage = state.stage
   if (!BRANCH_AUTO.includes(stage)) return 'not a stage the branch rule covers'
   if (!state.branch || state.branch === 'HEAD' || cfg.protectedBranches.includes(state.branch)) return 'the feature has no branch of its own'
-  if (state.gates[stage]) return `gate ${stage} is ${state.gates[stage].status}, so its person decides`
+  if (state.gates[stage]) return `${STAGES[stage].name} is ${state.gates[stage].status}, so its person decides`
   const owners = cfg.gateOwners[stage] ?? []
-  if (owners.length) return `gateOwners names ${owners.join(', ')} for gate ${stage}`
+  if (owners.length) return `gateOwners names ${owners.join(', ')} for ${STAGES[stage].name}`
   if (isFrozen(dir)) return 'the error budget is frozen'
   const file = path.join(dir, '.ai-sdlc', 'audit.jsonl')
   const events = (fs.existsSync(file) ? fs.readFileSync(file, 'utf8').split(/\r?\n/) : []).filter(Boolean)
     .map(l => { try { return JSON.parse(l) } catch { return {} } })
-  if (events.some(e => e.event === 'reject' && e.feature === state.feature && e.stage === stage)) return `a person sent gate ${stage} back`
+  if (events.some(e => e.event === 'reject' && e.feature === state.feature && e.stage === stage)) return `a person sent ${STAGES[stage].name} back`
   if (stage === 3 && (state.kinds ?? []).includes('data')) return 'data work keeps its DBA at Design'
   if (stage === 3 && risky) return `Security and privacy touches ${risky}`
   // Last, so the message names the switch only when the switch is what would pass the gate.
@@ -497,7 +505,8 @@ export function promotable(dir) {
 // The next stage this feature's lane runs, or undefined when the run is complete.
 export function nextStage(state) {
   const stages = (LANES[state.lane] ?? LANES.full).stages
-  return stages[stages.indexOf(state.stage) + 1]
+  // A stage the lane no longer runs (Release, before ADR-0008) is the last one, never a way back to the first.
+  return stages.includes(state.stage) ? stages[stages.indexOf(state.stage) + 1] : undefined
 }
 
 // Minimal glob: ** spans directories, * stays inside one segment.

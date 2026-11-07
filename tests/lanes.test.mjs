@@ -12,7 +12,7 @@ const VERIFY = ['## Test results', '## Pre-review', '## Not verified', '## Revie
 const CLEAN_PRE = '\n## Pre-review\n\nRisk: medium, because it changes code the tests cover\nOpen findings: 0\nLook here first: src/app.ts:1\nLenses run: correctness, tests\nRevert: git revert the merge commit\n'
 const hoursAgo = h => new Date(Date.now() - h * 36e5).toISOString()
 
-test('bug lane: repro red, then green, passes Build on checks; the PR review is the only human gate', () => {
+test('bug lane: repro red, then green, passes Build on checks; Verify passes on checks and the bug ends at its PR', () => {
   const r = makeRepo('bug/demo')
   const gate = switchableGate(r)
   r.config({ gateCommand: 'node gate.cjs' })
@@ -31,7 +31,7 @@ test('bug lane: repro red, then green, passes Build on checks; the PR review is 
   assert.equal(r.sdlc('gate', 'demo').status, 0)
   const build = r.sdlc('request', 'demo')
   assert.equal(build.status, 0, build.out)
-  assert.match(build.out, /passed on checks.*now at stage 5/)
+  assert.match(build.out, /passed on checks.*now at Verify/)
   assert.equal(r.state('demo').stage, 5)
 
   const early = r.sdlc('request', 'demo')
@@ -42,8 +42,7 @@ test('bug lane: repro red, then green, passes Build on checks; the PR review is 
   r.sdlc('review', 'demo')
   const verify = r.sdlc('request', 'demo')
   assert.equal(verify.status, 0, verify.out)
-  assert.match(verify.out, /Review deadline: 8h/)
-  assert.match(r.say('sdlc approve demo 5'), /approved gate 5 .*demo is complete/)
+  assert.match(verify.out, /Verify passed on checks.*demo is complete/)
   assert.ok(r.state('demo').closedAt)
 })
 
@@ -97,7 +96,7 @@ test('a change to the schema must be marked as data work; an additive one stays 
   assert.doesNotMatch(asked, /Backout/, 'Backout is due at Release')
   r.fill('specs/demo/db-design.md', ['## Data impact', '## Data model', '## Migration plan (expand-contract)', '## Rehearsal', '## Down migration'])
   assert.match(r.sdlc('request', 'demo').out, /passed on checks/, 'an additive migration is light-lane work')
-  assert.match(stageSpec(r.state('demo'), 5).owner, /DBA/, 'the DBA reviews the PR')
+  assert.doesNotMatch(stageSpec(r.state('demo'), 5).owner, /DBA/, 'the plugin names no PR approver (ADR-0008)')
 })
 
 test('issue #27: a task in a second repo moves light-lane work up to the full lane', () => {
@@ -111,7 +110,7 @@ test('issue #27: a task in a second repo moves light-lane work up to the full la
   assert.match(r.sdlc('request', 'demo').out, /T2 changes a second repo \(web-app\), which needs the full lane: ask a human to type "sdlc lane demo full"/)
 
   r.say('sdlc autonomy on a demo with no users and no data')
-  assert.match(r.sdlc('request', 'demo').out, /T2 changes a second repo \(web-app\), so demo moves to the full lane and goes back to stage 3 \(Design\)/)
+  assert.match(r.sdlc('request', 'demo').out, /T2 changes a second repo \(web-app\), so demo moves to the full lane and goes back to Design/)
   assert.equal(r.state('demo').lane, 'full')
 })
 
@@ -164,10 +163,10 @@ test('PR size: the Verify gate refuses an oversized full-lane PR', () => {
   r.put('api/Huge.csproj', 'x\n'.repeat(450))
   r.put('web/tsconfig.app.json', 'x\n'.repeat(450))
   r.put('api/appsettings.json', 'x\n'.repeat(450))
-  assert.doesNotMatch(r.sdlc('request', 'demo').out, /over the full lane limit/)
   r.git('add', '.')
   r.git('commit', '-m', 'later work')
   const ok = r.sdlc('request', 'demo')
+  assert.doesNotMatch(ok.out, /over the full lane limit/)
   assert.equal(ok.status, 0, ok.out)
   assert.match(ok.out, /Rebuilt specs\/demo\/review-packet\.md at HEAD/, 'a stale packet is rebuilt, not refused')
   assert.equal(r.state('demo').reviewedSha, r.git('rev-parse', 'HEAD'), 'Release checks the commit that was reviewed')
@@ -193,12 +192,12 @@ test('review deadlines: an overdue gate is flagged in status and at session star
   r.sdlc('init', 'demo', '--full')
   r.setState('demo', { gates: { 1: { status: 'waiting', requestedAt: hoursAgo(30) } } })
   assert.match(r.sdlc('status').out, /OVERDUE \(deadline 24h\)/)
-  assert.match(r.hook('session-start', {}), /OVERDUE: demo gate 1/)
+  assert.match(r.hook('session-start', {}), /OVERDUE: demo Define/)
   r.setState('demo', { gates: { 1: { status: 'waiting', requestedAt: hoursAgo(2) } } })
   assert.doesNotMatch(r.sdlc('status').out, /OVERDUE/)
 })
 
-test('hotfix: only a human declares it; it runs Build on checks, two human gates, and a postmortem is due', () => {
+test('hotfix: only a human declares it; Build and Verify pass on checks, and a postmortem is due', () => {
   const r = makeRepo('hotfix/api-down')
   const gate = switchableGate(r)
   r.config({ gateCommand: 'node gate.cjs' })
@@ -218,16 +217,8 @@ test('hotfix: only a human declares it; it runs Build on checks, two human gates
   assert.match(r.sdlc('request', 'api-down').out, /passed on checks/)
   r.sdlc('gate', 'api-down')
   r.sdlc('review', 'api-down')
-  assert.match(r.sdlc('request', 'api-down').out, /Review deadline: 1h/)
-  r.say('sdlc approve api-down 5')
-  assert.equal(r.state('api-down').stage, 6)
-  r.remote()
-  const live = r.land('the fix')
-  r.fill('specs/api-down/hotfix.md', ALL.filter(h => h !== '## Probes'), `${CLEAN_PRE}\n## Probes\n\n- checkout: pass\n\nLive: ${live}\n`)
-  const release = r.sdlc('request', 'api-down')
-  assert.equal(release.status, 0, release.out)
-  assert.match(r.say('sdlc approve api-down 6'), /Postmortem due/)
-  assert.equal(r.state('api-down').liveSha, live)
+  assert.match(r.sdlc('request', 'api-down').out, /passed on checks.*Postmortem due/)
+  assert.ok(r.state('api-down').closedAt, 'a hotfix ends at its PR (ADR-0008)')
 
   r.setState('api-down', { postmortemDue: hoursAgo(1) })
   assert.match(r.sdlc('status').out, /POSTMORTEM OVERDUE/)

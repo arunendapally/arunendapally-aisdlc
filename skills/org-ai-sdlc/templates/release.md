@@ -1,6 +1,6 @@
 # Release: <feature>
 
-<!-- Stage 6 Release. Owner: sre agent. Gate: the release owner, asked with "sdlc ask <feature>"; under autonomy it passes on its checks.
+<!-- Release. Owner: sre agent. Gate: the release owner, asked with "sdlc ask <feature>"; under autonomy it passes on its checks.
      The sre writes this before the deploy and finishes it after the probes. Humans merge, apply and deploy;
      under autonomy "sdlc merge" lands the reviewed commit.
      A required section with only a comment in it is empty, and the gate refuses it. Keep every "## " heading
@@ -17,11 +17,11 @@ Unconfirmed: the dead-letter alert was not seen firing (## Not verified). -->
 
 ## Rollout
 
-<!-- How exposure grows and the number that stops it. Full lane: link the alert in plan.md "## Run it";
+<!-- How exposure grows and the number that stops it. Full lane: link the alert in design.md "## Run it";
      light lane: name it here. Example:
 Mechanism: flag SAVED_ITEMS, default off.
 Steps: 5% of signed-in shoppers for 1 h, 50% for 1 day, then 100%.
-Stop and roll back if: POST /saved-items 5xx above 1% for 5 min, or GET p95 above 300 ms (plan.md "## Run it").
+Stop and roll back if: POST /saved-items 5xx above 1% for 5 min, or GET p95 above 300 ms (design.md "## Run it").
      Or: None, because no user can see the change (config-only refactor, see pr.md Summary). -->
 
 ## Order

@@ -3,7 +3,7 @@
 // board record (ADR-0003). A plan that names no ADR has nothing for the board to question.
 import fs from 'node:fs'
 import path from 'node:path'
-import { loadConfig, section } from './lib.mjs'
+import { loadConfig, section, designDoc } from './lib.mjs'
 
 // An ADR worth reviewing has its sections, a status and at least two options.
 export function adrProblems(text, name) {
@@ -34,13 +34,14 @@ function findAdr(dir, id) {
 }
 
 export function boardProblems(dir, feature) {
-  const plan = path.join(dir, loadConfig(dir).specsDir, feature, 'plan.md')
+  const doc = designDoc(dir, { feature })
+  const plan = path.join(dir, loadConfig(dir).specsDir, feature, doc)
   const decisions = fs.existsSync(plan) ? decisionsIn(fs.readFileSync(plan, 'utf8')) : []
   const problems = []
   for (const id of decisions) {
     const file = findAdr(dir, id)
     if (!file) {
-      problems.push(`plan.md names ${id}, but docs/adr/ has no file for it`)
+      problems.push(`${doc} names ${id}, but docs/adr/ has no file for it`)
       continue
     }
     const text = fs.readFileSync(file, 'utf8')

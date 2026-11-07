@@ -184,11 +184,11 @@ test('release: stale knowledge or facts the change touched, unmarked superseded 
   assert.deepEqual(releaseProblems(r.repo, state, ready).warnings, [])
 })
 
-test('outcome: a full-lane feature closes at release and leaves a follow-up with an owner, a due date and its own flow number', () => {
+test('outcome: a full-lane feature closes at Verify (ADR-0008) and leaves a follow-up with an owner, a due date and its own flow number', () => {
   const r = makeRepo()
   r.sdlc('init', 'demo', '--full')
-  r.setState('demo', { stage: 6, stages: { 6: { enteredAt: hoursAgo(1) } }, gates: { 6: { status: 'approved' } } })
-  r.put('specs/demo/release.md', '## Outcome metric\n\nMetric: checkout conversion +2%\nOwner: Priya\n')
+  r.setState('demo', { stage: 5, stages: { 5: { enteredAt: hoursAgo(1) } }, gates: { 5: { status: 'approved' } } })
+  r.put('specs/demo/prd.md', '## Outcome metric\n\nMetric: checkout conversion +2%\nOwner: Priya\n')
   const closed = r.sdlc('advance', 'demo').out
   assert.match(closed, /complete\. Outcome follow-up: Priya reads "checkout conversion \+2%" by/)
   const due = r.state('demo').outcome.due
@@ -205,23 +205,23 @@ test('outcome: a full-lane feature closes at release and leaves a follow-up with
   assert.doesNotMatch(r.sdlc('status').out, /OUTCOME/)
 })
 
-test('outcome: release.md can name its own read date; the light lane opens one too (agile change 2)', () => {
+test('outcome: the PRD can name its own read date; the light lane opens one too (agile change 2)', () => {
   const r = makeRepo()
   r.sdlc('init', 'demo', '--full')
-  r.setState('demo', { stage: 6, stages: { 6: { enteredAt: hoursAgo(1) } }, gates: { 6: { status: 'approved' } } })
-  r.put('specs/demo/release.md', '## Outcome metric\n\nMetric: m\nOwner: o\nRead on: 2026-12-01\n')
+  r.setState('demo', { stage: 5, stages: { 5: { enteredAt: hoursAgo(1) } }, gates: { 5: { status: 'approved' } } })
+  r.put('specs/demo/prd.md', '## Outcome metric\n\nMetric: m\nOwner: o\nRead on: 2026-12-01\n')
   r.sdlc('advance', 'demo')
   assert.equal(r.state('demo').outcome.due.slice(0, 10), '2026-12-01')
   r.sdlc('init', 'small')
-  r.setState('small', { stage: 6, stages: { 6: { enteredAt: hoursAgo(1) } }, gates: { 6: { status: 'approved' } } })
-  r.put('specs/small/release.md', '## Outcome metric\n\nMetric: m\nOwner: o\n')
+  r.setState('small', { stage: 5, stages: { 5: { enteredAt: hoursAgo(1) } }, gates: { 5: { status: 'approved' } } })
+  r.put('specs/small/prd.md', '## Outcome metric\n\nMetric: m\nOwner: o\n')
   const closed = r.sdlc('advance', 'small')
   assert.equal(closed.status, 0, closed.out)
   assert.equal(r.state('small').outcome.status, 'open', 'the light lane opens an outcome follow-up by default')
   assert.ok(Math.abs(Date.parse(r.state('small').outcome.due) - Date.now() - 7 * 864e5) < 6e4, 'the light lane watch window is 7 days')
   r.sdlc('init', 'refactor')
-  r.setState('refactor', { stage: 6, stages: { 6: { enteredAt: hoursAgo(1) } }, gates: { 6: { status: 'approved' } } })
-  r.put('specs/refactor/release.md', '## Outcome metric\n\nMetric: None, because nothing a user sees changes\n')
+  r.setState('refactor', { stage: 5, stages: { 5: { enteredAt: hoursAgo(1) } }, gates: { 5: { status: 'approved' } } })
+  r.put('specs/refactor/prd.md', '## Outcome metric\n\nMetric: None, because nothing a user sees changes\n')
   r.sdlc('advance', 'refactor')
   assert.equal(r.state('refactor').outcome, undefined, '"None, because ..." opens no follow-up')
 
@@ -232,8 +232,8 @@ test('outcome: release.md can name its own read date; the light lane opens one t
 
   r.config({ outcomeWindowDays: { light: 0 } })
   r.sdlc('init', 'small2')
-  r.setState('small2', { stage: 6, stages: { 6: { enteredAt: hoursAgo(1) } }, gates: { 6: { status: 'approved' } } })
-  r.put('specs/small2/release.md', '## Outcome metric\n\nMetric: m\nOwner: o\n')
+  r.setState('small2', { stage: 5, stages: { 5: { enteredAt: hoursAgo(1) } }, gates: { 5: { status: 'approved' } } })
+  r.put('specs/small2/prd.md', '## Outcome metric\n\nMetric: m\nOwner: o\n')
   r.sdlc('advance', 'small2')
   assert.equal(r.state('small2').outcome, undefined, 'a repo can turn it off for light')
 })

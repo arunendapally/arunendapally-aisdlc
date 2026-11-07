@@ -2,10 +2,10 @@
 // proposed changes to the plugin itself. It proposes; a human approves the PR that applies them.
 import fs from 'node:fs'
 import path from 'node:path'
-import { listFeatures, loadConfig, readTrust, promotable } from './lib.mjs'
+import { STAGES, listFeatures, loadConfig, readTrust, promotable } from './lib.mjs'
 import { parseLedger, humanCatches } from './review.mjs'
 
-export const STAGE_COMMAND = { 1: 'commands/plan.md', 3: 'commands/design.md', 4: 'commands/build.md', 5: 'commands/verify.md', 6: 'commands/release.md' }
+export const STAGE_COMMAND = { 1: 'commands/define.md', 3: 'commands/design.md', 4: 'commands/build.md', 5: 'commands/verify.md', 6: 'commands/release.md' }
 const CHECKLIST = 'templates/repo/standards/code-review-checklist.md'
 export const MIN_RECALL_SAMPLE = 5
 const STOP = new Set(['about', 'after', 'again', 'also', 'because', 'before', 'being', 'does', 'from', 'have', 'into', 'just', 'missed', 'missing', 'more', 'needs', 'only', 'other', 'should', 'some', 'that', 'their', 'there', 'these', 'this', 'when', 'where', 'which', 'with', 'without', 'would', 'still', 'what', 'were', 'will', 'been', 'than', 'then', 'they', 'them', 'your'])
@@ -116,7 +116,7 @@ export function analyze(evidence) {
     const [stage, word] = key.split(':')
     add({
       kind: 'rejection-theme', severity: fresh.length >= 3 ? 'high' : 'medium',
-      title: `Gate ${stage} keeps rejecting work for "${word}"`,
+      title: `${STAGES[stage]?.name ?? `Gate ${stage}`} keeps rejecting work for "${word}"`,
       evidence: fresh.map(r => `${r.feature}: "${r.reason}"`),
       change: {
         target: Number(stage) >= 4 ? CHECKLIST : STAGE_COMMAND[stage],
@@ -162,7 +162,7 @@ export function analyze(evidence) {
     if (m <= w.sla) continue
     add({
       kind: 'gate-wait', severity: m > 2 * w.sla ? 'high' : 'medium',
-      title: `Gate ${key} waits a median ${m.toFixed(1)}h against a ${w.sla}h deadline`,
+      title: `${STAGES[key.split(':')[1]]?.name ?? 'Gate'} (${key.split(':')[0]} lane) waits a median ${m.toFixed(1)}h against a ${w.sla}h deadline`,
       evidence: [`${w.hours.length} approvals, median ${m.toFixed(1)}h, longest ${Math.max(...w.hours).toFixed(1)}h`],
       change: {
         target: 'agents/pre-reviewer.md',

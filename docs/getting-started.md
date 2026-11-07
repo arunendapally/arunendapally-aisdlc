@@ -67,7 +67,7 @@ A feature waits on you three times: the spec, the merge and the release. Agents 
 | Stage | You run | The agents produce | You decide |
 |---|---|---|---|
 | Start | `/ai-sdlc:start add a saved-items list` | The route and lane, a feature branch and `specs/saved-items/` | Your intent: `sdlc intent saved-items change: ...; smallest: ...; drop if: ...` |
-| 1 Plan | `/ai-sdlc:plan saved-items` | Their questions first (you answer them), then a short `prd.md` and `acceptance.feature`: a Gherkin scenario per requirement | `sdlc approve saved-items 1` |
+| 1 Define | `/ai-sdlc:define saved-items` | Their questions first (you answer them), then a short `prd.md` and `acceptance.feature`: a Gherkin scenario per requirement | `sdlc approve saved-items 1` |
 | 4 Build | `/ai-sdlc:build saved-items` | Tests first, then code from the builder, reviewed by the tech lead. Passes on checks | Nothing: no wait |
 | 5 Verify | `/ai-sdlc:verify saved-items` | The test proof, the review packet, the findings ledger `review.md`, and a PR whose body says what was not verified | Review the PR from "Look here first", add what you find to `review.md` as H rows, then `sdlc approve saved-items 5` |
 | 6 Release | `/ai-sdlc:release saved-items` | The rollout, a tested rollback, and probe results after you deploy | You merge and deploy; then `sdlc approve saved-items 6` |
@@ -78,7 +78,7 @@ When a gate refuses, `sdlc request` lists every reason, for example "R2 has no s
 
 ### Starting from a Spec Kit spec
 
-If the feature already has a GitHub Spec Kit `spec.md`, start the Plan gate from it instead of rewriting it: `sdlc init <slug>`, then `node <plugin>/scripts/sdlc.mjs import-speckit <slug> path/to/spec.md`. It fills the PRD's requirements (FR-001 becomes R1, keeping the Spec Kit id beside it), assumptions and open questions (including every `[NEEDS CLARIFICATION]`), the outcome metric from SC-001, and one scenario per acceptance scenario. It never overwrites a PRD someone has written. What Spec Kit does not say is left to you, and the Plan gate names each gap: which requirement each scenario proves, the non-functional requirements, the problem and users, the outcome's owner, and the person's intent.
+If the feature already has a GitHub Spec Kit `spec.md`, start the Define gate from it instead of rewriting it: `sdlc init <slug>`, then `node <plugin>/scripts/sdlc.mjs import-speckit <slug> path/to/spec.md`. It fills the PRD's requirements (FR-001 becomes R1, keeping the Spec Kit id beside it), assumptions and open questions (including every `[NEEDS CLARIFICATION]`), the outcome metric from SC-001, and one scenario per acceptance scenario. It never overwrites a PRD someone has written. What Spec Kit does not say is left to you, and the Define gate names each gap: which requirement each scenario proves, the non-functional requirements, the problem and users, the outcome's owner, and the person's intent.
 
 ## 4. Smaller work
 
@@ -167,7 +167,7 @@ Off by default, so the default path stays short. Turn them on when the risk call
 | "has lapsed" when you approve | The change moved after the agent requested the gate | Ask the agent to request it again, and look at what changed |
 | "Refused 2 times this session: hand back" | A guard refused the same step twice | Read the reason; run the step yourself if it is right, then reply so the session can act again |
 | "in slices" when reading a file | The file is large | Read the code that governs it first, then the file with an offset and limit |
-| "has changed since gate 1 (or 3) was approved" | The spec (`prd.md`, `acceptance.feature`) or the plan (`plan.md`) changed after you approved it | Read what changed, then approve that gate again; the feature carries on from there |
+| "has changed since Define (or Design) was approved" | The spec (`prd.md`, `acceptance.feature`) or the design (`design.md`) changed after you approved it | Read what changed, then approve that gate again; the feature carries on from there |
 | "lives on feature/x, but ... is checked out" | The command was run for one feature on another feature's branch | `git switch` to the branch it names, then run it again |
 | "needs the full lane" at Build | The light lane is for additive, low-risk work, and this change alters or drops data or touches a high-risk path | Type `sdlc lane <feature> full`; it goes back to Design |
 | The Swagger page is blank | The contract changed since the viewer was written, or you are offline | Run `sdlc api <feature>` again; the page loads Swagger UI from the internet |
