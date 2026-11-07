@@ -18,7 +18,8 @@
       "leftAt": "2026-11-07T04:03:59.803Z"
     },
     "6": {
-      "enteredAt": "2026-11-07T04:03:59.803Z"
+      "enteredAt": "2026-11-07T04:03:59.803Z",
+      "leftAt": "2026-11-07T13:51:24.200Z"
     }
   },
   "gates": {
@@ -52,7 +53,7 @@
     "brownfield"
   ],
   "capability": "gates-and-names",
-  "updatedAt": "2026-11-07T04:03:59.803Z",
+  "updatedAt": "2026-11-07T13:51:24.929Z",
   "revisions": {
     "1": 1
   },
@@ -114,5 +115,14 @@
     "skills/org-ai-sdlc/SKILL.md": "42700d9747539da8",
     "skills/org-ai-sdlc/templates/architecture-overview.md": "6a2b5731fbdbaa81",
     "tests/capability-overview.test.mjs": "2ce54473050ab9cf"
+  },
+  "closedAt": "2026-11-07T13:51:24.200Z",
+  "releasedSha": "66dd3792a7fe3a070287d186d0b522245e89c187",
+  "outcome": {
+    "metric": "decision rows recorded per capability in dogfood runs",
+    "owner": "Arun, plugin owner",
+    "due": "2026-11-14T13:51:24.929Z",
+    "status": "open",
+    "openedAt": "2026-11-07T13:51:24.929Z"
   }
 }

@@ -18,7 +18,8 @@
       "leftAt": "2026-11-07T12:15:48.166Z"
     },
     "6": {
-      "enteredAt": "2026-11-07T12:15:48.166Z"
+      "enteredAt": "2026-11-07T12:15:48.166Z",
+      "leftAt": "2026-11-07T13:51:26.191Z"
     }
   },
   "gates": {
@@ -52,7 +53,7 @@
     "brownfield"
   ],
   "capability": "gates-and-names",
-  "updatedAt": "2026-11-07T12:15:48.166Z",
+  "updatedAt": "2026-11-07T13:51:26.902Z",
   "revisions": {
     "1": 1
   },
@@ -128,5 +129,14 @@
     "skills/org-ai-sdlc/templates/tasks.md": "3b8a7a0c08a714b7",
     "templates/repo/.github/pull_request_template.md": "6ddf39706c53fbb2",
     "tests/definition-of-done.test.mjs": "fda55fa72ffaf9ba"
+  },
+  "closedAt": "2026-11-07T13:51:26.191Z",
+  "releasedSha": "45ffc93f65467165926042858364314b0062704a",
+  "outcome": {
+    "metric": "stage documents in dogfood PRs with every checklist item closed",
+    "owner": "Arun, plugin owner",
+    "due": "2026-11-14T13:51:26.902Z",
+    "status": "open",
+    "openedAt": "2026-11-07T13:51:26.902Z"
   }
 }

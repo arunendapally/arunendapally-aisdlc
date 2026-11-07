@@ -18,7 +18,8 @@
       "leftAt": "2026-11-06T19:03:02.466Z"
     },
     "6": {
-      "enteredAt": "2026-11-06T19:03:02.466Z"
+      "enteredAt": "2026-11-06T19:03:02.466Z",
+      "leftAt": "2026-11-07T13:51:31.479Z"
     }
   },
   "gates": {
@@ -52,7 +53,7 @@
     "brownfield"
   ],
   "capability": "gates-and-names",
-  "updatedAt": "2026-11-07T03:03:10.667Z",
+  "updatedAt": "2026-11-07T13:51:32.336Z",
   "revisions": {
     "1": 2
   },
@@ -133,5 +134,14 @@
     "scripts/sdlc.mjs": "77294945087aeb62",
     "skills/org-ai-sdlc/SKILL.md": "34ceeb2c738c4869",
     "tests/test-lock.test.mjs": "3e30d2a9672c586e"
+  },
+  "closedAt": "2026-11-07T13:51:31.479Z",
+  "releasedSha": "a9a144c2d3b7037e9166e4b28707450769e70dec",
+  "outcome": {
+    "metric": "test files changed after the proof in dogfood PRs",
+    "owner": "Arun, plugin owner",
+    "due": "2026-11-14T13:51:32.336Z",
+    "status": "open",
+    "openedAt": "2026-11-07T13:51:32.336Z"
   }
 }
