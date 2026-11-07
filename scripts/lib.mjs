@@ -308,6 +308,31 @@ export function section(text, heading) {
   return lines.slice(at + 1, end === -1 ? undefined : end).join('\n').trim()
 }
 
+// A capability's roadmap (plan-roadmap): each slice line under "## Slices" with its horizon (now when
+// unwritten, PRD A2), whether it is an enabler, and how it goes live.
+export function slicesOf(text) {
+  return [...(section(text, '## Slices') ?? '').matchAll(/^\s*[-*]\s*([a-z0-9][a-z0-9-]*):\s*(.*)$/gm)].map(([, slug, line]) => ({
+    slug,
+    line,
+    horizon: line.match(/Horizon:\s*(now|next|later)\b/i)?.[1].toLowerCase() ?? 'now',
+    enabler: /Kind:\s*enabler\b/i.test(line),
+    goesLive: line.match(/Goes live:\s*([^.\n]+)/i)?.[1].trim() ?? '',
+  }))
+}
+
+// Going live only after another slice is a sequence, a coupling smell, so it must say why (R4).
+// "only" limits it to one slice, so one slice's gap blocks only that slice's Define (pre-review F1).
+export function roadmapProblems(text, only) {
+  const slices = slicesOf(text).filter(s => !only || s.slug === only)
+  return [
+    ...slices.filter(s => /^after\b/i.test(s.goesLive) && !/,\s*because\s+\S/i.test(s.goesLive))
+      .map(s => `${s.slug} goes live after another slice but gives no reason: write "Goes live: after <slug>, because <reason>"`),
+    // A mistyped horizon would otherwise read as now without a word (pre-review F2).
+    ...slices.filter(s => /Horizon:/i.test(s.line) && !/Horizon:\s*(now|next|later)\b/i.test(s.line))
+      .map(s => `${s.slug} has a Horizon that is not now, next or later`),
+  ]
+}
+
 // The person's intent, typed as "change: ...; smallest: ...; drop if: ..." (one per line works too).
 // Only the parts are checked: a word count or a number rule is passed by filler in seconds.
 export const INTENT_PARTS = [['change', 'Change'], ['smallest', 'Smallest'], ['dropIf', 'Drop if']]

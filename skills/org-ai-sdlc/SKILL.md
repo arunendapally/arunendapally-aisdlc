@@ -19,7 +19,7 @@ The CTO first looks for drafts, requirements, architecture notes and code, and i
 | Learn an area, become an SME | `/ai-sdlc:learn` | none, knowledge only |
 | New behaviour | a feature: `init <slug>` | light (the default) |
 | A migration that alters or drops data, a high-risk path, a new datastore, dependency or service | a feature: `init <slug> --full` | full |
-| Big capability | slice it into `specs/<capability>/slices.md` (a record, not a gate), then `init <slug> --capability <capability>` per slice | per slice |
+| Big capability | `/ai-sdlc:plan <capability>` writes the roadmap in `specs/<capability>/slices.md` (no gate): slices placed now, next or later, enablers first, each saying how it goes live on its own; then `init <slug> --capability <capability>` per slice, and `sdlc tickets <slug>` gives one ticket per repo | per slice |
 
 Kinds stack and only add what the work needs: `brownfield` (facts), `perf` (budget and benchmarks), `api` (OpenAPI), `data` (`db-design.md`, the DBA on the PR).
 

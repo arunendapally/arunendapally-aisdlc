@@ -39,6 +39,7 @@ always shows today's price; the other option, keeping the price seen, needs a pr
      fits on one screen.
      A task in another repo adds "repos: [<repo>]" after its ID; in the light lane that moves the work to
      the full lane, and architecture-overview.md needs a row for that repo.
+     "sdlc tickets <feature>" prints one ticket per repo from these lines, to copy into the team's tracker.
      Example:
 - [ ] T1 [R1] files: src/lists/save.ts, tests/lists/save.test.ts test: AC-1, AC-2 depends-on: [] Save an item to the shopper's list, once.
   - done when: AC-1 and AC-2 pass; a save with no session gets 401.

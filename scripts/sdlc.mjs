@@ -7,7 +7,7 @@ import { fileURLToPath } from 'node:url'
 import { spawnSync } from 'node:child_process'
 import { STAGES, root, git, loadConfig, readState, writeState, listFeatures, missingHeadings, isFrozen, destructiveMigrations,
   stageSpec, section, matches, changedFiles, changedLines, createFeature, copyTemplate, TEMPLATES, overdueGates, overduePostmortems,
-  KINDS, trustedGates, promotable, readTrust, writeTrust, lessonPaid, lessonProblem, lessonsOwed, audit, withIntent, INTENT_PARTS, autonomy, designDoc, BRANCH_AUTO, branchAutoBlock, overviewFile, decisionProblems, openDoneItems } from './lib.mjs'
+  KINDS, trustedGates, promotable, readTrust, writeTrust, lessonPaid, lessonProblem, lessonsOwed, audit, withIntent, INTENT_PARTS, autonomy, designDoc, BRANCH_AUTO, branchAutoBlock, overviewFile, decisionProblems, openDoneItems, slicesOf, roadmapProblems } from './lib.mjs'
 import { check, conformance, OKF_VERSION, relevant, writeIndex } from './knowledge.mjs'
 import { collect, analyze, report, approvalSignals, approvalLines } from './retro.mjs'
 import { lint, requirementsFrom } from './gherkin.mjs'
@@ -120,7 +120,8 @@ const fieldWarnings = state => {
 // Work across repos (issue #27 d, #26 packets). Each task names its repos ("repos: [web]", this repo when
 // absent); architecture-overview.md (the capability's, or the feature's own) declares the systems under change.
 const thisRepo = () => path.basename(git('remote get-url origin', dir) || dir).replace(/\.git$/, '')
-const tasksOf = text => [...(section(text, '## Tasks') ?? '').matchAll(TASK_LINE)].map(([, id, rest]) => ({
+const tasksOf = text => [...(section(text, '## Tasks') ?? '').matchAll(TASK_LINE)].map(([line, id, rest]) => ({
+  line: line.trim(),
   id,
   repos: (rest.match(/repos:\s*\[([^\]]*)\]/)?.[1] ?? thisRepo()).split(',').map(s => s.trim()).filter(Boolean),
   deps: (rest.match(/depends-on:\s*\[([^\]]*)\]/)?.[1] ?? '').split(',').map(s => s.trim()).filter(Boolean),
@@ -255,6 +256,7 @@ const commands = {
     if (capability) fs.writeFileSync(path.join(dir, prd), fs.readFileSync(path.join(dir, prd), 'utf8').replace(/^(# PRD: .*\n)/, `$1\nCapability: ${capability} (${slices})\n`))
     if (capability) copyTemplate(dir, capability, 'architecture-overview.md')
     scaffoldKinds(state)
+    if (capability) for (const p of roadmapProblems(fs.readFileSync(path.join(dir, slices), 'utf8'))) console.log(`Warning: ${slices}: ${p}`)
     console.log(`Created ${feature} at Define, ${lane} lane${kindNote()}. Write ${prd} and ${feat}; one approval covers both.`)
   },
 
@@ -409,6 +411,8 @@ const commands = {
       if (state.intent && prdText) fs.writeFileSync(prd, withIntent(prdText, state.intent))
       else if (granted && !section(prdText, '## Intent')) missing.push('the PRD has no "## Intent" (change, smallest, drop if): with autonomy the agent writes it, and the request still checks it')
       else if (!granted && !state.intent) missing.push(`no intent from a person yet. Run "sdlc ask ${feature}" and ask its three questions with the question tool`)
+      const slices = state.capability && path.join(dir, cfg.specsDir, state.capability, 'slices.md')
+      if (slices && fs.existsSync(slices)) missing.push(...roadmapProblems(fs.readFileSync(slices, 'utf8'), feature).map(p => `${state.capability}/slices.md: ${p}`))
       if (fs.existsSync(prd)) missing.push(...assumptionProblems(fs.readFileSync(prd, 'utf8')).map(p => `prd.md: ${p}`))
       // The same route as a high-risk path at Build: a person moves it, or autonomy does, since it only adds checks.
       const nfr = nonFunctionalProblems(prdText)
@@ -734,13 +738,19 @@ Ask the owner: run "sdlc ask ${feature}" and put its question to them with the q
     for (const cap of feature || !fs.existsSync(specs) ? [] : fs.readdirSync(specs).filter(c => fs.existsSync(path.join(specs, c, 'slices.md')))) {
       const text = fs.readFileSync(path.join(specs, cap, 'slices.md'), 'utf8')
       console.log(`Capability ${cap}: ${(section(text, '## Outcome') ?? '').split('\n')[0] || 'no outcome written'}`)
-      for (const [, slug, line] of (section(text, '## Slices') ?? '').matchAll(/^\s*[-*]\s*([a-z0-9][a-z0-9-]*):\s*(.*)$/gm)) {
-        const s = readState(dir, slug)
-        const after = line.match(/Depends on:\s*([^.]+)/i)?.[1].trim()
-        const waits = after && !/^none$/i.test(after) ? `, depends on ${after}` : ''
-        const where = s ? (s.closedAt ? `complete (${s.lane} lane)` : `${STAGES[s.stage].name} (${s.lane} lane)`) : `not started (${line.match(/Status:\s*([^.\n]+)/i)?.[1].trim() ?? 'no status'})`
-        console.log(`  ${slug}: ${where}${waits}`)
+      // Grouped now, next, later (plan-roadmap R1), with enablers marked.
+      const all = slicesOf(text)
+      for (const horizon of ['now', 'next', 'later'].filter(h => all.some(s => s.horizon === h))) {
+        console.log(`  ${horizon}`)
+        for (const { slug, line, enabler } of all.filter(s => s.horizon === horizon)) {
+          const s = readState(dir, slug)
+          const after = line.match(/Depends on:\s*([^.]+)/i)?.[1].trim()
+          const waits = after && !/^none$/i.test(after) ? `, depends on ${after}` : ''
+          const where = s ? (s.closedAt ? `complete (${s.lane} lane)` : `${STAGES[s.stage].name} (${s.lane} lane)`) : `not started (${line.match(/Status:\s*([^.\n]+)/i)?.[1].trim() ?? 'no status'})`
+          console.log(`    ${slug}: ${enabler ? 'enabler, ' : ''}${where}${waits}`)
+        }
       }
+      for (const p of roadmapProblems(text)) console.log(`  ROADMAP: ${p}`)
     }
     if (!features.length) return console.log('No features in flight. Start one with /ai-sdlc:start.')
     const overdue = overdueGates(dir)
@@ -927,6 +937,18 @@ Ask the owner: run "sdlc ask ${feature}" and put its question to them with the q
     }
   },
 
+  // One ticket per repo (plan-roadmap R5), plain markdown to copy into any tracker. Printed, never created.
+  tickets() {
+    need()
+    const file = path.join(dir, loadConfig(dir).specsDir, feature, 'tasks.md')
+    if (!fs.existsSync(file)) fail(`${feature} has no tasks.md yet: tickets come from its tasks.`)
+    const tasks = tasksOf(fs.readFileSync(file, 'utf8'))
+    for (const repo of [...new Set(tasks.flatMap(t => t.repos))]) {
+      const mine = tasks.filter(t => t.repos.includes(repo))
+      console.log(`## ${feature}: ${repo}\n\nSpec: ${loadConfig(dir).specsDir}/${feature}/prd.md\nAcceptance criteria: ${[...new Set(mine.flatMap(t => t.scenarios))].join(', ') || 'none named'} (${loadConfig(dir).specsDir}/${feature}/acceptance.feature)\n\n${mine.map(t => t.line).join('\n')}\n`)
+    }
+  },
+
   // The test matrix: each Gherkin criterion, its level, and the tests that name it.
   tests() {
     need()
@@ -1079,6 +1101,6 @@ if (HUMAN_VERBS.includes(cmd)) {
 }
 
 if (!commands[cmd]) {
-  fail(`${cmd ? `Unknown command: ${cmd}.\n` : ''}Usage: sdlc <init|bug|task|kind|request|advance|gate|tests|proof|conflict|spike|review|gherkin|api|packets|retry|status|outcome|trust|metrics|retro|incident|knowledge|init-repo> [feature] [...]\nA person, in their own terminal: sdlc <${HUMAN_VERBS.join('|')}> ...`)
+  fail(`${cmd ? `Unknown command: ${cmd}.\n` : ''}Usage: sdlc <init|bug|task|kind|request|advance|gate|tests|proof|conflict|spike|review|gherkin|api|packets|tickets|retry|status|outcome|trust|metrics|retro|incident|knowledge|init-repo> [feature] [...]\nA person, in their own terminal: sdlc <${HUMAN_VERBS.join('|')}> ...`)
 }
 commands[cmd]()
