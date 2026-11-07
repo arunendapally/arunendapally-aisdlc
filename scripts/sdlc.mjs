@@ -324,6 +324,8 @@ const commands = {
   request() {
     const state = need()
     const cfg = loadConfig(dir)
+    // A feature an older plugin left at Release (stage 6) is past Verify, so it completes (ADR-0008).
+    if (state.stage === 6 && !state.closedAt) return console.log(advanceFeature(dir, state))
     if ([4, 5].includes(state.stage)) onBranch(state)
     // Verify is the last stage (ADR-0008): code committed after it passed reopens it, so the PR's review
     // covers what is on the branch.
@@ -664,7 +666,7 @@ Ask the owner: run "sdlc ask ${feature}" and put its question to them with the q
   advance() {
     const state = need()
     if (state.closedAt) fail(`${feature} is complete.`)
-    if (state.gates[state.stage]?.status !== 'approved') fail(`${STAGES[state.stage].name} is not approved. Nothing moved.`)
+    if (state.stage !== 6 && state.gates[state.stage]?.status !== 'approved') fail(`${STAGES[state.stage].name} is not approved. Nothing moved.`)
     console.log(advanceFeature(dir, state))
   },
 

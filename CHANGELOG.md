@@ -4,6 +4,7 @@ All notable changes to this repository. The format follows [Keep a Changelog](ht
 
 ## [Unreleased]
 
+- **A feature left at Release completes** (close-stage-six, ADR-0008). A feature an older plugin moved to stage 6 completes on its next `sdlc request` or `sdlc advance`, with its outcome follow-up from the PRD and no Release check or approval. The two evals that ran the Release check are removed; F3 stays caught by the deploy-hold hook eval. Tests in `tests/stop-at-pr.test.mjs`.
 - **A feature branch runs on its checks until the PR** (ADR-0007). Requested on the feature's own branch, Define and Design pass on their checks; Verify passes on its checks under ADR-0008, and the PR review is the org's. A person keeps Define or Design when gateOwners names one, after a send-back, on a frozen budget, and at Design for data or risky security work. Every pass on checks is audited as `auto`, and the review packet lists them. Tests in `tests/branch-autonomy.test.mjs`.
 - **The unmodified init-repo kit does not count toward PR size.** A file `sdlc init-repo` wrote, left exactly as the plugin ships it, is the plugin's code, so the gate's line limit leaves it out; an edited kit file still counts. Test in `tests/smooth.test.mjs`.
 - **The merge is the hand check.** A `@manual` criterion no longer needs a "Checked by hand" line in the PR body; the review packet lists it under "Check by hand before merging", and the person who merges checks it. Tests in `tests/release-criteria.test.mjs`.

@@ -78,6 +78,7 @@ test('stop-at-pr AC-5: completing a feature at Verify opens its outcome follow-u
   assert.deepEqual([r.state('demo').outcome.owner, r.state('demo').outcome.metric], ['Priya', 'share of saved items bought'])
 })
 
+// close-stage-six AC-4: a feature at Verify whose checks fail still stops.
 test('stop-at-pr AC-6: a failing Verify still stops with the reasons', () => {
   const r = atVerify('light', { leave: '## Test results' })
   const out = r.sdlc('request', 'demo')
@@ -95,6 +96,22 @@ test('stop-at-pr: a feature left at stage 6 closes on advance, never back to Pla
   assert.match(r.sdlc('advance', 'demo').out, /demo is complete/)
   assert.equal(r.state('demo').stage, 6)
 })
+
+// close-stage-six: a feature an older plugin left at Release is past Verify, so it completes with no
+// Release check and no approval, and keeps its outcome follow-up from the PRD.
+for (const [verb, ac] of [['request', 'AC-1'], ['advance', 'AC-2']]) {
+  test(`close-stage-six ${ac} and AC-3: a feature left at stage 6 completes on ${verb}, with its outcome follow-up`, () => {
+    const r = makeRepo()
+    r.sdlc('init', 'demo', '--full')
+    r.put('specs/demo/prd.md', '## Outcome metric\n\nMetric: share of saved items bought\nOwner: Priya\n')
+    r.setState('demo', { stage: 6, stages: { 6: { enteredAt: hoursAgo(1) } } })
+    const out = r.sdlc(verb, 'demo')
+    assert.equal(out.status, 0, out.out)
+    assert.match(out.out, /demo is complete\. Outcome follow-up: Priya reads "share of saved items bought"/)
+    assert.ok(r.state('demo').closedAt)
+    assert.match(r.sdlc('status').out, /demo: complete \(full lane\)/)
+  })
+}
 
 // Review finding F2: the PR body, not only the untracked packet, names each @release criterion.
 test('stop-at-pr: Verify refuses a PR body that leaves an untested @release criterion out of "## Check after deploy"', () => {
