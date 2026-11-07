@@ -1,7 +1,7 @@
 {
   "feature": "plan-roadmap",
   "lane": "light",
-  "stage": 5,
+  "stage": 6,
   "branch": "feature/plan-roadmap",
   "createdAt": "2026-11-07T04:05:48.992Z",
   "stages": {
@@ -14,7 +14,11 @@
       "leftAt": "2026-11-07T04:42:24.280Z"
     },
     "5": {
-      "enteredAt": "2026-11-07T04:42:24.280Z"
+      "enteredAt": "2026-11-07T04:42:24.280Z",
+      "leftAt": "2026-11-07T12:29:54.774Z"
+    },
+    "6": {
+      "enteredAt": "2026-11-07T12:29:54.774Z"
     }
   },
   "gates": {
@@ -33,6 +37,14 @@
       "approvedAt": "2026-11-07T04:42:23.914Z",
       "auto": true,
       "fingerprint": "44d3f8ff4ac377ac"
+    },
+    "5": {
+      "status": "approved",
+      "by": "checks: autonomy granted by Arun Endapally",
+      "requestedAt": "2026-11-07T12:29:51.740Z",
+      "approvedAt": "2026-11-07T12:29:51.740Z",
+      "auto": true,
+      "fingerprint": "d8bf933438acbb7b"
     }
   },
   "retries": {},
@@ -40,7 +52,7 @@
     "brownfield"
   ],
   "capability": "gates-and-names",
-  "updatedAt": "2026-11-07T04:43:01.569Z",
+  "updatedAt": "2026-11-07T12:29:54.774Z",
   "revisions": {
     "1": 1
   },
@@ -51,12 +63,61 @@
       "at": "2026-11-07T04:42:09.825Z",
       "runs": 1,
       "runtime": "v24.19.0"
+    },
+    "5": {
+      "ok": true,
+      "count": 254,
+      "at": "2026-11-07T12:29:30.377Z",
+      "runs": 1,
+      "runtime": "v24.19.0"
     }
   },
-  "baseline": 253,
+  "baseline": 254,
   "baselineRuntime": "v24.19.0",
   "proofBase": "47df4d4d1f5972cd3dadc372d1fea4109a36bbf7",
   "sizeChecked": 58,
-  "lastPacketHead": "7110d50",
-  "ledgerIds": []
+  "lastPacketHead": "8912b7a",
+  "ledgerIds": [
+    "F1",
+    "F2",
+    "F3"
+  ],
+  "riskTier": "medium",
+  "reviewedSha": "8912b7a2e6b7576c39d71ce3cfa423028e5674c4",
+  "reviewedFiles": [
+    "CHANGELOG.md",
+    "commands/plan.md",
+    "commands/start.md",
+    "scripts/lib.mjs",
+    "scripts/sdlc.mjs",
+    "skills/org-ai-sdlc/SKILL.md",
+    "skills/org-ai-sdlc/templates/slices.md",
+    "skills/org-ai-sdlc/templates/tasks.md",
+    "specs/gates-and-names/slices.md",
+    "specs/plan-roadmap/acceptance.feature",
+    "specs/plan-roadmap/facts.md",
+    "specs/plan-roadmap/pr.md",
+    "specs/plan-roadmap/prd.md",
+    "specs/plan-roadmap/review.md",
+    "specs/plan-roadmap/state.json",
+    "specs/plan-roadmap/tasks.md",
+    "tests/plan-roadmap.test.mjs",
+    "tests/slices.test.mjs",
+    "specs/plan-roadmap/review-packet.md",
+    "specs/stage-names/review-packet.md",
+    "specs/stop-at-pr/review-packet.md",
+    "specs/test-lock/review-packet.md"
+  ],
+  "reviewedHashes": {
+    "CHANGELOG.md": "fd3c71c38bf5f829",
+    "commands/plan.md": "a7e419404187d63e",
+    "commands/start.md": "644662c1e1135fab",
+    "scripts/lib.mjs": "9387d371eea9dc59",
+    "scripts/sdlc.mjs": "c4267e70d27123cf",
+    "skills/org-ai-sdlc/SKILL.md": "4dcb36edbe3f6c60",
+    "skills/org-ai-sdlc/templates/slices.md": "f374c8158722307d",
+    "skills/org-ai-sdlc/templates/tasks.md": "cd377259df70b8e2",
+    "tests/plan-roadmap.test.mjs": "13d341d4ddeb07d2",
+    "tests/slices.test.mjs": "4eb11e493b365033"
+  }
 }
