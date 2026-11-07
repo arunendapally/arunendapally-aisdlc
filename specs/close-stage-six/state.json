@@ -1,7 +1,7 @@
 {
   "feature": "close-stage-six",
   "lane": "full",
-  "stage": 4,
+  "stage": 5,
   "branch": "feature/close-stage-six",
   "createdAt": "2026-11-07T14:03:19.499Z",
   "stages": {
@@ -14,7 +14,11 @@
       "leftAt": "2026-11-07T14:05:20.918Z"
     },
     "4": {
-      "enteredAt": "2026-11-07T14:05:20.918Z"
+      "enteredAt": "2026-11-07T14:05:20.918Z",
+      "leftAt": "2026-11-07T14:18:42.933Z"
+    },
+    "5": {
+      "enteredAt": "2026-11-07T14:18:42.933Z"
     }
   },
   "gates": {
@@ -33,13 +37,21 @@
       "approvedAt": "2026-11-07T14:05:20.916Z",
       "auto": true,
       "fingerprint": "f76cc9af19cf62da"
+    },
+    "4": {
+      "status": "approved",
+      "by": "checks: autonomy granted by Arun Endapally",
+      "requestedAt": "2026-11-07T14:18:42.481Z",
+      "approvedAt": "2026-11-07T14:18:42.481Z",
+      "auto": true,
+      "fingerprint": "e7867c96e08b8e5d"
     }
   },
   "retries": {},
   "kinds": [
     "brownfield"
   ],
-  "updatedAt": "2026-11-07T14:18:28.374Z",
+  "updatedAt": "2026-11-07T14:18:42.933Z",
   "revisions": {
     "1": 1,
     "3": 1
@@ -55,5 +67,6 @@
   },
   "baseline": 304,
   "baselineRuntime": "v24.19.0",
-  "proofBase": "1af03e7a6b4e58eefc558af18b2c4d2193537e92"
+  "proofBase": "1af03e7a6b4e58eefc558af18b2c4d2193537e92",
+  "sizeChecked": 311
 }
