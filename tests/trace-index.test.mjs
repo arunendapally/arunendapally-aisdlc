@@ -52,3 +52,15 @@ test('trace-index AC-4: a requirement with no scenario or no test is marked', ()
   r.put('tests/save-list.test.mjs', "test('save a thing', () => {})\n")
   assert.match(lineOf(r.sdlc('trace', 'saved-items').out, 'save-list/R1'), /no test/)
 })
+
+test('trace-index AC-2: a decision naming a range or a list links every requirement in it, and R1 never matches R10', () => {
+  const r = repo()
+  r.put('specs/save-list/prd.md', PRD.replace('- R2. (must) Share the list.\n', ['R2', 'R3', 'R4', 'R10'].map(id => `- ${id}. (must) Thing.\n`).join('')))
+  r.put('specs/saved-items/architecture-overview.md', OVERVIEW.replace('| 2026-11-08 | Other', '| 2026-11-09 | Range | Arun | chat | save-list R2 to R3 |\n| 2026-11-10 | List | Arun | chat | save-list R1, R4 |\n| 2026-11-11 | Dash | Arun | chat | save-list R2-R4 |\n| 2026-11-12 | Ten | Arun | chat | save-list R10 |\n| 2026-11-08 | Other'))
+  r.put('docs/adr/0003-ten.md', '# ADR-0003: Ten\n\nsave-list/R10 only.\n')
+  const out = r.sdlc('trace', 'saved-items').out
+  assert.match(lineOf(out, 'save-list/R3'), /Range.*Dash/)
+  assert.match(lineOf(out, 'save-list/R4'), /List.*Dash/)
+  assert.doesNotMatch(lineOf(out, 'save-list/R1'), /Ten|0003-ten/)
+  assert.match(lineOf(out, 'save-list/R10'), /Ten.*0003-ten/)
+})

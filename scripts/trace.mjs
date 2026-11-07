@@ -7,6 +7,9 @@ import { requirementsFrom } from './gherkin.mjs'
 import { matrix } from './testmatrix.mjs'
 
 const read = file => (fs.existsSync(file) ? fs.readFileSync(file, 'utf8') : '')
+// The R ids a Changes cell names for a feature: "save-list R1", "save-list/R1", "R1, R4", "R1 to R5", "R2-R4".
+const idsIn = (changes, slug) => [...changes.matchAll(new RegExp(`(?<![\\w-])${slug}[ /](R\\d+(?:\\s*(?:,|and|to|-)\\s*R?\\d+)*)`, 'g'))]
+  .flatMap(([, list]) => [...list.matchAll(/R?(\d+)(?:\s*(?:to|-)\s*R?(\d+))?/g)].flatMap(([, a, b]) => Array.from({ length: (b ?? a) - a + 1 }, (_, i) => `R${+a + i}`)))
 
 export function trace(dir, capability) {
   const specs = path.join(dir, loadConfig(dir).specsDir)
@@ -18,14 +21,13 @@ export function trace(dir, capability) {
     const rows = matrix(dir, slug).rows
     return requirementsFrom(read(path.join(specs, slug, 'prd.md'))).map(r => {
       const id = `${slug}/${r}`
-      const names = new RegExp(`\\b${slug}[ /]${r}\\b`)
       const mine = rows.filter(row => row.requirements.includes(r))
       return {
         id,
         scenarios: mine.map(row => row.ac),
         tests: [...new Set(mine.flatMap(row => row.tests.map(t => t.replace(/ \(\w+\)$/, ''))))],
-        decisions: decisions.filter(d => names.test(d.changes ?? '')).map(d => `decision:${d.date} ${d.decision}`),
-        adrs: adrs.filter(a => a.text.includes(id)).map(a => a.file),
+        decisions: decisions.filter(d => idsIn(d.changes ?? '', slug).includes(r)).map(d => `decision:${d.date} ${d.decision}`),
+        adrs: adrs.filter(a => new RegExp(`(?<![\\w-])${id}\\b`).test(a.text)).map(a => a.file),
       }
     })
   })
