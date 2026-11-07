@@ -1,7 +1,7 @@
 {
   "feature": "close-stage-six",
   "lane": "full",
-  "stage": 3,
+  "stage": 4,
   "branch": "feature/close-stage-six",
   "createdAt": "2026-11-07T14:03:19.499Z",
   "stages": {
@@ -10,7 +10,11 @@
       "leftAt": "2026-11-07T14:04:43.883Z"
     },
     "3": {
-      "enteredAt": "2026-11-07T14:04:43.883Z"
+      "enteredAt": "2026-11-07T14:04:43.883Z",
+      "leftAt": "2026-11-07T14:05:20.918Z"
+    },
+    "4": {
+      "enteredAt": "2026-11-07T14:05:20.918Z"
     }
   },
   "gates": {
@@ -21,14 +25,23 @@
       "approvedAt": "2026-11-07T14:04:43.880Z",
       "auto": true,
       "fingerprint": "47356c41f01163ad"
+    },
+    "3": {
+      "status": "approved",
+      "by": "checks: autonomy granted by Arun Endapally",
+      "requestedAt": "2026-11-07T14:05:20.916Z",
+      "approvedAt": "2026-11-07T14:05:20.916Z",
+      "auto": true,
+      "fingerprint": "f76cc9af19cf62da"
     }
   },
   "retries": {},
   "kinds": [
     "brownfield"
   ],
-  "updatedAt": "2026-11-07T14:04:43.884Z",
+  "updatedAt": "2026-11-07T14:05:20.918Z",
   "revisions": {
-    "1": 1
+    "1": 1,
+    "3": 1
   }
 }
