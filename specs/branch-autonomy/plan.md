@@ -5,18 +5,17 @@
 Builds: Plan (gate 1) and Design (gate 3) pass on their checks when requested on the feature's own branch, unless the repo names a person for that gate or the change is risky; every pass on checks is audited and the review packet lists them.
 Reuses: the automatic-gate path Build already uses (F3), with its fingerprint, so spec and plan drift still send work back; gateOwners as the per-repo off switch.
 Biggest risk: a weak PRD or design reaches the PR with no person having read it before Build (PRD A1); the PR review is the catch, and the packet now says which gates and revisions no person saw.
-Not doing: any change to Verify, Release, merge or repo-wide autonomy (ADR-0007).
+Not doing: any change to Verify, merge or repo-wide autonomy (ADR-0007); Verify and Release follow ADR-0008.
 Open: none.
 
 | Requirement | Where it is built |
 |---|---|
 | R1 Plan passes on checks on a branch | scripts/lib.mjs (BRANCH_AUTO, branchAuto() conditions), scripts/sdlc.mjs request() |
 | R2 Design passes on checks on a branch | scripts/lib.mjs (BRANCH_AUTO, branchAuto() conditions), scripts/sdlc.mjs request() |
-| R3 merge gate waits for a person | unchanged: stage 5 is not in BRANCH_AUTO; test pins it, and pins BRANCH_AUTO against neverTrust |
+| R3 the plugin never merges or pushes to main | unchanged: main has no merge command (ADR-0008); stage 5 is not in BRANCH_AUTO; AC-3 pins that Verify leaves main where it was, and a test pins BRANCH_AUTO against neverTrust |
 | R4 drift sends work back | unchanged drift check in request() (F3), with branch wording in next(); test pins it |
 | R5 failing checks refuse | unchanged missing-checks path in request(); test pins it |
 | R6 PR shows gates passed on checks | scripts/sdlc.mjs request() (audit event "auto"), scripts/review.mjs packet() and packetText() |
-| R7 Release waits for its owner | unchanged: stage 6 is not in BRANCH_AUTO; test pins it |
 
 ## C4 views
 
@@ -67,7 +66,7 @@ None, because it reads the feature's own state.json and the repo config, and wri
 
 ## Test plan
 
-- AC-1, AC-2, AC-3, AC-4, AC-5, AC-7: subsystem, in tests/branch-autonomy.test.mjs, each test builds a throwaway git repo in a temp folder with a feature on its own branch and removes it after.
+- AC-1, AC-2, AC-3, AC-4, AC-5: subsystem, in tests/branch-autonomy.test.mjs, each test builds a throwaway git repo in a temp folder with a feature on its own branch and removes it after.
 - Conditions: subsystem, same file: main, detached HEAD, wrong branch waits naming the switch, gateOwners named, rejected and waiting gates, a rejection cleared by drift still waits, frozen budget, kind data at gate 3, risky NFR at gate 3, an "auto" audit line written.
 - AC-6: unit, packetText() given a packet with one pass on checks and one drift event.
 - Unit: no BRANCH_AUTO stage appears in neverTrust for any lane.
@@ -76,7 +75,11 @@ None, because it reads the feature's own state.json and the repo config, and wri
 ## Run it
 
 - Signals: each pass on checks writes event "auto" to .ai-sdlc/audit.jsonl, by "checks: feature branch" (or the autonomy or earned-trust label).
-- Revisit signal: gate 5 "reject" events in audit.jsonl on a feature with an "auto" event at gate 1 or 3; Arun reads their reasons for the first three PRs (PRD A1).
+- Revisit signal: PRs sent back in the org's review for a feature with an "auto" event at gate 1 or 3 in audit.jsonl; Arun reads their reasons for the first three PRs (PRD A1).
 - Alert: None, because this is a local CLI with no service.
 - Config and secrets: no new config or secret; gateOwners and protectedBranches keep their meaning.
 - Cost and backup: None, because nothing is stored beyond the gate record and one audit line.
+
+## Changes since v1
+
+- Main merged ADR-0008 (the plugin stops at a raised PR) and stage names: R3 now says the plugin never merges or pushes to main, R7 and AC-7 are removed, and the revisit signal reads PRs sent back in the org's review instead of gate 5 rejects, since Verify passes on its checks.
