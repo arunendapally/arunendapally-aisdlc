@@ -237,6 +237,27 @@ const scaffoldKinds = state => {
   fs.writeFileSync(prd, text)
 }
 
+// A spec or plan edited after it was approved has not been seen by a person: back to that stage,
+// not on to ship. The approvals after it went with the old version, so they go too.
+const driftOf = (state, cfg) => (state.dataDoc
+  ? [[1, 'Define', 'the spec (prd.md, acceptance.feature, or db-design.md "## Data impact")'], [3, 'Design', `the design (${designDoc(dir, state)}, or db-design.md "## Data model" or "## Migration plan (expand-contract)")`]]
+  : [[1, 'Define', 'the spec (prd.md or acceptance.feature)'], [3, 'Design', `the design (${designDoc(dir, state)})`]])
+  .find(([s]) => state.stage > s && state.gates[s]?.status === 'approved' && state.gates[s].fingerprint && state.gates[s].fingerprint !== gateFingerprint(dir, state, s, cfg))
+const goBack = (state, [back, name, what], cfg = loadConfig(dir)) => {
+  const now = new Date().toISOString()
+  state.stages[state.stage] = { ...state.stages[state.stage], leftAt: now }
+  for (const s of Object.keys(state.gates)) if (Number(s) >= back) delete state.gates[s]
+  state.stage = back
+  state.stages[back] = { enteredAt: now }
+  writeState(dir, state)
+  audit(dir, { event: back === 1 ? 'spec-drift' : 'plan-drift', feature })
+  // ADR-0007: a gate the branch rule passes is requested again on its checks; otherwise a person approves.
+  const prdFile = path.join(dir, cfg.specsDir, feature, 'prd.md')
+  const risky = back === 3 && fs.existsSync(prdFile) ? nonFunctionalProblems(fs.readFileSync(prdFile, 'utf8')).risky : null
+  const next = autonomy(dir) ? `Request the ${name} gate again: it passes on its checks under autonomy.` : BRANCH_AUTO.includes(back) && !branchAutoBlock(dir, { ...state, stage: back, gates: {} }, cfg, risky) ? `Request the ${name} gate again: it passes on its checks on this branch.` : `Request the ${name} gate again so a person approves the new version.`
+  return `${what[0].toUpperCase()}${what.slice(1)} has changed since ${name} was approved, so ${feature} goes back to ${name}. ${next} Tests already written stay.`
+}
+
 const commands = {
   // Create a feature at stage 1, in the light lane unless --full. Starting full is always allowed
   // (it only adds the Design gate); only a human moves a feature from full to light ("sdlc lane").
@@ -318,30 +339,13 @@ const commands = {
     }
     // With autonomy granted by a person, every gate passes on its checks, recorded as granted by them.
     const granted = autonomy(dir)
-    // ADR-0007: why a person keeps gate n (null when the branch rule passes it); drift clears the gate records.
-    const keeps = n => {
-      const prdFile = path.join(dir, cfg.specsDir, feature, 'prd.md')
-      const risky = n === 3 && fs.existsSync(prdFile) ? nonFunctionalProblems(fs.readFileSync(prdFile, 'utf8')).risky : null
-      return branchAutoBlock(dir, { ...state, stage: n, gates: {} }, cfg, risky)
+    const drifted = driftOf(state, cfg)
+    // Once Build has started, a spec change is the person's call: a change request or an amendment.
+    if (drifted?.[0] === 1 && state.stage >= 4) {
+      audit(dir, { event: 'change-asked', feature })
+      fail(`The spec changed after development started. Ask the person, with the question tool: change request or amend the existing PRD? Change request (often better when much is already built): a new PRD linked to this one, with its own effort estimate, timeline and PR; the work already done and its estimate stay as agreed, and the extra effort is visible. Amend: a new version of this PRD saying what changed; simpler for a small clarification, but the original estimate must be re-done with the added effort stated. Either way the design and tasks may change. Their answer: change request: sdlc cr ${feature} <new-slug>; amend: sdlc amend ${feature}.`)
     }
-    const next = n => (granted ? `Request the ${STAGES[n].name} gate again: it passes on its checks under autonomy.` : BRANCH_AUTO.includes(n) && !keeps(n) ? `Request the ${STAGES[n].name} gate again: it passes on its checks on this branch.` : `Request the ${STAGES[n].name} gate again so a person approves the new version.`)
-    // A spec or plan edited after it was approved has not been seen by a person: back to that stage,
-    // not on to ship. The approvals after it went with the old version, so they go too.
-    const drifted = (state.dataDoc
-      ? [[1, 'Define', 'the spec (prd.md, acceptance.feature, or db-design.md "## Data impact")'], [3, 'Design', `the design (${designDoc(dir, state)}, or db-design.md "## Data model" or "## Migration plan (expand-contract)")`]]
-      : [[1, 'Define', 'the spec (prd.md or acceptance.feature)'], [3, 'Design', `the design (${designDoc(dir, state)})`]])
-      .find(([s]) => state.stage > s && state.gates[s]?.status === 'approved' && state.gates[s].fingerprint && state.gates[s].fingerprint !== gateFingerprint(dir, state, s, cfg))
-    if (drifted) {
-      const [back, name, what] = drifted
-      const now = new Date().toISOString()
-      state.stages[state.stage] = { ...state.stages[state.stage], leftAt: now }
-      for (const s of Object.keys(state.gates)) if (Number(s) >= back) delete state.gates[s]
-      state.stage = back
-      state.stages[back] = { enteredAt: now }
-      writeState(dir, state)
-      audit(dir, { event: back === 1 ? 'spec-drift' : 'plan-drift', feature })
-      fail(`${what[0].toUpperCase()}${what.slice(1)} has changed since ${name} was approved, so ${feature} goes back to ${name}. ${next(back)} Tests already written stay.`)
-    }
+    if (drifted) fail(goBack(state, drifted, cfg))
     let spec = granted ? { ...stageSpec(state, state.stage, trustedGates(dir)), isAuto: true, owner: `autonomy granted by ${granted.by}` } : stageSpec(state, state.stage, trustedGates(dir))
     if (spec.artefact === 'design.md') spec.artefact = designDoc(dir, state)
     // ADR-0007: after autonomy and earned trust, the feature branch rule; keptBy says why a person decides.
@@ -574,6 +578,30 @@ Ask the owner: run "sdlc ask ${feature}" and put its question to them with the q
       console.log(`Unconfirmed assumptions: ${unconfirmed.join(', ') || 'none'}`)
     }
     if (state.stage === 5) console.log(`Risk tier: ${state.riskTier}. Files reviewed: ${state.reviewedFiles.length}.\nNot verified: ${section(doc(spec.artefact), '## Not verified') || 'nothing listed'}`)
+  },
+
+  // The person's answer to "change request or amend?". A change request is a new feature in the same
+  // capability that names the original; the original keeps its state and approvals.
+  cr() {
+    const state = need()
+    const slug = rest[0]
+    if (!slug || !/^[a-z0-9][a-z0-9-]*$/.test(slug)) fail('Usage: sdlc cr <feature> <new-slug>')
+    if (readState(dir, slug)) fail(`Feature "${slug}" already exists.`)
+    if (isFrozen(dir)) fail('The error budget is spent, so new features wait until a human unfreezes it.')
+    const specs = loadConfig(dir).specsDir
+    createFeature(dir, { feature: slug, lane: state.lane, extra: { kinds: [], ...(state.capability ? { capability: state.capability } : {}) } })
+    const prd = copyTemplate(dir, slug, 'prd.md')
+    const feat = copyTemplate(dir, slug, 'acceptance.feature')
+    const cap = state.capability ? `Capability: ${state.capability} (${specs}/${state.capability}/slices.md)\n` : ''
+    fs.writeFileSync(path.join(dir, prd), fs.readFileSync(path.join(dir, prd), 'utf8').replace(/^(# PRD: .*\n)/, `$1\nChanges: ${feature}\n${cap}`))
+    console.log(`Created ${slug} at Define, ${state.lane} lane, as a change request to ${feature}, whose state and approvals are untouched. Put ${feature}'s spec back to its approved text (git restore ${specs}/${feature}/prd.md ${specs}/${feature}/acceptance.feature) and write the change in ${prd} and ${feat}.`)
+  },
+
+  amend() {
+    const state = need()
+    const drifted = driftOf(state, loadConfig(dir))
+    if (drifted?.[0] !== 1) fail(`${feature}'s spec has not changed since Define was approved: nothing to amend.`)
+    console.log(goBack(state, drifted))
   },
 
   // The question a person answers with a click instead of typing a command (owner feedback, 29 Oct).
@@ -1101,6 +1129,6 @@ if (HUMAN_VERBS.includes(cmd)) {
 }
 
 if (!commands[cmd]) {
-  fail(`${cmd ? `Unknown command: ${cmd}.\n` : ''}Usage: sdlc <init|bug|task|kind|request|advance|gate|tests|proof|conflict|spike|review|gherkin|api|packets|tickets|retry|status|outcome|trust|metrics|retro|incident|knowledge|init-repo> [feature] [...]\nA person, in their own terminal: sdlc <${HUMAN_VERBS.join('|')}> ...`)
+  fail(`${cmd ? `Unknown command: ${cmd}.\n` : ''}Usage: sdlc <init|bug|task|kind|request|cr|amend|advance|gate|tests|proof|conflict|spike|review|gherkin|api|packets|tickets|retry|status|outcome|trust|metrics|retro|incident|knowledge|init-repo> [feature] [...]\nA person, in their own terminal: sdlc <${HUMAN_VERBS.join('|')}> ...`)
 }
 commands[cmd]()

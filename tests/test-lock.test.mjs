@@ -69,6 +69,8 @@ test('AC-4 Raising a conflict does not count against the retry cap', () => {
 const newVersion = r => {
   r.put('specs/demo/prd.md', READY_PRD + '\n## Changes since v1\n\n- R1 now saves 200 items.\n')
   r.sdlc('request', 'demo')
+  // change-request: a spec change at Build asks first; the person's answer here is amend.
+  r.sdlc('amend', 'demo')
   r.sdlc('request', 'demo')
 }
 

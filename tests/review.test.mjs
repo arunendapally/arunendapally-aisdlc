@@ -77,7 +77,8 @@ test('a spec changed after Plan was approved sends the feature back to Plan', ()
   assert.doesNotMatch(r.sdlc('request', 'demo').out, /has changed since gate/, 'an unchanged spec stays where it is')
 
   r.put('specs/demo/prd.md', READY_PRD.replace('Save an item', 'Save and share an item'))
-  const out = r.sdlc('request', 'demo').out
+  assert.match(r.sdlc('request', 'demo').out, /change request or amend the existing PRD\?/, 'at Build the person chooses')
+  const out = r.sdlc('amend', 'demo').out
   assert.match(out, /The spec \(prd\.md or acceptance\.feature\) has changed since Define was approved/)
   assert.match(out, /back to Define/)
   const s = r.state('demo')

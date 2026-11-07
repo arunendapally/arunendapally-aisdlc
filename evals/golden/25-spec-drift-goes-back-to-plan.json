@@ -55,8 +55,24 @@
         "demo"
       ],
       "ok": false,
-      "out": "goes back to Define",
+      "out": "change request or amend the existing PRD?",
       "why": "an agent edited the approved spec during Build"
+    },
+    {
+      "state": [
+        "demo",
+        "stage",
+        4
+      ]
+    },
+    {
+      "sdlc": [
+        "amend",
+        "demo"
+      ],
+      "ok": true,
+      "out": "goes back to Define",
+      "why": "the person chose to amend"
     },
     {
       "state": [

@@ -50,7 +50,8 @@ test('with autonomy, messages say what happens next without a person, and risky 
   r.put('specs/demo/acceptance.feature', READY_FEATURE)
   r.sdlc('request', 'demo')
   r.put('specs/demo/prd.md', `## Intent\n\n- Change: a\n- Smallest: b\n- Drop if: c\n\n${READY_PRD.replace('Save an item', 'Save and share an item')}`)
-  const drift = r.sdlc('request', 'demo').out
+  assert.match(r.sdlc('request', 'demo').out, /change request or amend the existing PRD\?/)
+  const drift = r.sdlc('amend', 'demo').out
   assert.match(drift, /goes back to Define\. Request the Define gate again: it passes on its checks under autonomy/)
   assert.doesNotMatch(drift, /a person approves/)
 
