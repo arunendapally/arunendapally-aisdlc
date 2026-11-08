@@ -28,6 +28,14 @@ Removed, skipped or quarantined: none
 
 ## Pre-review
 
+Risk: medium, because the only code line is a comment (scripts/lib.mjs:180), but the gate floor for code is medium; the rest is docs and templates.
+Open findings: 5 (F1 to F3 minor, F4 and F5 nit; see review.md)
+Look here first: docs/getting-started.md:99 (the new outcome sentence contradicts the default config for the light lane), docs/getting-started.md:65 and docs/org-ai-sdlc-process.md:101 (how much Release wording this PR should clear versus the deferred docs pass)
+Lenses run: correctness, docs accuracy, dead references, simplicity
+Revert: git revert of the merge commit; no data or state to back out
+Checked mechanically: git grep for release.md, templates/release, stage 6 and ai-sdlc:release across scripts, hooks, tests, evals, commands, skills, templates, agents and docs: only STAGES[6] (scripts/lib.mjs:18, kept on purpose), tests/db-design.test.mjs:66 (a message, F5) and dated decision and feedback records remain; commands/release.md exists and already says out of scope, so retro.mjs:8 still resolves; outcomeFollowUp reads Metric, Owner and Read on: from the PRD Outcome metric (scripts/loop.mjs:201-210, called from loop.mjs:257); design.md has Run it (templates/design.md:112, lib.mjs:13); the two edited markdown tables keep their column count; no new dependency, nothing hand-rolled
+Could not check: the full suite and evals were not rerun here (gate reported 301 and 29/29); rendered markdown not viewed
+
 ## Not verified
 
 Other wording in docs/getting-started.md and docs/org-ai-sdlc-process.md that predates ADR-0008 (for example "sdlc approve saved-items 5" and "A CODEOWNER engineer approves and merges") was not changed: a separate docs pass.

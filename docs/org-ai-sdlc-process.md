@@ -57,7 +57,7 @@ Start anything with `/ai-sdlc:start <what you want>`. The CTO reads the code and
 | brownfield | the current system in the PRD, facts pinned to the code, characterisation tests before changing behaviour |
 | perf | a performance budget, a benchmark before, the same benchmark after |
 | api | the API changes in the PRD and an OpenAPI contract; breaking changes must be declared |
-| data | facts, and `db-design.md`, the data contract the DBA owns: data impact at Define, the ER diagram of the change and an expand-contract plan at Design (at Build in the light lane), a rehearsal and a down migration at Build, a backout at Release; the DBA on the PR |
+| data | facts, and `db-design.md`, the data contract the DBA owns: data impact at Define, the ER diagram of the change and an expand-contract plan at Design (at Build in the light lane), a rehearsal and a down migration at Build, a backout for the org's release; the DBA on the PR |
 
 A change to migrations or SQL that is not marked as data work cannot pass its gate. Agents may add a kind but never remove one.
 
@@ -98,7 +98,7 @@ What each stage expects, what happens in it, who leads and who decides, and what
 | **4 Build** | The approved spec (and the plan in the full lane), the standards and traps | Breaks the work into tasks; each slice runs test, implement, gate, retry, with the retries capped and the gate never below its baseline | `tech-lead`, `builder` | Nobody: it passes on its checks | `tasks.md` ticked off, code and tests, the gate green, the diff under the lane's limit |
 | **5 Verify** | The branch, its tests and the spec | Proves the new tests fail on the base code and pass on the branch, then the pre-reviewer reviews the PR through expert lenses and scores the risk | `pre-reviewer`, `qa-engineer` | A CODEOWNER engineer approves and merges | The PR (summary, test results, pre-review, not verified), the review packet and test matrix, merged to `main` |
 | **Observe** | The outcome metric and its watch window (14 days in the full lane) | Reads the metric against its target | The metric's owner | The owner records it; a breach goes to the incident commander | The outcome recorded as met, missed or breach |
-| **Remember** | What the change touched | Flags stale knowledge pages, facts and superseded ADRs at Release; a bug or hotfix owes a trap guarded by a check | The agent on the feature | Reviewed with the release | Updated knowledge, facts and ADR status, and new traps |
+| **Remember** | What the change touched | An agent checks stale knowledge pages, facts and superseded ADRs before the PR (no gate warns since ADR-0008); a bug or hotfix owes a trap guarded by a check | The agent on the feature | Reviewed with the PR | Updated knowledge, facts and ADR status, and new traps |
 | **Improve** | Rejections, escalations and escapes across features | Ranks proposals, changes at most three plugin files, and adds an eval for each that fails before and passes after; never loosens a gate | `cto` | A platform owner merges the retro PR | A `retro/<date>` PR that tightens the plugin |
 
 ---
@@ -151,7 +151,7 @@ Decided in [ADR-0002](adr/0002-loop-spine.md), and made lighter by [ADR-0003](ad
   - `sdlc spike <feature>` marks a slice as a spike: it may skip the red-first habit, never the proof, and it cannot pass Verify until a non-spike slice replaces it.
 - **Verify, then review.** The machine gate runs before the packet, the lenses and the human, at every scale.
 - **Release and observe.** In the full and light lanes, Release refuses without a rollback line `Tested: <date>, <how>` (a date no later than today), with a probe that failed, and without a passing probe for each `@release` criterion. It also needs `## Outcome metric` naming `Metric:` and `Owner:`, or `Metric: None, because ...`. The feature closes at release and opens an outcome follow-up, due after the watch window (`outcomeWindowDays`: 14 days in the full lane, 7 in the light lane; 0 turns a lane off) or on its `Read on:` date. Status and session start show OUTCOME DUE and OVERDUE; `sdlc metrics` reports its age. `sdlc outcome <feature> breach` alerts the incident commander; only a human declares a hotfix.
-- **Remember, on staleness, as warnings.** Release warns about each of these, and an agent fixes what it lists before the human review:
+- **Remember, on staleness, as warnings.** Release warned about each of these until ADR-0008 removed it; now an agent checks them before the human review:
   - a knowledge page whose sources the change touched is stale (C4 files count as sources)
   - a fact in `facts.md` about a file the change touched is stale
   - a decision says it supersedes an ADR (in `design.md` or a changed ADR) and that ADR is not marked `Status: superseded`
@@ -282,7 +282,7 @@ Each gate refuses work that guesses, skips a question or hides risk, so what rea
 | Builder writes its own tests | tests come first, and the proof shows each one fails on the base code; a bug fix needs its repro red first |
 | Hotfix speed vs safety | a human declares it; a 1h review; rollback written before the fix; a postmortem is enforced, and the repro is proved after the merge |
 | Data changes hide inside "small" work | schema files force the data kind; an additive migration stays light with the DBA on the PR; altering or dropping data needs the full lane |
-| Knowledge rots | every page names its sources and verified commit; stale pages are flagged mechanically and warned about at Release |
+| Knowledge rots | every page names its sources and verified commit; stale pages are flagged mechanically by `sdlc knowledge check` |
 
 ---
 

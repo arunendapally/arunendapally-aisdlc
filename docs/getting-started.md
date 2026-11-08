@@ -62,7 +62,7 @@ That is all you need. The rest of this guide is reference.
 
 ## 3. What happens, stage by stage
 
-A feature waits on you three times: the spec, the merge and the release. Agents cannot type the approvals for you; the hooks refuse it.
+A feature waits on you at the spec and at the PR; merge, deploy and release follow your org's own process (ADR-0008). Agents cannot type the approvals for you; the hooks refuse it.
 
 | Stage | You run | The agents produce | You decide |
 |---|---|---|---|
@@ -96,7 +96,7 @@ If the feature already has a GitHub Spec Kit `spec.md`, start the Define gate fr
 - **Retire work that will not ship:** type `sdlc close <feature> <reason>`. It keeps its history and leaves the board. It is refused while a lesson is owed or a postmortem is open.
 - **When review keeps going round:** after three refused Verify rounds the gate stops. Read what is going wrong, then type `sdlc reject <feature> 5 rethink: <the new approach>`.
 - **Error budget spent:** type `sdlc freeze`. No new feature starts (`sdlc init` is refused); bug fixes, hotfixes and tasks carry on until `sdlc unfreeze`.
-- **When Verify completes a full-lane feature:** its outcome follow-up opens with the owner and read date from the PRD's `## Outcome metric` (or none, for `Metric: None, because ...`). Status shows OUTCOME DUE, then OVERDUE. An agent records `sdlc outcome <feature> met|missed|breach`; a breach alerts the incident commander, who decides whether to declare a hotfix. Add `"outcomeWindowDays": { "light": 7 }` to turn it on for the light lane.
+- **When Verify completes a full or light feature:** its outcome follow-up opens with the owner and read date from the PRD's `## Outcome metric` (or none, for `Metric: None, because ...`). Status shows OUTCOME DUE, then OVERDUE. An agent records `sdlc outcome <feature> met|missed|breach`; a breach alerts the incident commander, who decides whether to declare a hotfix. Set a lane to 0 in `"outcomeWindowDays"` to turn it off.
 - **When the retro is due early:** an escalation past the retry cap, or the same serious review finding in two features, shows RETRO DUE in `status`. Running the retro clears it.
 
 ## 6. Set it up for a team
