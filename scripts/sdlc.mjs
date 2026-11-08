@@ -543,10 +543,10 @@ const commands = {
     const gate = state.gates[state.stage]
     if (gate?.status === 'approved') fail(`${spec.name} is already approved. Run: sdlc advance ${feature}`)
     const now = new Date().toISOString()
-    // The commit the reviewer sees is the one Release must find on the remote's main (ADR-0004).
+    // The commit the reviewer saw, so a closed feature reopens when code changes after it (ADR-0004).
     if (state.stage === 5) {
       state.reviewedSha = git('rev-parse HEAD', dir)
-      // After the merge the branch shows no diff against main, so Release reads what was reviewed.
+      // After the merge the branch shows no diff against main, so the reopen check reads what was reviewed.
       state.reviewedFiles = changedFiles(dir, cfg).map(f => f.file)
       state.reviewedHashes = contentHashes(dir, state.reviewedFiles.filter(f => !f.startsWith(`${cfg.specsDir}/`) && !f.startsWith('.ai-sdlc/')))
     }
