@@ -22,7 +22,7 @@ None a user sees, because the deleted branch ran only for a feature at stage 6: 
 ## Test results
 
 Suite: 301 passed, 0 failed, 0 skipped (baseline 309 on main; the 8 removed tests tested only the deleted functions)
-Gate: green, 301 passing, 29/29 evals, F1 to F5 caught, PR size 141 of 200 (sdlc gate remove-release)
+Gate: green, 301 passing, 29/29 evals, F1 to F5 caught, PR size 145 of 200 (sdlc gate remove-release)
 Removed, skipped or quarantined: 8 removed: failures F3 release, F3 rollback, F3 squash; loop release readiness, release warnings; harden failed probe, rollback date; release-criteria V4 Release refuses
 
 ## Pre-review
@@ -32,7 +32,7 @@ Open findings: 0 (F1, F2 fixed in e06216f)
 Look here first: scripts/sdlc.mjs:329 (confirm a closed stage-6 feature skipping the old Release check is acceptable, F2), CHANGELOG.md:7 (the stale-knowledge, superseded-ADR and postmortem-action warnings now run nowhere: a person decides whether Verify should own them)
 Lenses run: correctness, simplicity, dead references
 Revert: git revert of the merge commit; no data or state to back out
-Checked mechanically: checklist items 2, 3, 13, 21, 22, 26; no caller or import of releaseProblems, liveProblems, landedOn, releaseSha, liveShaIn, probeResult, testedOn, isHeaderRow, rememberWarnings in scripts, hooks, tests, evals, templates; the removed imports (gitOk, knowledgeCheck, knowledgePages, parseFacts, factProblems) have no other use in loop.mjs; every remaining loop.mjs import is still used; harden test 1 keeps its outcomeFollowUp assertion; the 8 removed tests exercised only deleted functions; no new dependency; packet signals: none
+Checked mechanically: checklist items 2, 3, 13, 21, 22, 26; suite rerun at ddfafa3: 301 passed, 0 failed; no caller or import of releaseProblems, liveProblems, landedOn, releaseSha, liveShaIn, probeResult, testedOn, isHeaderRow, rememberWarnings in scripts, hooks, tests, evals, templates; the removed imports (gitOk, knowledgeCheck, knowledgePages, parseFacts, factProblems) have no other use in loop.mjs; every remaining loop.mjs import is still used; harden test 1 keeps its outcomeFollowUp assertion; the 8 removed tests exercised only deleted functions; no new dependency; packet signals: none
 Could not check: docs, agents/sre.md and the release.md template still describe Release (out of scope by task.md); no proofCommand, so no fail-before proof; @release criteria are now named on the PR only (ADR-0008), not re-verified here
 
 ## Not verified
