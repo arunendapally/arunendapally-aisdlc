@@ -70,7 +70,6 @@ A feature waits on you three times: the spec, the merge and the release. Agents 
 | 1 Define | `/ai-sdlc:define saved-items` | Their questions first (you answer them), then a short `prd.md` and `acceptance.feature`: a Gherkin scenario per requirement | `sdlc approve saved-items 1` |
 | 4 Build | `/ai-sdlc:build saved-items` | Tests first, then code from the builder, reviewed by the tech lead. Passes on checks | Nothing: no wait |
 | 5 Verify | `/ai-sdlc:verify saved-items` | The test proof, the review packet, the findings ledger `review.md`, and a PR whose body says what was not verified | Review the PR from "Look here first", add what you find to `review.md` as H rows, then `sdlc approve saved-items 5` |
-| 6 Release | `/ai-sdlc:release saved-items` | The rollout, a tested rollback, and probe results after you deploy | You merge and deploy; then `sdlc approve saved-items 6` |
 
 **The full lane** adds stage 3 Design (`/ai-sdlc:design`: the plan, and an ADR with its review for each new datastore, dependency or service) and a fourth wait. Triage picks it for a migration that alters or drops data, a high-risk path, or a new component; you can also type `sdlc lane saved-items full` at any point before Verify.
 
@@ -97,7 +96,7 @@ If the feature already has a GitHub Spec Kit `spec.md`, start the Define gate fr
 - **Retire work that will not ship:** type `sdlc close <feature> <reason>`. It keeps its history and leaves the board. It is refused while a lesson is owed or a postmortem is open.
 - **When review keeps going round:** after three refused Verify rounds the gate stops. Read what is going wrong, then type `sdlc reject <feature> 5 rethink: <the new approach>`.
 - **Error budget spent:** type `sdlc freeze`. No new feature starts (`sdlc init` is refused); bug fixes, hotfixes and tasks carry on until `sdlc unfreeze`.
-- **After a full-lane release:** the feature closes, and its outcome follow-up opens with the owner and read date from `release.md` (`## Outcome metric`, or `Metric: None, because ...`). Status shows OUTCOME DUE, then OVERDUE. An agent records `sdlc outcome <feature> met|missed|breach`; a breach alerts the incident commander, who decides whether to declare a hotfix. Add `"outcomeWindowDays": { "light": 7 }` to turn it on for the light lane.
+- **When Verify completes a full-lane feature:** its outcome follow-up opens with the owner and read date from the PRD's `## Outcome metric` (or none, for `Metric: None, because ...`). Status shows OUTCOME DUE, then OVERDUE. An agent records `sdlc outcome <feature> met|missed|breach`; a breach alerts the incident commander, who decides whether to declare a hotfix. Add `"outcomeWindowDays": { "light": 7 }` to turn it on for the light lane.
 - **When the retro is due early:** an escalation past the retry cap, or the same serious review finding in two features, shows RETRO DUE in `status`. Running the retro clears it.
 
 ## 6. Set it up for a team

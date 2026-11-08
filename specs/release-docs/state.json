@@ -1,0 +1,28 @@
+{
+  "feature": "release-docs",
+  "lane": "task",
+  "stage": 4,
+  "branch": "task/release-docs",
+  "createdAt": "2026-11-08T04:51:09.978Z",
+  "stages": {
+    "4": {
+      "enteredAt": "2026-11-08T04:51:09.978Z"
+    }
+  },
+  "gates": {},
+  "retries": {},
+  "kinds": [],
+  "updatedAt": "2026-11-08T04:57:59.122Z",
+  "gateRuns": {
+    "4": {
+      "ok": true,
+      "count": 301,
+      "at": "2026-11-08T04:57:58.843Z",
+      "runs": 1,
+      "runtime": "v24.19.0"
+    }
+  },
+  "baseline": 301,
+  "baselineRuntime": "v24.19.0",
+  "proofBase": "9969432fe5179a2b2f804cdefd394c69338f1ae4"
+}

@@ -106,8 +106,8 @@ item seen before (support dashboard 2026-Q3, read by Sam, support lead). Today t
 
 ## Outcome metric
 
-<!-- One metric of value to users or the business, read after the lane's window (see release.md); release.md
-     copies Metric and Owner. Uptime and error rates are release probes, not outcomes. Example:
+<!-- One metric of value to users or the business, read after the lane's window (outcomeWindowDays in
+     config, or a "Read on: <date>" line here). Uptime and error rates are release probes, not outcomes. Example:
 Metric: share of saved items bought within 14 days of saving
 Baseline: none today (no saved list); the first read sets it
 Target: 8%
