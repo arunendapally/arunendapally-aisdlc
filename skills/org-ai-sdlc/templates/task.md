@@ -50,7 +50,7 @@ Risk: never below the floor the change sets; the gate refuses a lower label.
   medium  any other change, behind a flag or not, including copy inside code files
   high    auth, payments or migrations folders, infra/, terraform/, .github/, CODEOWNERS, .claude/agents/, .claude/hooks/, .mcp.json,
           a .sql or Prisma schema that drops, renames or alters, and any path in the repo's highRiskPaths or askPaths
-Open findings: open blocker, major and minor rows in specs/<feature>/review.md. Must be 0. Name any open nits.
+Open findings: open blocker, major and minor rows in specs/<feature>/review.md. Must be 0; open nits may stay, named: "Open findings: 0 (nits left open: F5)".
 Look here first: two or three file:line places that need human judgement, each with the question to decide. Never a place you already proved.
 Lenses run: the lenses that ran, by name. An empty ledger is valid; this line says what was looked at.
 Revert: the one step that undoes this (git revert of the merge, a flag off), and whether data must be backed out first. -->

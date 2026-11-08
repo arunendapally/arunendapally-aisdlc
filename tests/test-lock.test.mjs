@@ -6,6 +6,7 @@ import crypto from 'node:crypto'
 import fs from 'node:fs'
 import path from 'node:path'
 import { makeRepo, READY_PRD, READY_FEATURE } from './helpers.mjs'
+import { runtimePath } from '../scripts/lib.mjs'
 
 const TEST = "// demo\ntest('AC-1 Save an item', () => {})\n"
 const sha = t => crypto.createHash('sha256').update(t).digest('hex').slice(0, 16)
@@ -111,7 +112,7 @@ test('AC-1 in bypass mode the edit is audited, never called refused', () => {
   const r = proved()
   const out = r.hook('pre-tool', { tool_name: 'Write', tool_input: { file_path: `${r.repo}/tests/demo.test.mjs`, content: 'x' }, permission_mode: 'bypassPermissions' })
   assert.equal(out, '')
-  const audit = fs.readFileSync(path.join(r.repo, '.ai-sdlc', 'audit.jsonl'), 'utf8').trim().split('\n').map(l => JSON.parse(l))
+  const audit = fs.readFileSync(runtimePath(r.repo, 'audit.jsonl'), 'utf8').trim().split('\n').map(l => JSON.parse(l))
   assert.ok(audit.some(e => e.decision === 'bypassed' && e.rule === 'test-lock'))
 })
 

@@ -6,9 +6,13 @@ import path from 'node:path'
 import { makeRepo } from './helpers.mjs'
 import { runTask, regressions, loadTasks } from '../evals/run.mjs'
 import { score, runAgentEvals, loadAgentTasks } from '../evals/agents.mjs'
+import { runtimePath } from '../scripts/lib.mjs'
 
 const hoursAgo = h => new Date(Date.now() - h * 36e5).toISOString()
-const audit = (r, entries) => r.put('.ai-sdlc/audit.jsonl', entries.map(e => JSON.stringify({ at: new Date().toISOString(), ...e })).join('\n') + '\n')
+const audit = (r, entries) => {
+  fs.mkdirSync(path.dirname(runtimePath(r.repo, 'audit.jsonl')), { recursive: true })
+  fs.writeFileSync(runtimePath(r.repo, 'audit.jsonl'), entries.map(e => JSON.stringify({ at: new Date().toISOString(), ...e })).join('\n') + '\n')
+}
 const retro = (r, ...args) => JSON.parse(r.sdlc('retro', '--json', ...args).out)
 const kinds = res => res.proposals.map(p => p.kind)
 

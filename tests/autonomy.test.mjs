@@ -5,6 +5,7 @@ import assert from 'node:assert/strict'
 import fs from 'node:fs'
 import path from 'node:path'
 import { makeRepo, READY_PRD, READY_FEATURE } from './helpers.mjs'
+import { runtimePath } from '../scripts/lib.mjs'
 
 const GRANT = 'sdlc autonomy on a demo calculator with no users and no data'
 
@@ -14,7 +15,7 @@ test('only a person grants autonomy, with a reason, and can take it back', () =>
   assert.match(r.say(GRANT), /Test Human granted autonomy/)
   const flag = JSON.parse(fs.readFileSync(path.join(r.repo, '.ai-sdlc', 'AUTONOMY'), 'utf8'))
   assert.deepEqual([flag.by, flag.reason], ['Test Human', 'a demo calculator with no users and no data'])
-  assert.match(fs.readFileSync(path.join(r.repo, '.ai-sdlc', 'audit.jsonl'), 'utf8'), /"event":"autonomy-on"/)
+  assert.match(fs.readFileSync(runtimePath(r.repo, 'audit.jsonl'), 'utf8'), /"event":"autonomy-on"/)
   assert.match(r.sdlc('status').out, /AUTONOMY: granted by Test Human/)
 
   assert.equal(r.bash('echo sdlc autonomy on because'), 'deny', 'an agent cannot grant itself autonomy')

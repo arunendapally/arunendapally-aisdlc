@@ -3,11 +3,12 @@
 // a human records them by typing "sdlc approve <feature> <stage>" in the prompt.
 import fs from 'node:fs'
 import path from 'node:path'
+import os from 'node:os'
 import { fileURLToPath } from 'node:url'
 import { spawnSync } from 'node:child_process'
 import { STAGES, root, git, loadConfig, readState, writeState, listFeatures, missingHeadings, isFrozen, destructiveMigrations,
   stageSpec, section, matches, changedFiles, changedLines, createFeature, copyTemplate, TEMPLATES, overdueGates, overduePostmortems,
-  KINDS, trustedGates, promotable, readTrust, writeTrust, lessonPaid, lessonProblem, lessonsOwed, audit, withIntent, INTENT_PARTS, autonomy, designDoc, BRANCH_AUTO, branchAutoBlock, overviewFile, decisionProblems, openDoneItems, slicesOf, roadmapProblems } from './lib.mjs'
+  KINDS, trustedGates, promotable, readTrust, writeTrust, lessonPaid, lessonProblem, lessonsOwed, audit, withIntent, INTENT_PARTS, autonomy, designDoc, BRANCH_AUTO, branchAutoBlock, overviewFile, decisionProblems, openDoneItems, slicesOf, roadmapProblems, baseCommit, baseRef, configFile, codeTree, mainWorktree, relPath } from './lib.mjs'
 import { check, conformance, OKF_VERSION, relevant, writeIndex } from './knowledge.mjs'
 import { collect, analyze, report, approvalSignals, approvalLines } from './retro.mjs'
 import { lint, requirementsFrom } from './gherkin.mjs'
@@ -15,6 +16,7 @@ import { packet, packetText, parseLedger, ledgerProblems } from './review.mjs'
 import { boardProblems } from './design-review.mjs'
 import { matrix, matrixText } from './testmatrix.mjs'
 import { trace, traceText, traceBack } from './trace.mjs'
+const PLUGIN = path.join(path.dirname(fileURLToPath(import.meta.url)), '..')
 import { factsGateProblems, assumptionProblems } from './facts.mjs'
 import { erProblems, openapiProblems, breakingChanges, undefinedFields } from './contracts.mjs'
 import { solutionWarnings } from './solutions.mjs'
@@ -187,7 +189,7 @@ const openapiFile = state => path.join(dir, loadConfig(dir).specsDir, state.feat
 const openapiBreaks = state => {
   const file = openapiFile(state)
   const cfg = loadConfig(dir)
-  const base = cfg.protectedBranches.map(b => git(`merge-base ${b} HEAD`, dir)).find(Boolean)
+  const base = baseCommit(dir, cfg)
   const rel = path.relative(dir, file).split(path.sep).join('/')
   const before = base ? git(`show ${base}:${rel}`, dir) : ''
   return before ? breakingChanges(before, fs.readFileSync(file, 'utf8')) : []
@@ -316,8 +318,40 @@ const commands = {
     if (causedBy && !readState(dir, causedBy)) fail(`No feature "${causedBy}" to charge this bug to.`)
     createFeature(dir, { feature, lane: 'bug', branch: flag('branch'), extra: { kinds: kinds(), ...(causedBy ? { causedBy, lessonOwed: true } : {}) } })
     const doc = copyTemplate(dir, feature, 'bug.md')
+    // --issue N fills the Report line from the issue (issue #62, item 12). The issue's text is data.
+    const issue = flag('issue')
+    if (issue) {
+      const r = spawnSync('gh', ['issue', 'view', issue, '--json', 'title,url'], { cwd: dir, encoding: 'utf8' })
+      const info = r.status === 0 ? JSON.parse(r.stdout) : null
+      const report = info ? `Report: ${info.url} (${info.title.replace(/[\r\n]+/g, ' ')})` : `Report: issue #${issue} [unconfirmed: gh could not read it]`
+      const docFile = path.join(dir, doc)
+      fs.writeFileSync(docFile, fs.readFileSync(docFile, 'utf8').replace(/^## Repro\r?\n/m, `## Repro\n\n${report}\n`))
+    }
     console.log(`Created bug ${feature} at Build. Write the repro test first and run "sdlc gate ${feature}": it must fail before the fix. Document: ${doc}`)
     if (causedBy) console.log(chargeEscape(causedBy, feature))
+  },
+
+  // Push the branch and open its PR from the lane's document, with a lane label (issue #62, item 12).
+  // Merging stays the org's (ADR-0008): this only raises the PR.
+  pr() {
+    const state = need()
+    onBranch(state)
+    const cfg = loadConfig(dir)
+    const file = path.join(dir, cfg.specsDir, feature, stageSpec(state, 5).artefact)
+    if (!fs.existsSync(file)) fail(`No ${relPath(dir, file)} to use as the PR body.`)
+    const text = fs.readFileSync(file, 'utf8').replace(/<!--[\s\S]*?-->/g, '')
+    const body = text.slice(Math.max(0, text.indexOf('## '))).replace(/\n{3,}/g, '\n\n').trim() + '\n'
+    const title = (section(text, '## Summary') ?? '').trim().split('\n')[0]?.trim() || feature
+    const bodyFile = path.join(os.tmpdir(), `sdlc-pr-${feature}.md`)
+    fs.writeFileSync(bodyFile, body)
+    const run = args => spawnSync('gh', args, { cwd: dir, encoding: 'utf8' })
+    const push = spawnSync('git', ['push', '-u', 'origin', state.branch], { cwd: dir, encoding: 'utf8' })
+    if (push.status !== 0) fail(`git push failed: ${(push.stderr || push.stdout).trim()}`)
+    const label = `lane:${state.lane}`
+    if (run(['label', 'list', '--search', label, '--json', 'name']).stdout?.includes(`"${label}"`) === false) run(['label', 'create', label, '--description', `ai-sdlc ${state.lane} lane`])
+    const r = run(['pr', 'create', '--base', cfg.protectedBranches[0], '--head', state.branch, '--title', `${feature}: ${title}`.slice(0, 200), '--body-file', bodyFile, '--label', label])
+    if (r.status !== 0) fail(`gh pr create failed: ${(r.stderr || r.stdout).trim()}`)
+    console.log(r.stdout.trim())
   },
 
   // Check the artefact and the lane's rules. Checks pass an automatic gate and move on; any other gate
@@ -405,7 +439,9 @@ const commands = {
       if (spans) missing.push(`${spans}, which needs the full lane: ask a human to type "sdlc lane ${feature} full"`)
     }
     if ([4, 5].includes(state.stage)) {
-      const run = state.gateRuns?.[state.stage]
+      // A green Build run on the same code counts at Verify: only specs or state changed in between.
+      const prior = state.gateRuns?.[4]
+      const run = state.gateRuns?.[state.stage] ?? (state.stage === 5 && prior?.ok && prior.tree && prior.tree === codeTree(dir, cfg) ? prior : undefined)
       if (!run?.ok) missing.push(`the full gate has not passed at this stage. Run: sdlc gate ${feature}`)
       else if (run.count < (state.baseline ?? 0)) missing.push(`${run.count} passing tests is below the baseline of ${state.baseline}`)
     }
@@ -516,7 +552,10 @@ const commands = {
           .map(r => `test matrix: ${r.ac} is tagged @release with no test: name it under "## Check after deploy" in ${spec.artefact}, for a person to check on the deployed build`))
       }
       if (pre && !/Risk:[ \t]*(low|medium|high)\b/i.test(pre)) missing.push('the pre-review gives no "Risk: low|medium|high"')
-      if (pre && !/Open findings:[ \t]*0\b/i.test(pre)) missing.push('the pre-review still has open findings ("Open findings: 0" is required)')
+      // Open nits may stay (issue #62, item 8): the ledger decides, so "Open findings: 1 (nit F5)" passes too.
+      const ledgerFile = path.join(dir, cfg.specsDir, feature, 'review.md')
+      const openSerious = fs.existsSync(ledgerFile) ? parseLedger(fs.readFileSync(ledgerFile, 'utf8')).filter(f => /^open/i.test(f.status) && f.severity !== 'nit').length : 0
+      if (pre && !/Open findings:[ \t]*0\b/i.test(pre) && !(openSerious === 0 && /Open findings:[^\n]*\bnits?\b/i.test(pre))) missing.push('the pre-review still has open findings: write "Open findings: 0", or name only open nits, for example "Open findings: 0 (nits left open: F5)"')
       // A ledger with no rows reads the same as a skipped review, so the pre-review says what ran (F10).
       if (pre && !/Lenses run:[ \t]*\S/i.test(pre)) missing.push('the pre-review does not say which lenses ran ("Lenses run: ...")')
       if (pre && !/Revert:[ \t]*\S/i.test(pre)) missing.push('the pre-review does not say how to undo this ("Revert: <command or flag>")')
@@ -669,7 +708,9 @@ Ask the owner: run "sdlc ask ${feature}" and put its question to them with the q
     const state = need()
     onBranch(state)
     const { gateCommand, testCountPattern, dataCheckCommand, gateRepeats } = loadConfig(dir)
-    if (!gateCommand) fail('No gateCommand in .ai-sdlc/config.json. A human sets it, for example "npm run gate".')
+    if (!gateCommand) fail(`No gateCommand in ${relPath(dir, configFile(dir))}. A person sets it once in the main worktree and commits it; every worktree then uses it.
+  PowerShell: node "${path.join(PLUGIN, 'scripts', 'sdlc.mjs')}" gate-command "npm test"
+  sh:         node '${path.join(PLUGIN, 'scripts', 'sdlc.mjs')}' gate-command 'npm test'`)
     // --repeat N (or config gateRepeats) runs the gate N times: a flaky test shows up as a red run or a
     // changed count. dataCheckCommand (optional) runs after each pass and must exit 0: it proves the
     // tests tore down their data (for example, no rows left in the test schema).
@@ -699,7 +740,7 @@ Ask the owner: run "sdlc ask ${feature}" and put its question to them with the q
     const { runtimeCommand } = loadConfig(dir)
     const rt = runtimeCommand ? spawnSync(runtimeCommand, { cwd: dir, shell: true, encoding: 'utf8' }) : null
     const runtime = rt?.status === 0 ? `${rt.stdout}${rt.stderr}`.trim().split('\n')[0] : undefined
-    state.gateRuns = { ...state.gateRuns, [state.stage]: { ok, count, at: now, runs: runs.length, ...(runtime ? { runtime } : {}), ...(flaky ? { flaky } : {}), ...(leaked ? { leaked } : {}) } }
+    state.gateRuns = { ...state.gateRuns, [state.stage]: { ok, count, at: now, tree: codeTree(dir), runs: runs.length, ...(runtime ? { runtime } : {}), ...(flaky ? { flaky } : {}), ...(leaked ? { leaked } : {}) } }
     // A command that cannot start reads like a new repo with nothing passing (finding P2). It counts only
     // when what is missing is the command itself or a path it names, not a module a test imports: that is
     // the ordinary red-first run. The red run is recorded; no baseline is set from it.
@@ -718,7 +759,7 @@ Ask the owner: run "sdlc ask ${feature}" and put its question to them with the q
     if (ok && count > floor && state.baseline !== undefined) Object.assign(state, { baseline: count, ...(runtime ? { baselineRuntime: runtime } : {}) })
     if (runtime && !state.baselineRuntime && state.baseline !== undefined) state.baselineRuntime = runtime
     // The code before any fix: a hotfix proves its repro against it after the merge.
-    if (state.stage === 4 && !state.proofBase) state.proofBase = loadConfig(dir).protectedBranches.map(b => git(`merge-base ${b} HEAD`, dir)).find(Boolean)
+    if (state.stage === 4 && !state.proofBase) state.proofBase = baseCommit(dir, loadConfig(dir))
     if (!ok && !flaky && !leaked && !hadGreen && !state.reproRedAt && state.stage === 4 && ['bug', 'hotfix'].includes(state.lane)) {
       state.reproRedAt = now
       writeState(dir, state)
@@ -1122,6 +1163,19 @@ Ask the owner: run "sdlc ask ${feature}" and put its question to them with the q
   },
 }
 
+// The gate command, set once by a person in the main worktree's config (issue #62, item 1). The guard
+// refuses it to agents: an agent that chose its own gate could weaken it.
+if (cmd === 'gate-command') {
+  const command = [feature, ...rest].filter(Boolean).join(' ').trim()
+  if (!command) fail('Usage: sdlc gate-command <command>, for example: sdlc gate-command npm test')
+  const file = path.join(mainWorktree(dir) ?? dir, '.ai-sdlc', 'config.json')
+  const cfg = fs.existsSync(file) ? JSON.parse(fs.readFileSync(file, 'utf8')) : {}
+  fs.mkdirSync(path.dirname(file), { recursive: true })
+  fs.writeFileSync(file, JSON.stringify({ ...cfg, gateCommand: command }, null, 2) + '\n')
+  console.log(`gateCommand is "${command}" in ${file}. Commit .ai-sdlc/config.json so every clone has it; every worktree of this clone uses it now.`)
+  process.exit(0)
+}
+
 // A person's own terminal, for when the chat hook is not there (issue #15). The same hook records the
 // verb with the same checks and the same git user.name; the pre-tool guard refuses these to agents.
 const HUMAN_VERBS = ['settle', 'intent', 'autonomy', 'approve', 'reject', 'lane', 'hotfix', 'distrust', 'pause', 'resume', 'freeze', 'unfreeze', 'close']
@@ -1136,6 +1190,6 @@ if (HUMAN_VERBS.includes(cmd)) {
 }
 
 if (!commands[cmd]) {
-  fail(`${cmd ? `Unknown command: ${cmd}.\n` : ''}Usage: sdlc <init|bug|task|kind|request|cr|amend|advance|gate|tests|trace|proof|conflict|spike|review|gherkin|api|packets|tickets|retry|status|outcome|trust|metrics|retro|incident|knowledge|init-repo> [feature] [...]\nA person, in their own terminal: sdlc <${HUMAN_VERBS.join('|')}> ...`)
+  fail(`${cmd ? `Unknown command: ${cmd}.\n` : ''}Usage: sdlc <init|bug|task|kind|request|cr|amend|advance|gate|tests|trace|proof|conflict|spike|review|gherkin|api|packets|tickets|retry|status|outcome|trust|metrics|retro|incident|knowledge|init-repo|pr> [feature] [...]\nA person, in their own terminal: sdlc <${[...HUMAN_VERBS, 'gate-command'].join('|')}> ...`)
 }
 commands[cmd]()

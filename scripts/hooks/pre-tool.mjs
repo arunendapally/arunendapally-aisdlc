@@ -5,10 +5,21 @@
 import fs from 'node:fs'
 import path from 'node:path'
 import { spawnSync } from 'node:child_process'
-import { STAGES, root, git, loadConfig, isPaused, isProbe, readState, listFeatures, matches, relPath, readStdin, audit, autonomy } from '../lib.mjs'
+import { STAGES, root, git, loadConfig, isPaused, isProbe, readState, listFeatures, matches, relPath, readStdin, audit, autonomy, runtimePath } from '../lib.mjs'
 import { segments } from '../segments.mjs'
 
 const SECRET = /(AKIA[0-9A-Z]{16}|-----BEGIN [A-Z ]*PRIVATE KEY-----|ghp_[A-Za-z0-9]{36}|github_pat_[A-Za-z0-9_]{40,}|xox[baprs]-[A-Za-z0-9-]{10,}|sk-[A-Za-z0-9_-]{32,})/
+// What is allowed instead, per guard, so a refusal says where to go (issue #62, item 3).
+const INSTEAD = {
+  'push-protected': 'Instead: push the feature branch and open a PR (gh pr create).',
+  'commit-protected': 'Instead: git worktree add <path> -b <lane>/<slug>, then work there.',
+  'force-push': 'Instead: merge the base branch into yours and push normally.',
+  'human-action': 'Instead: give the person the command. A repo can let agents run it by listing a pattern in "bashAllow" in .ai-sdlc/config.json (a person edits that file).',
+  'guardrail-command': 'Instead: read with the Read tool or cat, grep, head or sed -n; stage and commit with git add and git commit; change feature state only through sdlc.mjs.',
+  'guardrail-file': 'Instead: change feature state through sdlc.mjs; a person edits guardrail files.',
+  production: 'Instead: read-only probes (get, list, describe, logs) are allowed.',
+  'bug-scope': 'Instead: a version-only bump of package.json is allowed in the bug lane; anything else in that file is a feature.',
+}
 const ANSWER = 'This is a final answer, not an error: do not retry, rephrase, wrap it in a script or reach for another tool. Give the user the command once if one is needed, then stop.'
 
 const input = readStdin()
@@ -19,7 +30,7 @@ const ti = input.tool_input ?? {}
 const session = input.session_id ?? 'default'
 
 // Denials per session and rule, reset by the user-prompt hook whenever a human types.
-const denialsFile = path.join(dir, '.ai-sdlc', 'denials.json')
+const denialsFile = runtimePath(dir, 'denials.json')
 const readDenials = () => {
   try {
     return JSON.parse(fs.readFileSync(denialsFile, 'utf8'))
@@ -37,7 +48,7 @@ const decide = (permissionDecision, reason, rule) => {
     process.exit(0)
   }
   audit(dir, { event: 'pre-tool', tool, decision: permissionDecision, reason, rule, session })
-  let text = reason
+  let text = `${reason} (guard: ${rule})${INSTEAD[rule] ? ` ${INSTEAD[rule]}` : ''}`
   if (permissionDecision === 'deny' && rule !== 'held') {
     const all = readDenials()
     const mine = all[session] ?? {}
@@ -46,8 +57,8 @@ const decide = (permissionDecision, reason, rule) => {
     fs.mkdirSync(path.dirname(denialsFile), { recursive: true })
     fs.writeFileSync(denialsFile, JSON.stringify(all, null, 2) + '\n')
     text = mine[rule] >= cfg.denialCap
-      ? `${reason} Refused ${mine[rule]} times this session: hand back to the user now. Until they reply, only reading is allowed.`
-      : `${reason} ${ANSWER}`
+      ? `${text} Refused ${mine[rule]} times this session: hand back to the user now. Until they reply, only reading is allowed.`
+      : `${text} ${ANSWER}`
   }
   console.log(JSON.stringify({ hookSpecificOutput: { hookEventName: 'PreToolUse', permissionDecision, permissionDecisionReason: `[ai-sdlc] ${text}` } }))
   process.exit(0)
@@ -192,8 +203,11 @@ if (tool === 'Bash' || tool === 'PowerShell') {
   if (/--no-verify\b/.test(c)) deny('--no-verify skips the checks. Fix the failure instead.', 'no-verify')
   // A repo with no commits has no main to protect yet: its first commit starts it.
   if (onProtected && /\bgit\s+(commit|merge|rebase|cherry-pick|reset)\b/.test(c) && git('rev-parse --verify -q HEAD', at) !== '') deny(`You are on ${branch}. Work on a feature branch in its own worktree.`, 'commit-protected')
+  // A person may let agents run a command the guard would hand back: "bashAllow" patterns in the config.
+  const allowed = (cfg.bashAllow ?? []).map(a => new RegExp(a, 'i'))
+  const human = allowed.length ? parts.filter(p => !allowed.some(a => a.test(p.text))).map(code).join('\n') : scan
   for (const p of cfg.deployPatterns) {
-    if (new RegExp(p, 'i').test(scan)) deny(`"${c.slice(0, 60)}" merges, deploys, changes settings or records a human decision. A human runs it.`, 'human-action')
+    if (new RegExp(p, 'i').test(human)) deny(`"${c.slice(0, 60)}" merges, deploys, changes settings or records a human decision. A human runs it.`, 'human-action')
   }
   for (const p of cfg.prodPatterns) {
     if (new RegExp(p, 'i').test(scan) && !isProbe(c)) deny(`"${c.slice(0, 60)}" touches production. Agents run read-only probes only.`, 'production')
@@ -275,7 +289,10 @@ if (prd) {
 const feature = listFeatures(dir).find(s => s.branch === branch)
 const isDoc = rel.startsWith(`${cfg.specsDir}/`) || rel.startsWith('docs/') || rel.endsWith('.md')
 if (feature && feature.stage < 4 && !isDoc) deny(`${feature.feature} is at ${STAGES[feature.stage].name}. Code waits for Build.`, 'code-before-build')
-if (feature?.lane === 'bug' && matches(rel, cfg.bugForbidPaths)) deny(`${rel} is out of scope for a bug fix (dependencies, schema, CI or infrastructure). Open a feature with /ai-sdlc:start instead.`, 'bug-scope')
+// A bug fix may carry its version bump (issue #62, item 2): an Edit that changes only the "version" line.
+const VERSION = /^\s*"version"\s*:\s*"[^"\n]+",?\s*$/
+const versionOnly = tool === 'Edit' && /package\.json$/.test(rel) && VERSION.test(ti.old_string ?? '') && VERSION.test(ti.new_string ?? '')
+if (feature?.lane === 'bug' && matches(rel, cfg.bugForbidPaths) && !versionOnly) deny(`${rel} is out of scope for a bug fix (dependencies, schema, CI or infrastructure). Open a feature with /ai-sdlc:start instead.`, 'bug-scope')
 if (feature?.lane === 'hotfix' && matches(rel, cfg.bugForbidPaths)) ask(`${rel} changes dependencies, schema, CI or infrastructure inside a hotfix. The on-call engineer must approve this edit.`, 'hotfix-scope')
 
 if (matches(rel, cfg.askPaths)) ask(`${rel} controls CI, ownership or agents. A human must approve this edit.`, 'ask-path')

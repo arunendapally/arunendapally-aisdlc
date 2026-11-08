@@ -3,12 +3,14 @@ description: Agent code review of a PR before a human looks. Builds the review p
 argument-hint: <feature-slug>
 ---
 
+**Small change, no subagent** (issue #62, item 11): when `sdlc gate` reports a PR size under 30 lines and the change touches no high-risk path, the tech lead reviews the diff against `standards/code-review-checklist.md` itself, records any finding in `review.md`, and writes `## Pre-review` with `Lenses run: tech-lead self-review (small change)`. Otherwise delegate as below.
+
 Delegate to the `pre-reviewer` agent for `$ARGUMENTS`.
 
 1. `node "${CLAUDE_PLUGIN_ROOT}/scripts/sdlc.mjs" review $ARGUMENTS` writes `specs/$ARGUMENTS/review-packet.md` (risk signals, criteria with no test, deleted tests, lenses to run) and starts `specs/$ARGUMENTS/review.md`, the findings ledger.
 2. The pre-reviewer runs the lenses the packet lists in parallel and records every finding in the ledger: severity, `file:line`, checklist item, what is wrong, status, source.
-3. Findings go back to the `builder` through the `tech-lead`. Fix, re-run the gate, re-review, update each row. Cap 3 rounds (`node "${CLAUDE_PLUGIN_ROOT}/scripts/sdlc.mjs" retry $ARGUMENTS pre-review`), then escalate.
-4. When nothing above nit is open, it writes `## Pre-review` in the PR body: `Risk:`, `Open findings: 0`, `Look here first:` with two or three `file:line` pointers that need human judgement, the lenses run, what it checked, and what it could not check.
+3. Findings go back to the `builder` through the `tech-lead`. Fix, re-run the gate, re-review, and mark each row `fixed: HEAD` in the same commit as the fix (it resolves to the last commit that changed the row's file). Cap 3 rounds (`node "${CLAUDE_PLUGIN_ROOT}/scripts/sdlc.mjs" retry $ARGUMENTS pre-review`), then escalate.
+4. When nothing above nit is open, it writes `## Pre-review` in the PR body with the Edit tool: `Risk:`, `Open findings: 0` (open nits named, if any), `Look here first:` with two or three `file:line` pointers that need human judgement, the lenses run, what it checked, and what it could not check.
 
 **For the human reviewer:** read the packet's "Look here first", then the ledger, then only the places the pre-review pointed at. Add every finding you make to `review.md` with source `human`. Those rows are how the pre-review learns: `sdlc retro` turns them into checklist items and review evals.
 

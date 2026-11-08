@@ -3,7 +3,7 @@
 import fs from 'node:fs'
 import path from 'node:path'
 import { STAGES, root, git, loadConfig, readState, writeState, missingHeadings, isFrozen, createFeature, copyTemplate,
-  readTrust, writeTrust, promotable, readStdin, audit, lessonPaid, overduePostmortems, parseIntent, INTENT_PARTS } from '../lib.mjs'
+  readTrust, writeTrust, promotable, readStdin, audit, lessonPaid, overduePostmortems, parseIntent, INTENT_PARTS, runtimePath } from '../lib.mjs'
 import { advanceFeature, gateFingerprint } from '../loop.mjs'
 
 const input = readStdin()
@@ -23,7 +23,7 @@ const say = msg => {
 }
 
 // A human typed something, so a session held after repeated denials may act again (ADR-0004).
-const denialsFile = path.join(dir, '.ai-sdlc', 'denials.json')
+const denialsFile = runtimePath(dir, 'denials.json')
 if (fs.existsSync(denialsFile)) {
   try {
     const all = JSON.parse(fs.readFileSync(denialsFile, 'utf8'))

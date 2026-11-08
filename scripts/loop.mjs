@@ -11,13 +11,13 @@ import os from 'node:os'
 import path from 'node:path'
 import crypto from 'node:crypto'
 import { spawnSync } from 'node:child_process'
-import { STAGES, git, loadConfig, section, changedFiles, listFeatures, nextStage, writeState, matches, destructiveMigrations, scaffoldFiles, designDoc } from './lib.mjs'
+import { STAGES, git, loadConfig, baseCommit, runtimePath, section, changedFiles, listFeatures, nextStage, writeState, matches, destructiveMigrations, scaffoldFiles, designDoc } from './lib.mjs'
 import { matrix } from './testmatrix.mjs'
 import { parseLedger } from './review.mjs'
 
 export const sha256 = text => crypto.createHash('sha256').update(text).digest('hex').slice(0, 16)
 
-const mergeBase = (dir, cfg) => cfg.protectedBranches.map(b => git(`merge-base ${b} HEAD`, dir)).find(Boolean)
+const mergeBase = (dir, cfg) => baseCommit(dir, cfg)
 
 // The test files that trace this feature's criteria, from the test matrix.
 // Levels the proof leaves to their own run (proofSkipLevels, finding V6): a browser suite needs tools the
@@ -214,7 +214,7 @@ export function overdueOutcomes(dir, now = Date.now()) {
 }
 
 // Retro triggers: why a retro is due before its schedule.
-const triggerFile = dir => path.join(dir, '.ai-sdlc', 'retro-due.json')
+const triggerFile = dir => runtimePath(dir, 'retro-due.json')
 export function readTriggers(dir) {
   return fs.existsSync(triggerFile(dir)) ? JSON.parse(fs.readFileSync(triggerFile(dir), 'utf8')) : []
 }

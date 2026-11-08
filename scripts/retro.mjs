@@ -2,7 +2,7 @@
 // proposed changes to the plugin itself. It proposes; a human approves the PR that applies them.
 import fs from 'node:fs'
 import path from 'node:path'
-import { STAGES, listFeatures, loadConfig, readTrust, promotable } from './lib.mjs'
+import { STAGES, listFeatures, loadConfig, readTrust, promotable, runtimePath } from './lib.mjs'
 import { parseLedger, humanCatches } from './review.mjs'
 
 export const STAGE_COMMAND = { 1: 'commands/define.md', 3: 'commands/design.md', 4: 'commands/build.md', 5: 'commands/verify.md', 6: 'commands/release.md' }
@@ -17,7 +17,7 @@ const median = xs => {
 const hoursBetween = (a, b) => (Date.parse(b) - Date.parse(a)) / 36e5
 
 function readAudit(dir) {
-  const file = path.join(dir, '.ai-sdlc', 'audit.jsonl')
+  const file = runtimePath(dir, 'audit.jsonl')
   if (!fs.existsSync(file)) return []
   return fs.readFileSync(file, 'utf8').split('\n').filter(Boolean).flatMap(line => {
     try {

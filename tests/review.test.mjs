@@ -6,6 +6,8 @@ import fs from 'node:fs'
 import { makeRepo, switchableGate, READY_PRD, READY_FEATURE } from './helpers.mjs'
 import { riskTier } from '../scripts/loop.mjs'
 import { parseLedger, ledgerProblems } from '../scripts/review.mjs'
+import path from 'node:path'
+import { runtimePath } from '../scripts/lib.mjs'
 
 const hoursAgo = h => new Date(Date.now() - h * 36e5).toISOString()
 const BUG = ['## Repro', '## Expected and actual', '## Root cause', '## Fix', '## Test results', '## Not verified']
@@ -85,7 +87,7 @@ test('a spec changed after Plan was approved sends the feature back to Plan', ()
   assert.equal(s.stage, 1)
   assert.equal(s.gates['1'], undefined, 'the old approval no longer covers the spec')
   assert.equal(s.gates['4'], undefined)
-  assert.match(fs.readFileSync(`${r.repo}/.ai-sdlc/audit.jsonl`, 'utf8'), /"event":"spec-drift"/)
+  assert.match(fs.readFileSync(runtimePath(r.repo, 'audit.jsonl'), 'utf8'), /"event":"spec-drift"/)
 
   // The new spec says what changed since v1; a person approves it as v2, and the feature carries on.
   assert.match(r.sdlc('request', 'demo').out, /approved as v1: add "## Changes since v1"/)
@@ -255,7 +257,7 @@ test('the review packet counts .NET and Java tests as tests, with the patterns t
   r.put('src/main/java/Pricing.java', 'class Pricing {}\n')
   r.put('src/test/java/PricingTest.java', 'class PricingTest { Pricing p; }\n')
   const out = r.sdlc('review', 'demo').out
-  assert.match(out, /5 files changed: 2 code, 3 test\./)
+  assert.match(out, /5 files changed: 2 code, 3 test, against main \([0-9a-f]{7}\)\./)
   for (const f of ['CalculatorEngineTests.cs', 'CalculatorApiTests.cs', 'PricingTest.java']) {
     assert.doesNotMatch(out, new RegExp(`${f}\` \\|[^\\n]*no changed test mentions it`), `${f} is a test, not untested code`)
   }

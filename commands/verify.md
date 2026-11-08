@@ -15,6 +15,6 @@ Verify for `$ARGUMENTS`. You are the `tech-lead`.
 3. Keep the PR small: `sdlc request` refuses over the lane's line limit (specs, docs and lock files not counted). Split a large feature into one PR per slice.
 4. Write `specs/$ARGUMENTS/pr.md` from the template, then run `/ai-sdlc:pre-review $ARGUMENTS` so `## Pre-review` names the risk, has no open findings and points the human at where to look.
 5. Only when the pre-review says `Risk: high`: the `qa-engineer` writes `## QA verdict` (exploratory pass, accessibility checks on changed screens), and the `safe-ai-sdlc-expert` lists scan findings a human must accept.
-6. Use `pr.md` as the PR body. Push the feature branch and open a PR labelled `stage:verify` and `author:agent`.
+6. After the gate below passes, commit `specs/$ARGUMENTS/` and run `node "${CLAUDE_PLUGIN_ROOT}/scripts/sdlc.mjs" pr $ARGUMENTS`: it pushes the branch and opens the PR from `pr.md` with its lane label.
 
 **Gate:** `node "${CLAUDE_PLUGIN_ROOT}/scripts/sdlc.mjs" request $ARGUMENTS` (it rebuilds a stale review packet itself). It passes on its checks and completes the feature (ADR-0008). Agents never merge: the PR is the hand-off, and who reviews, merges, deploys and releases it is the org's own process. Point the reviewer at "Look here first". Name every untested `@release` criterion under `## Check after deploy` in `pr.md` (the review packet lists them); the request refuses one left out.
