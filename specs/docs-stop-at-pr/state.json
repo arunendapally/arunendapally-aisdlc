@@ -12,7 +12,7 @@
   "gates": {},
   "retries": {},
   "kinds": [],
-  "updatedAt": "2026-11-08T05:33:52.595Z",
+  "updatedAt": "2026-11-08T05:34:06.956Z",
   "gateRuns": {
     "4": {
       "ok": true,
@@ -24,5 +24,7 @@
   },
   "baseline": 301,
   "baselineRuntime": "v24.19.0",
-  "proofBase": "150ba2c58a0b958361fe90859fdc0fed9a9ff0eb"
+  "proofBase": "150ba2c58a0b958361fe90859fdc0fed9a9ff0eb",
+  "lastPacketHead": "2431f2f",
+  "ledgerIds": []
 }

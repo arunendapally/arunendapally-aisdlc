@@ -28,6 +28,14 @@ Removed, skipped or quarantined: none
 
 ## Pre-review
 
+Risk: low, because only markdown changed (README.md, CHANGELOG.md, agents/qa-engineer.md, two docs files) and no path needs a person.
+Open findings: 5
+Look here first: docs/org-ai-sdlc-process.md:71 (whether the full lane should promise no Design wait when data and risky work keep it with a person), docs/org-ai-sdlc-process.md:277 (the "three times" claim this task set out to remove is still there), docs/org-ai-sdlc-process.md:153 (a whole Release bullet still describes deleted checks: fix here or in a follow-up)
+Lenses run: correctness against ADR-0007 and ADR-0008, simplicity, docs accuracy, dead references
+Revert: git revert of the merge commit; no data to back out
+Checked mechanically: each changed line against LANES and BRANCH_AUTO and branchAutoBlock in scripts/lib.mjs, the Verify reopen in scripts/sdlc.mjs request(), the deploy and preview guards in scripts/hooks/pre-tool.mjs; table column counts in both changed tables (3 and 6, all rows match); grep of the five files for approve 1/5/6, merge gate, release and wait claims; checklist items 2, 17, 21, 22
+Could not check: rendered markdown; whether qa-engineer defects always land as ledger rows (the Verify claim at agents/qa-engineer.md:27 relies on it); the suite was not run, by instruction
+
 ## Not verified
 
 docs/releases/*.md and the README's narrative of an earlier release were left as written: they record what was true then.
