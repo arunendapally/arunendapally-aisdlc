@@ -6,7 +6,7 @@ import assert from 'node:assert/strict'
 import { makeRepo } from './helpers.mjs'
 import { matrix } from '../scripts/testmatrix.mjs'
 import { packetText } from '../scripts/review.mjs'
-import { releaseProblems, proofProblems } from '../scripts/loop.mjs'
+import { proofProblems } from '../scripts/loop.mjs'
 import { lint } from '../scripts/gherkin.mjs'
 import { loadConfig } from '../scripts/lib.mjs'
 
@@ -27,17 +27,6 @@ test('V4: a @release criterion is due at Release, not refused at Verify', () => 
   assert.ok(!m.problems.some(p => /AC-3/.test(p)), m.problems.join('\n'))
   assert.equal(m.rows.find(x => x.ac === 'AC-3').due, 'release')
   assert.match(r.sdlc('tests', 'demo').out, /\| AC-3 .*\| at release \|/)
-})
-
-test('V4: Release refuses until a probe names each @release criterion with a pass', () => {
-  const r = setup()
-  const doc = probes => `## Rollout\n\nAll at once.\n\n## Rollback (tested)\n\nTested: 2026-11-02, revert and redeploy on a fork\n\n## Probes\n\n${probes}\n\nLive: abcdef1\n\n## Outcome metric\n\nMetric: None, because nothing about visitors is collected\n`
-  const problems = text => releaseProblems(r.repo, { feature: 'demo', lane: 'light', reviewedFiles: [] }, text, loadConfig(r.repo)).problems.join('\n')
-  assert.match(problems(doc('- home page: pass')), /AC-3 is checked at release: name it on a probe line of its own with its result/)
-  assert.doesNotMatch(problems(doc('- AC-3 the live page carries the released sha: pass')), /AC-3/)
-  assert.match(problems(doc('- AC-3 the live page carries the released sha: not ok')), /AC-3 is checked at release/)
-  const hotfix = releaseProblems(r.repo, { feature: 'demo', lane: 'hotfix', reviewedFiles: [] }, doc('- home page: pass'), loadConfig(r.repo)).problems.join('\n')
-  assert.match(hotfix, /AC-3 is checked at release/, 'a hotfix releases too')
 })
 
 // merge-is-hand-check: the merge is the hand check, so the PR body carries no "Checked by hand" line.

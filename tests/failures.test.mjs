@@ -4,7 +4,6 @@
 import { test } from 'node:test'
 import assert from 'node:assert/strict'
 import { makeRepo, switchableGate } from './helpers.mjs'
-import { releaseProblems, landedOn } from '../scripts/loop.mjs'
 import { loadConfig } from '../scripts/lib.mjs'
 
 const hoursAgo = h => new Date(Date.now() - h * 36e5).toISOString()
@@ -49,68 +48,6 @@ test('F2: large files are read in slices, with the exact call in the refusal', (
   assert.equal(r.tool('Read', { file_path: `${r.repo}/src/small.ts` }).decision, 'allow')
   assert.equal(r.tool('Bash', { command: 'cat src/validators.ts' }).decision, 'deny', 'a shell dump is the same mistake')
   assert.equal(r.tool('Bash', { command: 'head -50 src/validators.ts' }).decision, 'allow')
-})
-
-test('F3: release refuses a change that is not on the remote main, and a live build that is not this release', () => {
-  const r = makeRepo()
-  r.sdlc('init', 'demo', '--full')
-  const state = () => r.state('demo')
-  const ready = live => `## Rollback (tested)\n\nTested: 2026-10-21, staging.\n\n## Probes\n\n- saved items render: pass\n\nLive: ${live}\n\n## Outcome metric\n\nMetric: m\nOwner: o\n`
-  assert.match(releaseProblems(r.repo, state(), ready('abc1234')).problems.join(), /no "origin" remote/, 'the branch would be the only copy')
-  r.remote()
-  r.put('src/saved.ts', 'export const saved = true\n')
-  r.git('add', '.')
-  r.git('commit', '-q', '-m', 'saved items')
-  r.setState('demo', { reviewedSha: r.git('rev-parse', 'HEAD') })
-  const branchBuild = r.git('rev-parse', 'HEAD')
-  const before = releaseProblems(r.repo, state(), ready(branchBuild)).problems.join('\n')
-  assert.match(before, /is not on origin\/main.*a preview, never a release/, 'a deploy from the branch is not a release')
-  assert.match(releaseProblems(r.repo, state(), ready('unknown')).problems.join(), /"Live: unknown": find out what is running/)
-  assert.match(releaseProblems(r.repo, state(), '## Probes\n\n- ok\n').problems.join(), /no "Live: <sha>" line/)
-
-  const main = r.land()
-  assert.deepEqual(releaseProblems(r.repo, state(), ready(main)).problems, [])
-  const old = r.git('rev-parse', 'origin/main~1')
-  assert.match(releaseProblems(r.repo, state(), ready(old)).problems.join(), /does not contain the release commit/, 'the running build is older than this release')
-})
-
-test('F3: the next release refuses a live build that rolled the last release back', () => {
-  const r = makeRepo()
-  r.remote()
-  r.put('src/first.ts', 'export const first = 1\n')
-  const firstLive = r.land('first')
-  // The second feature branched before the first landed, and its build is what got deployed.
-  r.git('checkout', '-q', '-b', 'feature/second', 'main~1')
-  r.put('specs/first/state.json', JSON.stringify({ feature: 'first', lane: 'full', stage: 6, stages: {}, gates: {}, retries: {}, closedAt: hoursAgo(5), releasedSha: firstLive, liveSha: firstLive }))
-  r.sdlc('init', 'second', '--full', '--branch', 'feature/second')
-  r.put('src/second.ts', 'export const second = 2\n')
-  r.git('add', '-A')
-  r.git('commit', '-q', '-m', 'second, branched before first landed')
-  r.setState('second', { reviewedSha: r.git('rev-parse', 'HEAD') })
-  const secondBranch = r.git('rev-parse', 'HEAD')
-  r.git('push', '-q', 'origin', `${secondBranch}:refs/heads/main`, '--force')
-  const text = `## Rollback (tested)\n\nTested: 2026-10-21, staging.\n\n## Probes\n\n- ok\n\nLive: ${secondBranch}\n\n## Outcome metric\n\nMetric: m\nOwner: o\n`
-  assert.match(releaseProblems(r.repo, r.state('second'), text).problems.join(), /no longer contains first .*this deploy rolled it back/)
-  assert.match(r.sdlc('status').out, new RegExp(`Live: ${firstLive.slice(0, 7)} \\(first`), 'status says which version is live')
-})
-
-test('F3: a squash merge counts as landed', () => {
-  const r = makeRepo()
-  r.remote()
-  r.put('src/a.ts', 'export const a = 1\n')
-  r.git('add', '-A')
-  r.git('commit', '-q', '-m', 'a')
-  r.put('src/b.ts', 'export const b = 2\n')
-  r.git('add', '-A')
-  r.git('commit', '-q', '-m', 'b')
-  const tip = r.git('rev-parse', 'HEAD')
-  r.git('checkout', '-q', 'main')
-  r.git('merge', '-q', '--squash', 'feature/demo')
-  r.git('commit', '-q', '-m', 'squashed')
-  const squash = r.git('rev-parse', 'HEAD')
-  r.git('push', '-q', 'origin', 'main')
-  r.git('checkout', '-q', 'feature/demo')
-  assert.equal(landedOn(r.repo, tip, 'main'), squash)
 })
 
 test('F3: an agent preview deploy asks until the branch is on the remote; prod deploys and deploys in scripts never pass quietly', () => {

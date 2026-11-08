@@ -11,10 +11,8 @@ import os from 'node:os'
 import path from 'node:path'
 import crypto from 'node:crypto'
 import { spawnSync } from 'node:child_process'
-import { STAGES, git, gitOk, loadConfig, section, changedFiles, listFeatures, nextStage, writeState, matches, destructiveMigrations, scaffoldFiles, designDoc } from './lib.mjs'
+import { STAGES, git, loadConfig, section, changedFiles, listFeatures, nextStage, writeState, matches, destructiveMigrations, scaffoldFiles, designDoc } from './lib.mjs'
 import { matrix } from './testmatrix.mjs'
-import { check as knowledgeCheck, pages as knowledgePages } from './knowledge.mjs'
-import { parseFacts, factProblems } from './facts.mjs'
 import { parseLedger } from './review.mjs'
 
 export const sha256 = text => crypto.createHash('sha256').update(text).digest('hex').slice(0, 16)
@@ -196,133 +194,6 @@ export function proofProblems(dir, state, artefactText, cfg = loadConfig(dir)) {
 const outcomeValue = (text, label) => {
   const value = text.match(new RegExp(`${label}:(?:\\*\\*)?[ \\t]*(.*)`, 'i'))?.[1]?.replace(/^\*+\s*/, '').trim()
   return value && !/<[^>]*>/.test(value) ? value : null
-}
-
-// The date a rollback was tested: "Tested: 2026-11-02, how" ("**Tested:**" and "Tested on" too), and
-// not later than today, so a planned date does not count.
-const testedOn = text => {
-  const date = text.match(/\bTested(?::\*\*|:| on)[ \t]*(\d{4}-\d{2}-\d{2})(?!\d)/i)?.[1]
-  return date && date <= new Date().toISOString().slice(0, 10) ? date : null
-}
-
-// A probe's result: the last cell of a table row, or the words after the last ": " of a line, and the
-// first result word there. "5xx rate: ok, was red yesterday" passed; "checkout: FAIL, expected pass" failed.
-const isHeaderRow = (line, next) => /^\s*\|/.test(line) && /^\s*\|[\s:|-]+\|\s*$/.test(next ?? '')
-export function probeResult(line) {
-  if (/^\s*\|[\s:|-]+\|\s*$/.test(line)) return null
-  const cells = /^\s*\|/.test(line) ? line.split('|').map(c => c.trim()).filter(Boolean) : null
-  const where = cells ? cells[cells.length - 1] ?? '' : line.includes(': ') ? line.slice(line.lastIndexOf(': ') + 2) : line
-  if (/\bnot ok\b/i.test(where)) return 'fail'
-  const word = where.match(/\b(pass(ed)?|ok|green|fail(ed)?|red)\b/i)?.[1]
-  return word ? (/^(fail(ed)?|red)$/i.test(word) ? 'fail' : 'pass') : null
-}
-
-// Release: is it safe to ship (problems block), and is what we know still true (warnings)?
-export function releaseProblems(dir, state, artefactText, cfg = loadConfig(dir)) {
-  const problems = []
-  const changed = state.reviewedFiles ?? changedFiles(dir, cfg).map(f => f.file)
-
-  // Rollout readiness: a rollback that was actually tested, and probe results. A lane with an outcome
-  // window also names who reads the outcome, or says why there is none. A hotfix is already in
-  // production, so its incident commander judges these.
-  if (['full', 'light'].includes(state.lane)) {
-    const rollback = section(artefactText, '## Rollback (tested)') ?? ''
-    // The date the rollback ran, on a "Tested:" line, never a planned one (later change 2).
-    if (!testedOn(rollback)) problems.push('the rollback has no "Tested: <date>, <how>" line: test the rollback before release')
-    const probes = section(artefactText, '## Probes') ?? ''
-    if (!/\b(pass(ed)?|ok|green|fail(ed)?|red)\b/i.test(probes)) problems.push('"## Probes" records no result (pass or fail for each probe)')
-    for (const line of probes.split('\n').filter((l, i, all) => !isHeaderRow(l, all[i + 1]))) {
-      if (probeResult(line) === 'fail') problems.push(`a probe failed: ${line.replace(/\s+/g, ' ').trim().slice(0, 120)}. Fix it or roll back; a release with a failed probe is not done`)
-    }
-    const outcome = section(artefactText, '## Outcome metric') ?? ''
-    const none = /Metric:[ \t]*None, because[ \t]+\S/i.test(outcome)
-    if (state.lane in cfg.outcomeWindowDays && !none && (!outcomeValue(outcome, 'Metric') || !outcomeValue(outcome, 'Owner'))) problems.push('"## Outcome metric" needs "Metric:" and "Owner:" lines (or "Metric: None, because ..."), so the outcome follow-up has an owner')
-  }
-  // A @release criterion is proved here, in every lane that releases: a probe line names it with a
-  // passing result (finding V4). One criterion per line, so the result is that criterion's.
-  const probeLines = (section(artefactText, '## Probes') ?? '').split('\n')
-  for (const r of matrix(dir, state.feature).rows.filter(r => r.due === 'release')) {
-    const line = probeLines.find(l => new RegExp(`\\b${r.ac}\\b`).test(l))
-    if (!line || probeResult(line) !== 'pass') problems.push(`${r.ac} is checked at release: name it on a probe line of its own with its result ("- ${r.ac} ${r.name}: pass")`)
-  }
-  problems.push(...liveProblems(dir, state, artefactText, cfg))
-  return { problems, warnings: rememberWarnings(dir, state, changed, cfg) }
-}
-
-// What was released and what is live (ADR-0004, failure F3), in every lane that releases. The reviewed
-// commit must be on the remote's protected branch, so a branch deploy is never the release and never
-// the only copy; and the running system's build must contain it, and still contain the last release.
-export const releaseSha = (dir, state) => state.reviewedSha ?? git('rev-parse HEAD', dir)
-export const liveShaIn = text => (section(text, '## Probes') ?? section(text, '## Live') ?? '').match(/Live:\s*([0-9a-f]{7,40}|unknown)\b/i)?.[1]
-// The commit on origin/<branch> that holds the reviewed change: the commit itself after a merge, or the
-// squash commit whose patch is the same. Null when the change never reached the remote's branch.
-export function landedOn(dir, sha, branch) {
-  const ref = `origin/${branch}`
-  if (!gitOk(`rev-parse --verify --quiet ${ref}`, dir)) return null
-  if (gitOk(`merge-base --is-ancestor ${sha} ${ref}`, dir)) return sha
-  const base = git(`merge-base ${sha} ${ref}`, dir)
-  if (!base) return null
-  const id = git(`diff ${base} ${sha} | git patch-id --stable`, dir).split(' ')[0]
-  if (!id) return null
-  const match = git(`log -p --no-merges ${base}..${ref} | git patch-id --stable`, dir).split('\n').map(l => l.split(' ')).find(([p]) => p === id)
-  return match?.[1] ?? null
-}
-
-export function liveProblems(dir, state, artefactText, cfg = loadConfig(dir)) {
-  const problems = []
-  const reviewed = releaseSha(dir, state)
-  if (!git('remote get-url origin', dir)) return ['the repo has no "origin" remote: a release must be on the remote, or the branch is the only copy']
-  git('fetch --quiet origin', dir)
-  const landed = cfg.protectedBranches.map(b => landedOn(dir, reviewed, b)).find(Boolean)
-  if (!landed) problems.push(`the reviewed commit ${reviewed.slice(0, 7)} is not on origin/${cfg.protectedBranches.join(' or origin/')}: merge and push it first. A deploy from a branch is a preview, never a release`)
-  const sha = landed ?? reviewed
-  const live = liveShaIn(artefactText)
-  if (!live) return [...problems, '"## Probes" has no "Live: <sha>" line: read the build the running system reports (a version endpoint, a meta tag, the platform\'s inspect command) and record it']
-  if (/unknown/i.test(live)) return [...problems, '"Live: unknown": find out what is running before calling it released']
-  // cat-file -t, not "${live}^{commit}": cmd.exe on Windows eats the caret.
-  if (git(`cat-file -t ${live}`, dir) !== 'commit') return [...problems, `Live: ${live} is not a commit this repo knows: fetch, or read the build id again`]
-  if (!gitOk(`merge-base --is-ancestor ${sha} ${live}`, dir)) problems.push(`the live build ${live.slice(0, 7)} does not contain the release commit ${sha.slice(0, 7)}: what is running is not this release`)
-  const previous = listFeatures(dir).filter(s => s.feature !== state.feature && s.releasedSha).sort((a, b) => Date.parse(b.closedAt) - Date.parse(a.closedAt))[0]
-  if (previous && !gitOk(`merge-base --is-ancestor ${previous.releasedSha} ${live}`, dir)) problems.push(`the live build ${live.slice(0, 7)} no longer contains ${previous.feature} (${previous.releasedSha.slice(0, 7)}), released before: this deploy rolled it back`)
-  return problems
-}
-
-// What the change may have made untrue. These warn at Release, and an agent re-verifies them.
-export function rememberWarnings(dir, state, changed, cfg = loadConfig(dir)) {
-  const problems = []
-
-  // Remember: no knowledge page or fact this change touched may be stale.
-  const { stale } = knowledgeCheck(dir)
-  const touched = new Set(knowledgePages(dir).filter(p => p.sources.some(s => changed.some(c => c === s || c.startsWith(s.replace(/\/?$/, '/'))))).map(p => p.file))
-  for (const s of stale.filter(s => touched.has(s.file))) problems.push(`knowledge page ${s.file} is stale (${s.why}): re-verify it against the code`)
-  const facts = path.join(dir, cfg.specsDir, state.feature, 'facts.md')
-  if (fs.existsSync(facts)) {
-    const mine = parseFacts(fs.readFileSync(facts, 'utf8')).facts.filter(f => changed.includes(f.file))
-    for (const p of factProblems(dir, mine).filter(p => /is stale/.test(p))) problems.push(`facts.md: ${p}`)
-  }
-
-  // ADRs the change supersedes must say so.
-  const texts = [path.join(dir, cfg.specsDir, state.feature, designDoc(dir, state)), ...changed.filter(f => /^docs\/adr\/.+\.md$/.test(f)).map(f => path.join(dir, f))]
-    .filter(f => fs.existsSync(f)).map(f => fs.readFileSync(f, 'utf8'))
-  const superseded = [...new Set(texts.flatMap(t => [...t.matchAll(/\bsupersedes?\s+ADR-(\d{1,4})\b/gi)].map(m => m[1].padStart(4, '0'))))]
-  for (const id of superseded) {
-    const folder = path.join(dir, 'docs', 'adr')
-    const file = fs.existsSync(folder) ? fs.readdirSync(folder).find(f => f.startsWith(id)) : null
-    if (!file) problems.push(`the change supersedes ADR-${id}, which docs/adr does not have`)
-    else if (!/^Status:\s*superseded/im.test(fs.readFileSync(path.join(folder, file), 'utf8'))) problems.push(`ADR-${id} is superseded by this change: set its "Status: superseded by ..."`)
-  }
-
-  // Postmortems: every action links to the trap, test, check or PRD it became, with an owner and a date.
-  const link = /\]\(|https?:\/\/|#\d+|[\w.-]+\/[\w./-]+/
-  for (const f of changed.filter(f => /^docs\/incidents\/.+\.md$/.test(f) && fs.existsSync(path.join(dir, f)))) {
-    const rows = (section(fs.readFileSync(path.join(dir, f), 'utf8'), '## Actions') ?? '').split('\n')
-      .filter(l => /^\|/.test(l) && !/^\|\s*Action\s*\|/i.test(l) && !/^\|[\s|:-]+\|$/.test(l))
-    for (const row of rows) {
-      const [action, becomes, owner, due] = row.split('|').slice(1, -1).map(c => c.trim())
-      if (!link.test(becomes ?? '') || !owner || !/\d{4}-\d{2}-\d{2}/.test(due ?? '')) problems.push(`${f}: action "${(action ?? '').slice(0, 40)}" needs a link to the trap, test, check or PRD it became, an owner and a due date`)
-    }
-  }
-  return problems
 }
 
 // The outcome follow-up a released feature leaves behind: the metric, its owner and when to read it.
