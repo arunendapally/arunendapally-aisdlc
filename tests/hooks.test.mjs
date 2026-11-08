@@ -8,6 +8,7 @@ import { execFileSync, spawnSync } from 'node:child_process'
 import { fileURLToPath } from 'node:url'
 import { STAGES } from '../scripts/lib.mjs'
 import { READY_PRD, READY_FEATURE, makeRepo } from './helpers.mjs'
+import { runtimePath } from '../scripts/lib.mjs'
 
 const plugin = path.join(path.dirname(fileURLToPath(import.meta.url)), '..')
 const hook = name => path.join(plugin, 'scripts', 'hooks', `${name}.mjs`)
@@ -217,7 +218,8 @@ test('a browser action from an MCP tool asks a person, unless the repo allows th
 test('paused or held, a session reads only local files: no web calls that could carry data out', () => {
   const web = (tool_name, extra = {}) => decision(run('pre-tool', { tool_name, tool_input: { url: 'https://x.example/?q=data', query: 'data' }, ...extra }))
   fs.mkdirSync(path.join(repo, '.ai-sdlc'), { recursive: true })
-  fs.writeFileSync(path.join(repo, '.ai-sdlc', 'denials.json'), JSON.stringify({ held1: { 'guardrail-command': 2 } }))
+  fs.mkdirSync(path.dirname(runtimePath(repo, 'denials.json')), { recursive: true })
+  fs.writeFileSync(runtimePath(repo, 'denials.json'), JSON.stringify({ held1: { 'guardrail-command': 2 } }))
   assert.equal(web('WebFetch', { session_id: 'held1' }), 'deny')
   assert.equal(web('WebSearch', { session_id: 'held1' }), 'deny')
   assert.equal(decision(run('pre-tool', { tool_name: 'Read', tool_input: { file_path: path.join(repo, 'README.md') }, session_id: 'held1' })), 'allow')

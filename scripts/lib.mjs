@@ -1,6 +1,7 @@
 // Shared state and policy for the ai-sdlc plugin. No dependencies: Node 18+ only.
 import fs from 'node:fs'
 import path from 'node:path'
+import crypto from 'node:crypto'
 import { execSync } from 'node:child_process'
 import { fileURLToPath } from 'node:url'
 
@@ -114,9 +115,9 @@ export const DEFAULT_CONFIG = {
   deployPatterns: ['vercel\\b.*(--prod|--target[= ]production|\\bpromote\\b|\\balias\\b)', 'terraform\\s+apply', 'netlify\\s+deploy\\b.*--prod', 'fly(ctl)?\\s+deploy\\b',
     'firebase\\s+deploy\\b', 'wrangler\\s+(deploy|publish)\\b', '(npm|pnpm|yarn)\\s+(run\\s+)?deploy\\b', 'kubectl\\s+(apply|delete|rollout)', 'helm\\s+(install|upgrade)', 'npm\\s+publish',
     'gh\\s+pr\\s+merge', 'gh\\s+release\\s+create', 'gh\\s+(ruleset|secret|repo\\s+edit)\\b', 'gh\\s+api\\b.*(-X|--method)\\s*(?!GET\\b)[A-Z]+', 'git\\s+config\\b.*\\balias\\.',
-    '\\bsdlc\\s+(settle|approve|reject|lane|hotfix|intent|autonomy|trust|distrust|resume|unfreeze|close)\\b',
+    '\\bsdlc\\s+(settle|approve|reject|lane|hotfix|intent|autonomy|trust|distrust|resume|unfreeze|close|gate-command)\\b',
     // The same verbs through the CLI's terminal path, and the hook fed a prompt by hand, are a person's alone.
-    '\\bsdlc\\.mjs["\']?\\s+(settle|approve|reject|lane|hotfix|intent|autonomy|distrust|resume|unfreeze|close)\\b', 'hooks[\\\\/]user-prompt\\.mjs'],
+    '\\bsdlc\\.mjs["\']?\\s+(settle|approve|reject|lane|hotfix|intent|autonomy|distrust|resume|unfreeze|close|gate-command)\\b', 'hooks[\\\\/]user-prompt\\.mjs'],
   // Production is touched only by read-only probes: a command matching these must also be a probe.
   prodPatterns: ['\\b(aws|gcloud|az)\\b.*\\bprod(uction)?\\b', 'kubectl\\b.*--context[= ]\\S*prod'],
   // House-style text bans apply to these files. A repo can widen it, for example to "**".
@@ -134,6 +135,8 @@ export const DEFAULT_CONFIG = {
   // in mcpAllow: pages are content anyone can fill, and a browser can send data anywhere.
   mcpAskPattern: '^(navigate|computer|click|type|form_input|fill.*|javascript.*|evaluate.*|file_upload|upload.*|browser_batch)$',
   mcpAllow: [],
+  // Shell commands a person lets agents run that the guard would otherwise hand back (regexes, per segment).
+  bashAllow: [],
   // Two different loops (ADR-0004). retryCap counts failed checks after a real change; denialCap counts
   // refusals by one guard in one session, after which the session hands back and may only read until a
   // human types. A repo can lower denialCap, never raise it.
@@ -218,8 +221,34 @@ export function gitOk(args, cwd) {
   }
 }
 
+// The main worktree of the repo dir belongs to: every linked worktree shares its git common dir.
+const mainCache = new Map()
+export function mainWorktree(dir) {
+  if (!mainCache.has(dir)) {
+    const common = git('rev-parse --path-format=absolute --git-common-dir', dir)
+    mainCache.set(dir, common ? path.dirname(common) : null)
+  }
+  return mainCache.get(dir)
+}
+
+// Logs the hooks write (audit.jsonl, denials.json, retro-due.json) live in the git common dir, shared
+// by every worktree and never tracked, so no worktree is dirty from them (issue #62, item 6).
+export function runtimePath(dir, name) {
+  const common = git('rev-parse --path-format=absolute --git-common-dir', dir)
+  return common ? path.join(common, 'ai-sdlc', name) : path.join(dir, '.ai-sdlc', name)
+}
+
+// A worktree without its own config uses the main worktree's, so a new worktree needs no setup (issue #62, item 1).
+export function configFile(dir) {
+  const own = path.join(dir, '.ai-sdlc', 'config.json')
+  if (fs.existsSync(own)) return own
+  const main = mainWorktree(dir)
+  const shared = main && path.join(main, '.ai-sdlc', 'config.json')
+  return shared && fs.existsSync(shared) ? shared : own
+}
+
 export function loadConfig(dir) {
-  const file = path.join(dir, '.ai-sdlc', 'config.json')
+  const file = configFile(dir)
   const own = fs.existsSync(file) ? JSON.parse(fs.readFileSync(file, 'utf8')) : {}
   const cfg = { ...DEFAULT_CONFIG, ...own }
   for (const key of [...ADDITIVE, 'neverTrust']) cfg[key] = [...new Set([...DEFAULT_CONFIG[key], ...(own[key] ?? [])])]
@@ -367,7 +396,7 @@ export function withIntent(prdText, intent) {
 // Lines changed on this branch against the protected branch it came from, uncommitted work
 // included, leaving out the paths that do not need a reviewer's line-by-line reading.
 export function changedFiles(dir, cfg = loadConfig(dir)) {
-  const base = cfg.protectedBranches.map(b => git(`merge-base ${b} HEAD`, dir)).find(Boolean)
+  const base = baseCommit(dir, cfg)
   if (!base) return []
   const tracked = git(`diff --numstat ${base}`, dir).split('\n').filter(Boolean).map(line => {
     const [added, removed, file] = line.split('\t')
@@ -380,6 +409,33 @@ export function changedFiles(dir, cfg = loadConfig(dir)) {
     return { file, lines }
   })
   return [...tracked, ...fresh]
+}
+
+// The commit this branch's change is measured from: the merge-base with the protected branch, taken
+// from origin/<branch> when it is newer than the local copy, so merged PRs do not count (issue #62, item 5).
+export function baseRef(dir, cfg = loadConfig(dir)) {
+  for (const b of cfg.protectedBranches) {
+    const refs = [`origin/${b}`, b].filter(r => gitOk(`rev-parse --verify --quiet ${r}`, dir))
+    if (!refs.length) continue
+    if (refs.length === 2 && gitOk(`merge-base --is-ancestor ${refs[0]} ${refs[1]}`, dir)) return refs[1]
+    return refs[0]
+  }
+  return null
+}
+export function baseCommit(dir, cfg = loadConfig(dir)) {
+  const ref = baseRef(dir, cfg)
+  return ref ? git(`merge-base ${ref} HEAD`, dir) : ''
+}
+
+// What the gate ran on, leaving out specs and the plugin's state: the same code gives the same id, so a
+// green run at Build still counts at Verify after only specs or state changed (issue #62, item 7).
+export function codeTree(dir, cfg = loadConfig(dir)) {
+  const own = f => !f.startsWith(`${cfg.specsDir}/`) && !f.startsWith('.ai-sdlc/')
+  const index = git('ls-files -s', dir).split('\n').filter(l => l && own(l.split('\t')[1] ?? '')).join('\n')
+  const dirty = git(`diff HEAD -- . ":!${cfg.specsDir}" ":!.ai-sdlc"`, dir)
+  const fresh = git('ls-files --others --exclude-standard', dir).split('\n').filter(f => f && own(f))
+    .map(f => `${f} ${fs.statSync(path.join(dir, f)).mtimeMs}`).join('\n')
+  return crypto.createHash('sha256').update([index, dirty, fresh].join('\n')).digest('hex').slice(0, 16)
 }
 
 export function changedLines(dir, cfg = loadConfig(dir)) {
@@ -529,7 +585,7 @@ export function branchAutoBlock(dir, state, cfg, risky = null) {
   const owners = cfg.gateOwners[stage] ?? []
   if (owners.length) return `gateOwners names ${owners.join(', ')} for ${STAGES[stage].name}`
   if (isFrozen(dir)) return 'the error budget is frozen'
-  const file = path.join(dir, '.ai-sdlc', 'audit.jsonl')
+  const file = runtimePath(dir, 'audit.jsonl')
   const events = (fs.existsSync(file) ? fs.readFileSync(file, 'utf8').split(/\r?\n/) : []).filter(Boolean)
     .map(l => { try { return JSON.parse(l) } catch { return {} } })
   if (events.some(e => e.event === 'reject' && e.feature === state.feature && e.stage === stage)) return `a person sent ${STAGES[stage].name} back`
@@ -611,7 +667,7 @@ export function readStdin() {
 }
 
 export function audit(dir, entry) {
-  const file = path.join(dir, '.ai-sdlc', 'audit.jsonl')
+  const file = runtimePath(dir, 'audit.jsonl')
   fs.mkdirSync(path.dirname(file), { recursive: true })
   fs.appendFileSync(file, JSON.stringify({ at: new Date().toISOString(), ...entry }) + '\n')
 }

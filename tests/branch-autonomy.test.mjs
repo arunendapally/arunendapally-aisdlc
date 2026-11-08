@@ -7,6 +7,7 @@ import path from 'node:path'
 import { makeRepo, READY_PRD, READY_FEATURE, switchableGate } from './helpers.mjs'
 import { STAGES, LANES, BRANCH_AUTO, DEFAULT_CONFIG } from '../scripts/lib.mjs'
 import { packetText } from '../scripts/review.mjs'
+import { runtimePath } from '../scripts/lib.mjs'
 
 const INTENT = 'sdlc intent demo change: shoppers can save; smallest: a button; drop if: nobody saves'
 const PLAN = STAGES[3].headings.map(h => `${h}\n\nNone, because the test needs no design here.\n`).join('\n')
@@ -21,7 +22,7 @@ function ready(cfg = {}) {
   r.put('specs/demo/acceptance.feature', READY_FEATURE)
   return r
 }
-const auditOf = r => fs.readFileSync(path.join(r.repo, '.ai-sdlc', 'audit.jsonl'), 'utf8').trim().split('\n').map(l => JSON.parse(l))
+const auditOf = r => fs.readFileSync(runtimePath(r.repo, 'audit.jsonl'), 'utf8').trim().split('\n').map(l => JSON.parse(l))
 
 test('AC-1: a complete spec on the feature branch passes Define on its checks, and is audited', () => {
   const r = ready()

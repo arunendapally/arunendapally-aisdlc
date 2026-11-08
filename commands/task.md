@@ -10,4 +10,4 @@ You are the `tech-lead`. Task: $ARGUMENTS
 3. Run `node "${CLAUDE_PLUGIN_ROOT}/scripts/sdlc.mjs" gate <task-slug>` before any change: it records the baseline.
 4. Make the change (or hand it to the `builder`). Fill `## Change`, `## Why` and `## Behaviour change`. If behaviour changes, stop: it is a bug or a feature (`/ai-sdlc:start`).
 5. Gate green at or above the baseline, then `request` (passes Build on checks) and `advance`.
-6. `/ai-sdlc:pre-review <task-slug>`, use `task.md` as the PR body, open the PR labelled `lane:task`, `request`, and stop. Limit 200 changed lines; review deadline 8h.
+6. `/ai-sdlc:pre-review <task-slug>`, `request`, commit `specs/<task-slug>/`, then `node "${CLAUDE_PLUGIN_ROOT}/scripts/sdlc.mjs" pr <task-slug>` (pushes and opens the PR from `task.md` labelled `lane:task`), and stop. Limit 200 changed lines; review deadline 8h.

@@ -5,6 +5,7 @@ import assert from 'node:assert/strict'
 import fs from 'node:fs'
 import path from 'node:path'
 import { makeRepo, READY_PRD, READY_FEATURE } from './helpers.mjs'
+import { runtimePath } from '../scripts/lib.mjs'
 
 const INTENT = 'sdlc intent demo change: shoppers can come back to items they liked; smallest: a save button and a saved list; drop if: under 5% of shoppers save anything in two weeks'
 
@@ -19,7 +20,7 @@ test('only a person sets the intent, in three parts, while the feature is at Pla
   assert.equal(s.lane, 'light')
   assert.deepEqual([s.intent.change, s.intent.smallest, s.intent.dropIf, s.intent.by],
     ['shoppers can come back to items they liked', 'a save button and a saved list', 'under 5% of shoppers save anything in two weeks', 'Test Human'])
-  assert.match(fs.readFileSync(path.join(r.repo, '.ai-sdlc', 'audit.jsonl'), 'utf8'), /"event":"intent"/)
+  assert.match(fs.readFileSync(runtimePath(r.repo, 'audit.jsonl'), 'utf8'), /"event":"intent"/)
 
   r.setState('demo', { stage: 4 })
   assert.match(r.say(INTENT), /past Define.*Nothing recorded/)
