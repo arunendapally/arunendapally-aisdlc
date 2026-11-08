@@ -29,7 +29,7 @@ Removed, skipped or quarantined: none
 ## Pre-review
 
 Risk: low, because only markdown changed (README.md, CHANGELOG.md, agents/qa-engineer.md, two docs files) and no path needs a person.
-Open findings: 5
+Open findings: 0 (F1 to F5 fixed in 5ff8fd4)
 Look here first: docs/org-ai-sdlc-process.md:71 (whether the full lane should promise no Design wait when data and risky work keep it with a person), docs/org-ai-sdlc-process.md:277 (the "three times" claim this task set out to remove is still there), docs/org-ai-sdlc-process.md:153 (a whole Release bullet still describes deleted checks: fix here or in a follow-up)
 Lenses run: correctness against ADR-0007 and ADR-0008, simplicity, docs accuracy, dead references
 Revert: git revert of the merge commit; no data to back out
