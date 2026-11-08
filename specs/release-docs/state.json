@@ -1,18 +1,40 @@
 {
   "feature": "release-docs",
   "lane": "task",
-  "stage": 4,
+  "stage": 5,
   "branch": "task/release-docs",
   "createdAt": "2026-11-08T04:51:09.978Z",
   "stages": {
     "4": {
-      "enteredAt": "2026-11-08T04:51:09.978Z"
+      "enteredAt": "2026-11-08T04:51:09.978Z",
+      "leftAt": "2026-11-08T05:01:45.671Z"
+    },
+    "5": {
+      "enteredAt": "2026-11-08T05:01:45.671Z",
+      "leftAt": "2026-11-08T05:08:13.111Z"
     }
   },
-  "gates": {},
+  "gates": {
+    "4": {
+      "status": "approved",
+      "by": "checks: autonomy granted by Arun Endapally",
+      "requestedAt": "2026-11-08T05:01:45.311Z",
+      "approvedAt": "2026-11-08T05:01:45.311Z",
+      "auto": true,
+      "fingerprint": "d03eceddd9a27791"
+    },
+    "5": {
+      "status": "approved",
+      "by": "checks: autonomy granted by Arun Endapally",
+      "requestedAt": "2026-11-08T05:08:12.390Z",
+      "approvedAt": "2026-11-08T05:08:12.390Z",
+      "auto": true,
+      "fingerprint": "d03eceddd9a27791"
+    }
+  },
   "retries": {},
   "kinds": [],
-  "updatedAt": "2026-11-08T04:59:52.374Z",
+  "updatedAt": "2026-11-08T05:08:13.111Z",
   "gateRuns": {
     "4": {
       "ok": true,
@@ -20,11 +42,60 @@
       "at": "2026-11-08T04:57:58.843Z",
       "runs": 1,
       "runtime": "v24.19.0"
+    },
+    "5": {
+      "ok": true,
+      "count": 301,
+      "at": "2026-11-08T05:08:08.502Z",
+      "runs": 1,
+      "runtime": "v24.19.0"
     }
   },
   "baseline": 301,
   "baselineRuntime": "v24.19.0",
   "proofBase": "9969432fe5179a2b2f804cdefd394c69338f1ae4",
-  "lastPacketHead": "900268d",
-  "ledgerIds": []
+  "lastPacketHead": "d716ca4",
+  "ledgerIds": [
+    "F1",
+    "F2",
+    "F3",
+    "F4",
+    "F5"
+  ],
+  "sizeChecked": 2,
+  "riskTier": "medium",
+  "reviewedSha": "d716ca44c9bf913f640cef7785a3679bd06872cc",
+  "reviewedFiles": [
+    "CHANGELOG.md",
+    "agents/sre.md",
+    "docs/getting-started.md",
+    "docs/org-ai-sdlc-process.md",
+    "scripts/lib.mjs",
+    "skills/org-ai-sdlc/templates/incident.md",
+    "skills/org-ai-sdlc/templates/prd.md",
+    "skills/org-ai-sdlc/templates/release.md",
+    "specs/release-docs/review-packet.md",
+    "specs/release-docs/review.md",
+    "specs/release-docs/state.json",
+    "specs/release-docs/task.md",
+    "templates/repo/standards/README.md",
+    "tests/db-design.test.mjs",
+    "specs/close-stage-six/review-packet.md",
+    "specs/plan-roadmap/review-packet.md",
+    "specs/stage-names/review-packet.md",
+    "specs/stop-at-pr/review-packet.md",
+    "specs/test-lock/review-packet.md"
+  ],
+  "reviewedHashes": {
+    "CHANGELOG.md": "edba5a3459269111",
+    "agents/sre.md": "65df391d50e6a6de",
+    "docs/getting-started.md": "0ff4d7fa7f542c11",
+    "docs/org-ai-sdlc-process.md": "a392a7ac5dce900e",
+    "scripts/lib.mjs": "9906123379533352",
+    "skills/org-ai-sdlc/templates/incident.md": "1e32558e2a571a06",
+    "skills/org-ai-sdlc/templates/prd.md": "8ee3710f5cae36e6",
+    "templates/repo/standards/README.md": "1a6795651941e307",
+    "tests/db-design.test.mjs": "f9976683982adf0c"
+  },
+  "closedAt": "2026-11-08T05:08:13.111Z"
 }
