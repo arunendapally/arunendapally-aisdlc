@@ -29,7 +29,7 @@ Removed, skipped or quarantined: none
 ## Pre-review
 
 Risk: medium, because the only code line is a comment (scripts/lib.mjs:180), but the gate floor for code is medium; the rest is docs and templates.
-Open findings: 5 (F1 to F3 minor, F4 and F5 nit; see review.md)
+Open findings: 0 (F1 to F5 fixed in c0ebb5d)
 Look here first: docs/getting-started.md:99 (the new outcome sentence contradicts the default config for the light lane), docs/getting-started.md:65 and docs/org-ai-sdlc-process.md:101 (how much Release wording this PR should clear versus the deferred docs pass)
 Lenses run: correctness, docs accuracy, dead references, simplicity
 Revert: git revert of the merge commit; no data or state to back out
