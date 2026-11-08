@@ -177,7 +177,7 @@ export const DEFAULT_CONFIG = {
   // The test proof (ADR-0002): runs the traced test files against the base branch's code, where they
   // must fail. {files} becomes the quoted test files; {report}, if used, a JUnit XML path to write.
   proofCommand: '',
-  // Days after release by which the outcome metric is read, unless release.md names a date. Only the
+  // Days after release by which the outcome metric is read, unless the PRD names a "Read on:" date. Only the
   // lanes listed here open an outcome follow-up (agile change 2 turned it on for light); 0 turns a lane off.
   outcomeWindowDays: { full: 14, light: 7 },
 }
