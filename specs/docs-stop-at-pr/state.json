@@ -1,0 +1,28 @@
+{
+  "feature": "docs-stop-at-pr",
+  "lane": "task",
+  "stage": 4,
+  "branch": "task/docs-stop-at-pr",
+  "createdAt": "2026-11-08T05:27:55.204Z",
+  "stages": {
+    "4": {
+      "enteredAt": "2026-11-08T05:27:55.204Z"
+    }
+  },
+  "gates": {},
+  "retries": {},
+  "kinds": [],
+  "updatedAt": "2026-11-08T05:33:52.595Z",
+  "gateRuns": {
+    "4": {
+      "ok": true,
+      "count": 301,
+      "at": "2026-11-08T05:33:52.362Z",
+      "runs": 1,
+      "runtime": "v24.19.0"
+    }
+  },
+  "baseline": 301,
+  "baselineRuntime": "v24.19.0",
+  "proofBase": "150ba2c58a0b958361fe90859fdc0fed9a9ff0eb"
+}
