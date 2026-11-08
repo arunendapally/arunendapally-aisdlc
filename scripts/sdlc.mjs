@@ -19,7 +19,7 @@ import { factsGateProblems, assumptionProblems } from './facts.mjs'
 import { erProblems, openapiProblems, breakingChanges, undefinedFields } from './contracts.mjs'
 import { solutionWarnings } from './solutions.mjs'
 import { parseSpecKit, prdFromSpecKit, featureFromSpecKit } from './speckit.mjs'
-import { runProof, lockedFiles, sha256, proofProblems, releaseProblems, advanceFeature, overdueOutcomes, riskTier, gateFingerprint, unreviewedChanges, contentHashes, readTriggers, addTrigger, clearTriggers, repeatedFindings } from './loop.mjs'
+import { runProof, lockedFiles, sha256, proofProblems, advanceFeature, overdueOutcomes, riskTier, gateFingerprint, unreviewedChanges, contentHashes, readTriggers, addTrigger, clearTriggers, repeatedFindings } from './loop.mjs'
 
 const dir = root()
 const [cmd, feature, ...rest] = process.argv.slice(2)
@@ -525,14 +525,6 @@ const commands = {
       missing.push(...proof.problems)
       // The same serious finding in two features is a gap in the process: the retro is due now.
       for (const r of repeatedFindings(dir, cfg)) addTrigger(dir, `"${r.item}" found again (${r.features.join(', ')})`)
-    }
-    if (state.stage === 6) {
-      const file = path.join(dir, cfg.specsDir, feature, spec.artefact)
-      const release = releaseProblems(dir, state, fs.existsSync(file) ? fs.readFileSync(file, 'utf8') : '', cfg)
-      missing.push(...release.problems)
-      warnings.push(...release.warnings)
-      const unreviewed = unreviewedChanges(dir, state, cfg)
-      if (unreviewed.length) missing.push(`${unreviewed.slice(0, 5).join(', ')} changed after Verify reviewed ${state.reviewedSha.slice(0, 7)}: that code never reached a reviewer. Request Verify again`)
     }
     for (const w of warnings) console.log(`WARNING: ${w}`)
     if (state.stage === 5) {

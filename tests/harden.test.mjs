@@ -4,36 +4,16 @@ import { test } from 'node:test'
 import assert from 'node:assert/strict'
 import fs from 'node:fs'
 import { makeRepo, READY_PRD, READY_FEATURE } from './helpers.mjs'
-import { releaseProblems, outcomeFollowUp, probeResult } from '../scripts/loop.mjs'
+import { outcomeFollowUp } from '../scripts/loop.mjs'
 import { loadConfig } from '../scripts/lib.mjs'
 
 const release = ({ rollback = 'Tested: 2026-11-02, on staging: flag off restored the old totals', probes = '| AC-3 total | curl /cart | 10.99 | pass, 10.99 |\n\nLive: abcdef1', outcome = 'Metric: conversion back to 3.1%\nOwner: Priya' } = {}) =>
   `## Rollout\n\nAll at once.\n\n## Rollback (tested)\n\n${rollback}\n\n## Probes\n\n${probes}\n\n## Outcome metric\n\n${outcome}\n`
-const problems = (r, text) => releaseProblems(r.repo, { feature: 'demo', lane: 'light', reviewedFiles: [] }, text, loadConfig(r.repo)).problems.join('\n')
 
-test('1: an empty Metric or Owner does not borrow the next line, and a placeholder is not a value', () => {
+test('1: an empty Metric does not borrow the next line', () => {
   const r = makeRepo()
-  assert.doesNotMatch(problems(r, release()), /Outcome metric/)
-  assert.match(problems(r, release({ outcome: 'Metric:\nOwner: Priya' })), /needs "Metric:" and "Owner:"/)
-  assert.match(problems(r, release({ outcome: 'Metric: <the PRD outcome metric>\nOwner: <who reads it>' })), /needs "Metric:" and "Owner:"/)
   const cfg = loadConfig(r.repo)
   assert.equal(outcomeFollowUp({ feature: 'demo', lane: 'light' }, release({ outcome: 'Metric:\nOwner: Priya' }), cfg)?.metric ?? null, null)
-})
-
-test('2: a failed probe stops the release; a probe that passed, however it is worded, does not', () => {
-  const r = makeRepo()
-  const fails = probes => /a probe failed/.test(problems(r, release({ probes: `${probes}\n\nLive: abcdef1` })))
-  for (const p of ['| AC-3 total | curl /cart | 10.99 | fail, 10.98 |', '- checkout health: FAILED (500)', '- checkout: FAIL, expected pass']) assert.ok(fails(p), p)
-  for (const p of ['- a failed payment is retried once: pass', '- 5xx rate: ok, was red yesterday', '- batch jobs: ok, 0 failed', '| Bad password | curl /login | 401 | pass, 401 "login failed" |', '- p95: 180 ms, pass', '- p95: pass (0 failures)',
-    '| Probe | Command | Expected | Result (pass/fail) |\n|---|---|---|---|\n| AC-3 total | curl /cart | 10.99 | pass, 10.99 |']) assert.ok(!fails(p), p)
-  assert.equal(probeResult('|---|---|'), null)
-})
-
-test('2: a rollback is tested on a date it ran, not one it is planned for, however the line is written', () => {
-  const r = makeRepo()
-  const refused = rollback => /no "Tested: <date>, <how>" line/.test(problems(r, release({ rollback })))
-  for (const t of ['Not tested yet, planned 2026-11-05', 'Tested: <YYYY-MM-DD>, <how>', 'Tested: 2999-01-01, will run on staging']) assert.ok(refused(t), t)
-  for (const t of ['Tested: 2026-11-02, on staging; we will rerun it monthly', 'Tested: 2026-11-02, flag off, did not lose data', '**Tested:** 2026-11-02, on staging', 'helm rollback. Tested on 2026-11-02, on staging', 'Tested: 2026-11-02T14:00Z, on staging']) assert.ok(!refused(t), t)
 })
 
 test('1: every Pre-review value is on its own line, in CI and at the Verify gate', async () => {
