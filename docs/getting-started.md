@@ -50,7 +50,7 @@ claude plugin update ai-sdlc@arunendapally-aisdlc
 
    Only you can type it; agents build to it and show it back to you at every approval.
 
-4. **Answer and approve.** The agents ask their questions, write the spec, then build and test. You approve by typing in the prompt. The approval moves the feature on by itself:
+4. **Answer, and approve when asked.** The agents ask their questions, write the spec, then build and test. On the feature's own branch the spec passes on its checks; when `gateOwners` names you, or the work is not on its branch, you approve by typing in the prompt, and the approval moves the feature on by itself:
 
    ```
    sdlc approve saved-items 1
@@ -62,16 +62,16 @@ That is all you need. The rest of this guide is reference.
 
 ## 3. What happens, stage by stage
 
-A feature waits on you at the spec and at the PR; merge, deploy and release follow your org's own process (ADR-0008). Agents cannot type the approvals for you; the hooks refuse it.
+You answer the intent, then review the PR: Define and Design pass on their checks on the feature's own branch unless the repo names a person for them (ADR-0007), and merge, deploy and release are your org's own process (ADR-0008). Agents cannot type the approvals for you; the hooks refuse it.
 
 | Stage | You run | The agents produce | You decide |
 |---|---|---|---|
 | Start | `/ai-sdlc:start add a saved-items list` | The route and lane, a feature branch and `specs/saved-items/` | Your intent: `sdlc intent saved-items change: ...; smallest: ...; drop if: ...` |
-| 1 Define | `/ai-sdlc:define saved-items` | Their questions first (you answer them), then a short `prd.md` and `acceptance.feature`: a Gherkin scenario per requirement | `sdlc approve saved-items 1` |
+| 1 Define | `/ai-sdlc:define saved-items` | Their questions first (you answer them), then a short `prd.md` and `acceptance.feature`: a Gherkin scenario per requirement | Nothing on its own branch; `sdlc approve saved-items 1` when `gateOwners` names you |
 | 4 Build | `/ai-sdlc:build saved-items` | Tests first, then code from the builder, reviewed by the tech lead. Passes on checks | Nothing: no wait |
-| 5 Verify | `/ai-sdlc:verify saved-items` | The test proof, the review packet, the findings ledger `review.md`, and a PR whose body says what was not verified | Review the PR from "Look here first", add what you find to `review.md` as H rows, then `sdlc approve saved-items 5` |
+| 5 Verify | `/ai-sdlc:verify saved-items` | The test proof, the review packet, the findings ledger `review.md`, and a PR whose body says what was not verified | Review the PR from "Look here first", add what you find to `review.md` as H rows; merging is your org's process |
 
-**The full lane** adds stage 3 Design (`/ai-sdlc:design`: the plan, and an ADR with its review for each new datastore, dependency or service) and a fourth wait. Triage picks it for a migration that alters or drops data, a high-risk path, or a new component; you can also type `sdlc lane saved-items full` at any point before Verify.
+**The full lane** adds stage 3 Design (`/ai-sdlc:design`: the plan, and an ADR with its review for each new datastore, dependency or service), which waits for a person on data work or a risky Security and privacy section. Triage picks it for a migration that alters or drops data, a high-risk path, or a new component; you can also type `sdlc lane saved-items full` at any point before Verify.
 
 When a gate refuses, `sdlc request` lists every reason, for example "R2 has no scenario". Ask the agent to fix them and request again. Warnings, such as a knowledge page the change made stale, do not block.
 
@@ -81,8 +81,8 @@ If the feature already has a GitHub Spec Kit `spec.md`, start the Define gate fr
 
 ## 4. Smaller work
 
-- **A bug:** `/ai-sdlc:bug fix-total-rounding`. One document. A failing test must reproduce it before the fix. The merge is your only gate. If it came from earlier work, the agent adds `--caused-by <feature>`.
-- **A chore** (dependency bump, refactor, docs): `/ai-sdlc:task bump-express`. Your only gate is the merge.
+- **A bug:** `/ai-sdlc:bug fix-total-rounding`. One document. A failing test must reproduce it before the fix. The PR review is your only gate. If it came from earlier work, the agent adds `--caused-by <feature>`.
+- **A chore** (dependency bump, refactor, docs): `/ai-sdlc:task bump-express`. Your only gate is the PR review.
 - **Production is down:** you type `sdlc hotfix checkout-500 checkout returns 500 since 10:40`, then `/ai-sdlc:hotfix checkout-500`. It has a one-hour review deadline. A postmortem is due within two days (`/ai-sdlc:incident checkout-500`).
 - **Learn an area:** `/ai-sdlc:learn the payments retry logic` writes source-backed pages in `knowledge/` and a self-check for a person becoming the expert.
 - **A hard decision** (a guard, a gate, anything security-sensitive): ask Claude to run `/ai-sdlc:council` on the question. Experts review in parallel, a sceptic checks each review against the code, and the CTO writes a proposal to `docs/decisions/`. It takes a few minutes and costs a few dollars; it only advises, and you accept the proposal or not.
@@ -130,7 +130,7 @@ When more than one person uses it, or before the first release, a human does the
    For a one-person repo, first set `required_approving_review_count` to 0 and `require_code_owner_review` to false. GitHub does not let you approve your own pull request, so you would lock yourself out.
 5. **Set the repo variable** `BACKUP_REVIEWERS` to a team handle. The hourly `review-sla` workflow mentions it on overdue reviews.
 6. **Give agents a GitHub App or fine-grained token** with no admin or bypass rights.
-7. **Expose your build id** so a release can be checked: a version endpoint, a meta tag, or your platform's read-only inspect command. Release records it as `Live: <sha>` and refuses unless it contains the reviewed change on `origin/main` and the previous release.
+7. **Expose your build id** so your release can check what is live: a version endpoint, a meta tag, or your platform's read-only inspect command. The plugin does not check it; release is your org's process (ADR-0008).
 
 ## 7. Optional steps
 
@@ -162,7 +162,6 @@ Off by default, so the default path stays short. Turn them on when the risk call
 | "RUNTIME CHANGED" after `sdlc gate` | The tests ran on a different runtime (`runtimeCommand`) than the baseline | Compare the counts; look for cancelled or skipped tests |
 | "is not an owner of gate N" | `gateOwners` lists other names | Approve as a listed owner, or change the config |
 | An edit or command is refused with "[ai-sdlc]" | A guardrail: protected branch, secrets, a deploy, a guardrail file, or code before Build | Read the reason; humans run deploys and merges |
-| "is not on origin/main" or "Live:" at Release | The change was deployed from a branch, or the running build is not this release | Merge and push, deploy from main, read the build id again |
 | "has lapsed" when you approve | The change moved after the agent requested the gate | Ask the agent to request it again, and look at what changed |
 | "Refused 2 times this session: hand back" | A guard refused the same step twice | Read the reason; run the step yourself if it is right, then reply so the session can act again |
 | "in slices" when reading a file | The file is large | Read the code that governs it first, then the file with an offset and limit |

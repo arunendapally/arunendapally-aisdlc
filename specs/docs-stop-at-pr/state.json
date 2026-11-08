@@ -1,0 +1,92 @@
+{
+  "feature": "docs-stop-at-pr",
+  "lane": "task",
+  "stage": 5,
+  "branch": "task/docs-stop-at-pr",
+  "createdAt": "2026-11-08T05:27:55.204Z",
+  "stages": {
+    "4": {
+      "enteredAt": "2026-11-08T05:27:55.204Z",
+      "leftAt": "2026-11-08T05:36:08.784Z"
+    },
+    "5": {
+      "enteredAt": "2026-11-08T05:36:08.784Z",
+      "leftAt": "2026-11-08T05:42:24.039Z"
+    }
+  },
+  "gates": {
+    "4": {
+      "status": "approved",
+      "by": "checks: autonomy granted by Arun Endapally",
+      "requestedAt": "2026-11-08T05:36:08.550Z",
+      "approvedAt": "2026-11-08T05:36:08.550Z",
+      "auto": true,
+      "fingerprint": "58f026e1c687b3c1"
+    },
+    "5": {
+      "status": "approved",
+      "by": "checks: autonomy granted by Arun Endapally",
+      "requestedAt": "2026-11-08T05:42:23.327Z",
+      "approvedAt": "2026-11-08T05:42:23.327Z",
+      "auto": true,
+      "fingerprint": "58f026e1c687b3c1"
+    }
+  },
+  "retries": {},
+  "kinds": [],
+  "updatedAt": "2026-11-08T05:42:24.040Z",
+  "gateRuns": {
+    "4": {
+      "ok": true,
+      "count": 301,
+      "at": "2026-11-08T05:33:52.362Z",
+      "runs": 1,
+      "runtime": "v24.19.0"
+    },
+    "5": {
+      "ok": true,
+      "count": 301,
+      "at": "2026-11-08T05:42:19.739Z",
+      "runs": 1,
+      "runtime": "v24.19.0"
+    }
+  },
+  "baseline": 301,
+  "baselineRuntime": "v24.19.0",
+  "proofBase": "150ba2c58a0b958361fe90859fdc0fed9a9ff0eb",
+  "lastPacketHead": "4e5bdf6",
+  "ledgerIds": [
+    "F1",
+    "F2",
+    "F3",
+    "F4",
+    "F5"
+  ],
+  "sizeChecked": 0,
+  "riskTier": "low",
+  "reviewedSha": "4e5bdf692cc1315a917b312cefb625367849ef77",
+  "reviewedFiles": [
+    "CHANGELOG.md",
+    "README.md",
+    "agents/qa-engineer.md",
+    "docs/getting-started.md",
+    "docs/org-ai-sdlc-process.md",
+    "specs/docs-stop-at-pr/review-packet.md",
+    "specs/docs-stop-at-pr/review.md",
+    "specs/docs-stop-at-pr/state.json",
+    "specs/docs-stop-at-pr/task.md",
+    "specs/close-stage-six/review-packet.md",
+    "specs/plan-roadmap/review-packet.md",
+    "specs/stage-names/review-packet.md",
+    "specs/stop-at-pr/review-packet.md",
+    "specs/test-lock/review-packet.md"
+  ],
+  "reviewedHashes": {
+    "CHANGELOG.md": "63eed12b609445f0",
+    "README.md": "333c063f38ec3a2a",
+    "agents/qa-engineer.md": "e11dc99275fbc4d0",
+    "docs/getting-started.md": "182cdceab6236d48",
+    "docs/org-ai-sdlc-process.md": "e70c3473bbb055b2"
+  },
+  "closedAt": "2026-11-08T05:42:24.039Z"
+}

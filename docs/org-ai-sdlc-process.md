@@ -6,7 +6,7 @@
 
 **In one sentence:** every piece of work is triaged into the lightest lane that is still safe; agents do the work, test it and fix it in a loop; a named human decides at the few gates that matter; and everything learned is written down so the next piece of work starts smarter.
 
-**Kept simple on purpose** ([ADR-0003](adr/0003-simple-default-path.md)): a feature waits on a human three times (the spec, the merge, the release) and a bug once. A small safety core is mandatory everywhere; every other step is optional until the risk switches it on.
+**Kept simple on purpose** ([ADR-0003](adr/0003-simple-default-path.md)): a person answers the intent, then reviews the PR: Define and Design pass on their checks on the feature's own branch unless the repo names a person for them (ADR-0007), and merge, deploy and release are the org's own process (ADR-0008); a bug or task waits only for its PR review. A small safety core is mandatory everywhere; every other step is optional until the risk switches it on.
 
 ---
 
@@ -41,12 +41,12 @@ Start anything with `/ai-sdlc:start <what you want>`. The CTO reads the code and
 
 | The work | Route | Human gates |
 |---|---|---|
-| Production is broken now | a human types `sdlc hotfix <slug> <what is broken>`, then `/ai-sdlc:hotfix` | merge, release |
-| A bug: wrong behaviour today, no dependency, schema or infra change | `/ai-sdlc:bug` (with `--kind perf` for slowness) | merge |
-| A small chore users will not notice: bump, config, refactor, docs | `/ai-sdlc:task` | merge |
+| Production is broken now | a human types `sdlc hotfix <slug> <what is broken>`, then `/ai-sdlc:hotfix` | declared by a person, PR review |
+| A bug: wrong behaviour today, no dependency, schema or infra change | `/ai-sdlc:bug` (with `--kind perf` for slowness) | PR review |
+| A small chore users will not notice: bump, config, refactor, docs | `/ai-sdlc:task` | PR review |
 | A question, or someone needs to become an SME | `/ai-sdlc:learn` | none: it writes knowledge only |
-| New behaviour | a feature in the light lane | spec, merge, release |
-| A migration that alters or drops data, a high-risk path, a new datastore, dependency or service | a feature in the full lane | spec, design, merge, release |
+| New behaviour | a feature in the light lane | intent, PR review |
+| A migration that alters or drops data, a high-risk path, a new datastore, dependency or service | a feature in the full lane | intent, Design on data or risky work, PR review |
 | A big capability | split into slices first, one feature and one small PR per slice | per slice |
 | Not worth doing | say why and stop | none |
 
@@ -67,11 +67,11 @@ A change to migrations or SQL that is not marked as data work cannot pass its ga
 
 | Lane | Stages | Documents | Human gates | PR limit | Review deadline |
 |---|---|---|---|---|---|
-| light | Define, Build, Verify, Release | prd + acceptance.feature, tasks, pr + review, release | 3: spec, merge, release | 300 lines | 8h |
-| full | Define, Design, Build, Verify, Release | as light, plus design and ADRs | 4: spec, design, merge, release | 400 | 24h |
-| bug | Build, Verify | `bug.md` (also the PR body) | 1: merge | 200 | 8h |
-| task | Build, Verify | `task.md` (also the PR body) | 1: merge | 200 | 8h |
-| hotfix | Build, Verify, Release | `hotfix.md` (also the PR body) | 2: merge, release | 100 | 1h |
+| light | Define, Build, Verify | prd + acceptance.feature, tasks, pr + review | intent, PR review | 300 lines | 8h |
+| full | Define, Design, Build, Verify | as light, plus design and ADRs | intent, Design on data or risky work, PR review | 400 | 24h |
+| bug | Build, Verify | `bug.md` (also the PR body) | PR review | 200 | 8h |
+| task | Build, Verify | `task.md` (also the PR body) | PR review | 200 | 8h |
+| hotfix | Build, Verify | `hotfix.md` (also the PR body) | declared by a person, PR review | 100 | 1h |
 
 - Features start in the light lane. Triage starts one in the full lane (`init <slug> --full`) for a migration that alters or drops data, a high-risk path, or a new datastore, dependency or service. Only a human moves a feature to light, or declares a hotfix.
 - In the light lane, Build refuses a destructive migration or a high-risk path. A human types `sdlc lane <feature> full`, and the feature goes back to Design.
@@ -93,10 +93,10 @@ What each stage expects, what happens in it, who leads and who decides, and what
 | Stage | Input | What happens | Leads (agents) | Decides (human) | Output |
 |---|---|---|---|---|---|
 | **Start** | A request in plain words, or an issue or ticket link | Reads the code and the knowledge base, triages in five lines (what, who, how urgent, how big, how risky), picks the lane and kinds | `cto` | Nobody, except that only a human declares a hotfix | A lane and kinds, the `feature/<slug>` branch and worktree, and `specs/<slug>/` with `state.json` |
-| **1 Define** | The request and triage, the answers to the questions asked, and for brownfield or data work the facts pinned to the code | Asks the questions that would change the spec, records assumptions, writes numbered requirements, and turns every requirement into a Gherkin scenario. The gate checks that each requirement has one | `product-owner`, `qa-engineer` (`architect` for facts) | Product lead approves the spec | `prd.md`, `acceptance.feature` and, when needed, `facts.md`, approved together |
-| **3 Design** (full lane) | The approved PRD and scenarios, and the facts | Records each decision as an ADR with two options, cross-questioned by a reviewer from another discipline; covers the data model, contracts (breaking changes declared), threat model, test plan and how it runs | `architect`, `design-reviewer` (`dba`, `sre`, `safe-ai-sdlc-expert` where they apply) | Architect and product lead approve the design | `design.md`, ADRs in `docs/adr/` and, for api work, `openapi.yaml` with `swagger.html` |
+| **1 Define** | The request and triage, the answers to the questions asked, and for brownfield or data work the facts pinned to the code | Asks the questions that would change the spec, records assumptions, writes numbered requirements, and turns every requirement into a Gherkin scenario. The gate checks that each requirement has one | `product-owner`, `qa-engineer` (`architect` for facts) | Nobody on the feature's own branch: it passes on its checks (ADR-0007), unless `gateOwners` names a product lead | `prd.md`, `acceptance.feature` and, when needed, `facts.md`, approved together |
+| **3 Design** (full lane) | The approved PRD and scenarios, and the facts | Records each decision as an ADR with two options, cross-questioned by a reviewer from another discipline; covers the data model, contracts (breaking changes declared), threat model, test plan and how it runs | `architect`, `design-reviewer` (`dba`, `sre`, `safe-ai-sdlc-expert` where they apply) | Passes on its checks on the branch, except data work and a risky Security and privacy section, which the architect and product lead approve | `design.md`, ADRs in `docs/adr/` and, for api work, `openapi.yaml` with `swagger.html` |
 | **4 Build** | The approved spec (and the plan in the full lane), the standards and traps | Breaks the work into tasks; each slice runs test, implement, gate, retry, with the retries capped and the gate never below its baseline | `tech-lead`, `builder` | Nobody: it passes on its checks | `tasks.md` ticked off, code and tests, the gate green, the diff under the lane's limit |
-| **5 Verify** | The branch, its tests and the spec | Proves the new tests fail on the base code and pass on the branch, then the pre-reviewer reviews the PR through expert lenses and scores the risk | `pre-reviewer`, `qa-engineer` | A CODEOWNER engineer approves and merges | The PR (summary, test results, pre-review, not verified), the review packet and test matrix, merged to `main` |
+| **5 Verify** | The branch, its tests and the spec | Proves the new tests fail on the base code and pass on the branch, then the pre-reviewer reviews the PR through expert lenses and scores the risk | `pre-reviewer`, `qa-engineer` | Nobody in the plugin: it passes on its checks, and the PR review and merge are the org's | The PR (summary, test results, pre-review, not verified), the review packet and test matrix, and the feature complete |
 | **Observe** | The outcome metric and its watch window (14 days in the full lane) | Reads the metric against its target | The metric's owner | The owner records it; a breach goes to the incident commander | The outcome recorded as met, missed or breach |
 | **Remember** | What the change touched | An agent checks stale knowledge pages, facts and superseded ADRs before the PR (no gate warns since ADR-0008); a bug or hotfix owes a trap guarded by a check | The agent on the feature | Reviewed with the PR | Updated knowledge, facts and ADR status, and new traps |
 | **Improve** | Rejections, escalations and escapes across features | Ranks proposals, changes at most three plugin files, and adds an eval for each that fails before and passes after; never loosens a gate | `cto` | A platform owner merges the retro PR | A `retro/<date>` PR that tightens the plugin |
@@ -121,7 +121,7 @@ Earned trust is off by default. A repo turns it on with `"trust": true` in `.ai-
 - **The trust ledger.** Every first-time human approval of a gate adds to that gate's clean streak (per lane and stage, for example `bug:5`). A rejection resets it to zero. Approvals are counted whether trust is on or not.
 - **Promotion.** At 10 clean approvals in a row (configurable), `sdlc trust` and session start say the gate is ready. A human promotes it by typing `sdlc trust <lane> <stage>`. From then on that gate passes on checks.
 - **Demotion is automatic.** A rejection, `sdlc distrust`, an escaped bug, an error-budget freeze, or turning trust off hands the gate back to a human.
-- **Some gates never move:** merging a feature, and every release.
+- **Some steps are never the plugin's:** merging, deploying and releasing (ADR-0008).
 - **Who decides.** `trustOwners` in config lists who may promote; agents cannot (a shell command containing `sdlc trust` is refused, and the ledger is a guardrail file).
 
 ---
@@ -150,7 +150,7 @@ Decided in [ADR-0002](adr/0002-loop-spine.md), and made lighter by [ADR-0003](ad
   - A hotfix proves its repro after the merge (`sdlc proof <hotfix> --files <tests>`), against the code before the fix. Until it passes, its postmortem counts as not done.
   - `sdlc spike <feature>` marks a slice as a spike: it may skip the red-first habit, never the proof, and it cannot pass Verify until a non-spike slice replaces it.
 - **Verify, then review.** The machine gate runs before the packet, the lenses and the human, at every scale.
-- **Release and observe.** In the full and light lanes, Release refuses without a rollback line `Tested: <date>, <how>` (a date no later than today), with a probe that failed, and without a passing probe for each `@release` criterion. It also needs `## Outcome metric` naming `Metric:` and `Owner:`, or `Metric: None, because ...`. The feature closes at release and opens an outcome follow-up, due after the watch window (`outcomeWindowDays`: 14 days in the full lane, 7 in the light lane; 0 turns a lane off) or on its `Read on:` date. Status and session start show OUTCOME DUE and OVERDUE; `sdlc metrics` reports its age. `sdlc outcome <feature> breach` alerts the incident commander; only a human declares a hotfix.
+- **Observe.** Rollout, rollback and probes are the org's release (ADR-0008); a `@release` criterion is named in the PR under `## Check after deploy`. A full or light feature completes at Verify and opens an outcome follow-up from the PRD's `## Outcome metric` (`Metric:` and `Owner:`, or `Metric: None, because ...`), due after the watch window (`outcomeWindowDays`: 14 days in the full lane, 7 in the light lane; 0 turns a lane off) or on its `Read on:` date. Status and session start show OUTCOME DUE and OVERDUE; `sdlc metrics` reports its age. `sdlc outcome <feature> breach` alerts the incident commander; only a human declares a hotfix.
 - **Remember, on staleness, as warnings.** Release warned about each of these until ADR-0008 removed it; now an agent checks them before the human review:
   - a knowledge page whose sources the change touched is stale (C4 files count as sources)
   - a fact in `facts.md` about a file the change touched is stale
@@ -170,9 +170,9 @@ Decided in [ADR-0004](adr/0004-gates-that-catch-real-failures.md), after the fee
 |---|---|
 | F1. A permission denial retried about thirty times | Every denial says it is a final answer. The pre-tool hook counts denials per session and guard (`denialCap`, 2), hands back on the second, and then holds the session to reading until a human types. The autopilot starts nothing after a denied or aborted turn, and never restarts itself on green. |
 | F2. Context spent before the source of truth | The pre-tool hook refuses a full read of a large file and gives the sliced call. Brownfield and data facts need a `[governing]` fact pinned to implementation code. |
-| F3. A branch deploy erased by the next merge | Release refuses unless the reviewed change is on `origin/main` and `Live: <sha>`, read from the running system, contains it and the previous release. A preview deploy from an unpushed branch asks first. |
+| F3. A branch deploy erased by the next merge | Agents never merge or deploy to production; a preview deploy from an unpushed branch asks first, and a branch deploy is a preview, never a release. |
 
-**Lessons owed.** A bug filed with `--caused-by`, or a hotfix, owes a trap in `standards/traps.md` that names it under `Source` and is guarded by a check. The bug cannot merge, and the postmortem stays open, until it is paid. This is how Release and incidents feed Define by mechanism rather than by instruction.
+**Lessons owed.** A bug filed with `--caused-by`, or a hotfix, owes a trap in `standards/traps.md` that names it under `Source` and is guarded by a check. The bug cannot merge, and the postmortem stays open, until it is paid. This is how bugs and incidents feed Define by mechanism rather than by instruction.
 
 ---
 
@@ -181,7 +181,7 @@ Decided in [ADR-0004](adr/0004-gates-that-catch-real-failures.md), after the fee
 Decided in [ADR-0005](adr/0005-review-converges-and-risk-is-set-by-the-change.md), after [How the Claude Code team does code review](https://claude.dev/blog/solving-code-review-at-anthropic/).
 
 - **Review converges.** A Verify request the review refuses is a round. After three, the gate stops and asks for a rethink until a human types `sdlc reject <f> 5 rethink: ...`. The packet lists what changed since the last review; a finding that repeats a closed one is refused.
-- **An approval covers what was checked.** The request stores a fingerprint of the content it checked. If that changes before the human approves, the approval lapses. Release refuses code committed after Verify reviewed it.
+- **An approval covers what was checked.** The request stores a fingerprint of the content it checked. If that changes before the human approves, the approval lapses. A completed feature whose code changes after Verify reviewed it reopens at Verify on its next request.
 - **The change sets its risk tier.** Documents only is low, code is medium, and paths that always need a person (auth, payments, migrations, infrastructure, CI, CODEOWNERS, agents and hooks) or a destructive migration are high. The pre-review's `Risk:` may raise it, never lower it. High risk turns on the strict ledger rules. Every pre-review says how to revert.
 - **Every merge needs a person.** Earned trust no longer promotes any merge. Low-risk merges with no person are proposed, not decided, and wait for a revert counter, fifty clean low-tier merges and approvals bound to a verified identity.
 - **`sdlc close <feature> <reason>`** retires work that will not ship, never while a lesson is owed or a postmortem is open.
@@ -195,7 +195,7 @@ What one session learns, the next one must not have to learn again.
 - **Open format.** `knowledge/` is an [Open Knowledge Format](https://github.com/GoogleCloudPlatform/knowledge-catalog/blob/main/okf/SPEC.md) (OKF 0.2) bundle: plain Markdown pages with frontmatter `type` (system, component, decision, trap, runbook, howto, glossary, playbook), `title`, `description`, `sources` (the files the page describes, as `- resource: <path>`), `generated` and `verified` (who wrote and who checked it, and when), plus two keys of our own: `verified_commit` (the commit the sources were read at) and `confidence` (Established, Moderate, Preliminary). `sdlc knowledge index` writes `index.md` and logs changes in `log.md`, newest first. Pages link with `[[file-name]]`. Older pages (`name`, `sources: [paths]`, `verified: <commit>`) are still read. Any tool that reads OKF or Markdown can read them.
 - **Source-backed, so it cannot silently rot.** `sdlc knowledge check` marks a page stale when its sources changed since its verified commit, and fails on unusable pages (missing fields, unknown types, broken links).
 - **Read before you change.** `sdlc knowledge for <files>` lists the pages that cover them. Session start reports the size of the knowledge base and how much is stale, and the autopilot mod reminds every turn to look before changing an area.
-- **Written as you go.** `/ai-sdlc:learn` writes pages and a self-check for a human becoming the expert. Release updates the pages a feature taught us. Postmortems add traps. Knowledge is reviewed in PRs like code.
+- **Written as you go.** `/ai-sdlc:learn` writes pages and a self-check for a human becoming the expert. An agent updates the pages a feature taught us before its PR. Postmortems add traps. Knowledge is reviewed in PRs like code.
 
 ---
 
@@ -206,7 +206,7 @@ Sections 5 to 7 make each repo better. This loop makes the plugin better, for ev
 - **Evidence is recorded as the work runs:** rejection reasons, goals that escalated past the retry cap, how long each gate waited, guards that fired (the audit log), traps and how they are guarded, and escaped bugs. A bug that escaped shipped work is recorded with `sdlc bug <slug> --caused-by <feature>`, which also takes back the streak and any promotion of every gate that feature passed.
 - **`sdlc retro`** mines one or more repos (`--repos a,b`) over a window (`--since 30`) and ranks proposals: a rejection theme seen twice at the same gate becomes a checklist or command change; an escalating goal, a command change; a gate waiting past its deadline, a pre-review and PR-size change; a guard firing again and again, an agent rule or a narrower guard; an escape, a new Verify check; a trap guarded only by prose, a hook or test. One event is never a pattern.
 - **`/ai-sdlc:retro`** takes at most three proposals, changes the named plugin files on a `retro/<date>` branch, adds an eval for each that fails before the change and passes after, and opens a PR with the before and after numbers. It never loosens a guard, gate, limit or approval rule. A human platform owner merges it.
-- **Golden-task evals** (`evals/golden/`, `npm run eval`) are the promises the process makes, one per file, replayed in throwaway repos: agents cannot approve, a bug needs a repro, bugs stay small, only humans declare hotfixes, no PR without a pre-review, data work is detected, no merge, push or deploy, guardrails hold, the kill switch works, escapes cost trust, knowledge goes stale, code waits for Build, tests prove themselves against the base code, release needs a tested rollback, the outcome outlives the release, a frozen budget stops new features, an escalation triggers the retro, features start light with one spec approval, and risk leaves the light lane. CI fails on any task that passed in `evals/baseline.json` and fails now.
+- **Golden-task evals** (`evals/golden/`, `npm run eval`) are the promises the process makes, one per file, replayed in throwaway repos: agents cannot approve, a bug needs a repro, bugs stay small, only humans declare hotfixes, no PR without a pre-review, data work is detected, no merge, push or deploy, guardrails hold, the kill switch works, escapes cost trust, knowledge goes stale, code waits for Build, tests prove themselves against the base code, a branch deploy is a preview, the outcome outlives the release, a frozen budget stops new features, an escalation triggers the retro, features start light with one spec approval, and risk leaves the light lane. CI fails on any task that passed in `evals/baseline.json` and fails now.
 - **Agent evals** (`evals/agents/`, `npm run eval:agents`) run real agents through `claude -p` on small fixed tasks and score the answers: the CTO routes an outage to a human-declared hotfix and a schema change to the data kind, the pre-reviewer scores risk and finds the untested branch, the product owner grades its evidence. They cost tokens, so they run by hand and in every retro.
 
 ---
@@ -274,10 +274,10 @@ Each gate refuses work that guesses, skips a question or hides risk, so what rea
 
 | Tension | Decision |
 |---|---|
-| Full gates on every change are too slow | lanes by blast radius; a feature waits on a human three times, bugs and chores once; Build passes on checks; security findings block in every lane |
+| Full gates on every change are too slow | lanes by blast radius; a person answers the intent and reviews the PR, and Define and Design pass on checks on the feature branch; Build passes on checks; security findings block in every lane |
 | Process grows with every lesson | a small mandatory core; everything else optional, switched on by risk (ADR-0003); bookkeeping warns instead of blocking |
 | Agents produce more than humans can review | small PRs, agent pre-review that points humans at the two or three places that need judgement, deadlines with escalation |
-| Less human steering vs safety | Build on checks everywhere; earned trust optional per repo, granted by a human, lost on any rejection or a frozen error budget; merges of features and every release never move |
+| Less human steering vs safety | Build on checks everywhere; earned trust optional per repo, granted by a human, lost on any rejection or a frozen error budget; merging and releasing stay the org's |
 | Unattended fix loops vs runaway agents | a retry cap, a baseline that cannot drop, a stop when a turn changes nothing, the kill switch, and a human notified on every stop |
 | Builder writes its own tests | tests come first, and the proof shows each one fails on the base code; a bug fix needs its repro red first |
 | Hotfix speed vs safety | a human declares it; a 1h review; rollback written before the fix; a postmortem is enforced, and the repro is proved after the merge |

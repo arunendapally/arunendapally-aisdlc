@@ -1,6 +1,6 @@
 # ai-sdlc: the AI software development cycle for teams
 
-A Claude Code plugin. A CTO agent and 13 expert agents take work from idea to production in lanes from hotfix to full feature, and humans own every gate. A feature waits on you three times (the spec, the merge, the release); a bug once. Agents write tests first and prove each one fails without the change. Everything beyond the safety core is optional until the risk calls for it.
+A Claude Code plugin. A CTO agent and 13 expert agents take work from idea to production in lanes from hotfix to full feature, and humans own every gate. A person answers the intent, then reviews the PR: Define and Design pass on their checks on the feature's own branch unless the repo names a person for them (ADR-0007), and merge, deploy and release are the org's own process (ADR-0008). A bug or task waits only for its PR review. Agents write tests first and prove each one fails without the change. Everything beyond the safety core is optional until the risk calls for it.
 
 ## Try it
 
