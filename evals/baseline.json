@@ -52,10 +52,6 @@
     "passed": true
   },
   {
-    "name": "release-needs-tested-rollback",
-    "passed": true
-  },
-  {
     "name": "outcome-outlives-release",
     "passed": true
   },
@@ -81,10 +77,6 @@
   },
   {
     "name": "read-what-governs-first",
-    "passed": true
-  },
-  {
-    "name": "release-is-on-main-and-live",
     "passed": true
   },
   {
@@ -117,6 +109,10 @@
   },
   {
     "name": "requirements-not-solutions",
+    "passed": true
+  },
+  {
+    "name": "branch-deploy-is-a-preview",
     "passed": true
   }
 ]

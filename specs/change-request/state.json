@@ -18,7 +18,8 @@
       "leftAt": "2026-11-07T13:08:13.799Z"
     },
     "6": {
-      "enteredAt": "2026-11-07T13:08:13.799Z"
+      "enteredAt": "2026-11-07T13:08:13.799Z",
+      "leftAt": "2026-11-07T13:51:25.201Z"
     }
   },
   "gates": {
@@ -52,7 +53,7 @@
     "brownfield"
   ],
   "capability": "gates-and-names",
-  "updatedAt": "2026-11-07T13:08:13.800Z",
+  "updatedAt": "2026-11-07T13:51:25.905Z",
   "revisions": {
     "1": 1
   },
@@ -117,5 +118,14 @@
     "tests/autonomy.test.mjs": "08a348e0966dab6d",
     "tests/change-request.test.mjs": "ca547a57cb32239f",
     "tests/review.test.mjs": "6c7b6cafe08eee0e"
+  },
+  "closedAt": "2026-11-07T13:51:25.201Z",
+  "releasedSha": "31984607768ec5713cea5b70dc690c4978990504",
+  "outcome": {
+    "metric": "spec changes after Build started in dogfood runs that were asked about",
+    "owner": "Arun, plugin owner",
+    "due": "2026-11-14T13:51:25.905Z",
+    "status": "open",
+    "openedAt": "2026-11-07T13:51:25.905Z"
   }
 }

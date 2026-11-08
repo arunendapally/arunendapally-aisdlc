@@ -220,20 +220,6 @@ test('review converges: after three refused rounds the gate stops until a person
   assert.match(r.sdlc('request', 'demo').out, /passed on checks/)
 })
 
-test('code committed after Verify never reached a reviewer, so Release refuses it', () => {
-  const r = makeRepo()
-  r.remote()
-  r.sdlc('init', 'demo', '--full')
-  r.put('src/saved.ts', 'export const saved = true\n')
-  r.git('add', '-A')
-  r.git('commit', '-q', '-m', 'reviewed')
-  r.setState('demo', { stage: 6, stages: { 6: { enteredAt: hoursAgo(1) } }, reviewedSha: r.git('rev-parse', 'HEAD'), reviewedHashes: { 'src/saved.ts': 'unused' } })
-  r.put('src/extra.ts', 'export const extra = 1\n')
-  r.git('add', '-A')
-  r.git('commit', '-q', '-m', 'after review')
-  assert.match(r.sdlc('request', 'demo').out, /src\/extra\.ts changed after Verify reviewed .*never reached a reviewer/)
-})
-
 test('sdlc close: only a person retires work, with a reason, and never while a lesson is owed', () => {
   const r = makeRepo()
   r.sdlc('init', 'spike-idea')

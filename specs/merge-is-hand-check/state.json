@@ -18,7 +18,8 @@
       "leftAt": "2026-11-06T14:30:27.826Z"
     },
     "6": {
-      "enteredAt": "2026-11-06T14:30:27.826Z"
+      "enteredAt": "2026-11-06T14:30:27.826Z",
+      "leftAt": "2026-11-07T13:51:27.165Z"
     }
   },
   "gates": {
@@ -52,7 +53,7 @@
     "brownfield"
   ],
   "capability": "gates-and-names",
-  "updatedAt": "2026-11-06T19:31:02.340Z",
+  "updatedAt": "2026-11-07T13:51:27.960Z",
   "revisions": {
     "1": 1
   },
@@ -131,5 +132,14 @@
     "skills/org-ai-sdlc/templates/pr.md": "3ba7cd47c78902da",
     "templates/repo/.github/pull_request_template.md": "3ba7cd47c78902da",
     "tests/release-criteria.test.mjs": "66753ddead7f99b3"
+  },
+  "closedAt": "2026-11-07T13:51:27.165Z",
+  "releasedSha": "a341dd50a2dce8aa6e713c322ccdd7e0ff6f8f19",
+  "outcome": {
+    "metric": "human stops before the PR in one gates-and-names dogfood slice",
+    "owner": "Arun, plugin owner",
+    "due": "2026-11-14T13:51:27.960Z",
+    "status": "open",
+    "openedAt": "2026-11-07T13:51:27.960Z"
   }
 }

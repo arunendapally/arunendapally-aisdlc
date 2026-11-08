@@ -22,7 +22,8 @@
       "leftAt": "2026-11-07T04:03:04.002Z"
     },
     "6": {
-      "enteredAt": "2026-11-07T04:03:04.002Z"
+      "enteredAt": "2026-11-07T04:03:04.002Z",
+      "leftAt": "2026-11-07T13:51:23.108Z"
     }
   },
   "gates": {
@@ -64,7 +65,7 @@
     "brownfield"
   ],
   "capability": "gates-and-names",
-  "updatedAt": "2026-11-07T04:03:04.002Z",
+  "updatedAt": "2026-11-07T13:51:23.919Z",
   "intent": {
     "change": "Branch runs on its own",
     "smallest": "Gates pass on checks",
@@ -148,5 +149,14 @@
     "tests/branch-autonomy.test.mjs": "5c658bad0b84bcaf",
     "tests/helpers.mjs": "98862b8734cfb03e",
     "tests/hooks.test.mjs": "da0440be4fff1ba8"
+  },
+  "closedAt": "2026-11-07T13:51:23.108Z",
+  "releasedSha": "7ecc1e5624e0f7a2eded1eb0b961a7bffdd50db0",
+  "outcome": {
+    "metric": "human stops before the PR in one gates-and-names dogfood slice",
+    "owner": "Arun, plugin owner",
+    "due": "2026-11-21T13:51:23.919Z",
+    "status": "open",
+    "openedAt": "2026-11-07T13:51:23.919Z"
   }
 }
