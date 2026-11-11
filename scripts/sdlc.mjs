@@ -8,7 +8,7 @@ import { fileURLToPath } from 'node:url'
 import { spawnSync } from 'node:child_process'
 import { STAGES, root, git, loadConfig, readState, writeState, listFeatures, missingHeadings, isFrozen, destructiveMigrations,
   stageSpec, section, matches, changedFiles, changedLines, createFeature, copyTemplate, TEMPLATES, overdueGates, overduePostmortems,
-  KINDS, trustedGates, promotable, readTrust, writeTrust, lessonPaid, lessonProblem, lessonsOwed, audit, withIntent, INTENT_PARTS, autonomy, designDoc, BRANCH_AUTO, branchAutoBlock, overviewFile, decisionProblems, openDoneItems, slicesOf, roadmapProblems, baseCommit, baseRef, configFile, codeTree, mainWorktree, relPath } from './lib.mjs'
+  KINDS, trustedGates, promotable, readTrust, writeTrust, lessonPaid, lessonProblem, lessonsOwed, audit, withIntent, INTENT_PARTS, autonomy, designDoc, BRANCH_AUTO, branchAutoBlock, overviewFile, decisionProblems, openDoneItems, slicesOf, roadmapProblems, LANES, baseCommit, baseRef, configFile, codeTree, mainWorktree, relPath } from './lib.mjs'
 import { check, conformance, OKF_VERSION, relevant, writeIndex } from './knowledge.mjs'
 import { collect, analyze, report, approvalSignals, approvalLines } from './retro.mjs'
 import { lint, requirementsFrom } from './gherkin.mjs'
@@ -352,6 +352,99 @@ const commands = {
     const r = run(['pr', 'create', '--base', cfg.protectedBranches[0], '--head', state.branch, '--title', `${feature}: ${title}`.slice(0, 200), '--body-file', bodyFile, '--label', label])
     if (r.status !== 0) fail(`gh pr create failed: ${(r.stderr || r.stdout).trim()}`)
     console.log(r.stdout.trim())
+  },
+
+  // A worktree for one piece of work, on its lane's branch, with the work started in it (issue #62,
+  // item 6): sdlc worktree <bug|task|light|full> <slug> [--issue n]. A hotfix is a person's to declare.
+  worktree() {
+    const lane = feature
+    const slug = rest[0]
+    const start = { bug: ['bug', slug], task: ['task', slug], light: ['init', slug], full: ['init', slug, '--full'] }[lane]
+    if (!start || !slug || !/^[a-z0-9][a-z0-9-]*$/.test(slug)) fail('Usage: sdlc worktree <bug|task|light|full> <slug> [--issue <n>]. A hotfix is declared by a person.')
+    const cfg = loadConfig(dir)
+    const branch = `${LANES[lane].branch ?? 'feature'}/${slug}`
+    const where = path.join(mainWorktree(dir) ?? dir, '.claude', 'worktrees', slug)
+    if (fs.existsSync(where)) fail(`${relPath(dir, where)} already exists.`)
+    git('fetch --quiet origin', dir)
+    const base = baseRef(dir, cfg) ?? 'HEAD'
+    const add = spawnSync('git', ['worktree', 'add', '-b', branch, where, base], { cwd: dir, encoding: 'utf8' })
+    if (add.status !== 0) fail(`git worktree add failed: ${(add.stderr || add.stdout).trim()}`)
+    const issue = flag('issue')
+    const r = spawnSync('node', [fileURLToPath(import.meta.url), ...start, ...(issue && lane === 'bug' ? ['--issue', issue] : [])], { cwd: where, encoding: 'utf8' })
+    console.log(`${(r.stdout + r.stderr).trim()}\nWorktree: ${where} on ${branch} from ${base}. Work there.`)
+    if (r.status !== 0) process.exit(r.status)
+  },
+
+  // Remove worktrees whose branch is merged into the protected branch on the remote, and their local
+  // branches. A worktree with changes not committed is kept and named (issue #62, item 6).
+  cleanup() {
+    const cfg = loadConfig(dir)
+    git('fetch --quiet --prune origin', dir)
+    const target = baseRef(dir, cfg)
+    if (!target) fail('No protected branch to compare with.')
+    // Arguments go to git directly: through sh on Linux, the parentheses of a format string do not parse.
+    const out = (...args) => spawnSync('git', args, { cwd: dir, encoding: 'utf8' }).stdout ?? ''
+    const merged = new Set(out('branch', '--merged', target, '--format=%(refname:short)').split(/\r?\n/).filter(Boolean))
+    // A squash merge leaves the branch unmerged in git's eyes; its remote branch is gone after the merge.
+    const gone = new Set(out('branch', '--format=%(refname:short)%09%(upstream:track)').split(/\r?\n/).filter(l => /\t\[gone\]/.test(l)).map(l => l.split('\t')[0]))
+    const blocks = git('worktree list --porcelain', dir).split(/\r?\n\r?\n/).filter(Boolean)
+    const main = mainWorktree(dir)
+    const removed = []
+    const kept = []
+    for (const b of blocks) {
+      const where = b.match(/^worktree (.+)$/m)?.[1]
+      const branch = b.match(/^branch refs\/heads\/(.+)$/m)?.[1]
+      if (!where || !branch || path.resolve(where) === path.resolve(main ?? '') || cfg.protectedBranches.includes(branch)) continue
+      if (!merged.has(branch) && !gone.has(branch)) continue
+      if (git('status --porcelain', where)) { kept.push(`${branch} (${where}: uncommitted changes)`); continue }
+      const rm = spawnSync('git', ['worktree', 'remove', where], { cwd: dir, encoding: 'utf8' })
+      if (rm.status !== 0) { kept.push(`${branch} (${(rm.stderr || '').trim()})`); continue }
+      // A merged branch is deleted safely (-d); a squash-merged one keeps its branch, so no commit is lost.
+      if (merged.has(branch)) spawnSync('git', ['branch', '-d', branch], { cwd: dir, encoding: 'utf8' })
+      removed.push(merged.has(branch) ? branch : `${branch} (branch kept)`)
+    }
+    console.log(`Removed ${removed.length} merged worktree(s)${removed.length ? `: ${removed.join(', ')}` : ''}.${kept.length ? `\nKept: ${kept.join('; ')}` : ''}`)
+  },
+
+  // The mechanical end of a lane in one step (issue #62, item 11): the gate, Build and Verify on their
+  // checks, the spec folder committed, then the PR. Run it after the pre-review is written.
+  ship() {
+    const state = need()
+    onBranch(state)
+    const cfg = loadConfig(dir)
+    const self = fileURLToPath(import.meta.url)
+    const step = (...args) => {
+      const r = spawnSync('node', [self, ...args], { cwd: dir, encoding: 'utf8' })
+      const out = (r.stdout + r.stderr).trim()
+      if (r.status !== 0) fail(`sdlc ${args.join(' ')} stopped:\n${out}`)
+      return out
+    }
+    if (state.stage < 4) fail(`${feature} is at ${STAGES[state.stage].name}: ship runs Build and Verify only.`)
+    console.log(step('gate', feature).split('\n').pop())
+    for (let i = 0; i < 3 && !readState(dir, feature).closedAt; i++) console.log(step('request', feature).split('\n').pop())
+    if (!readState(dir, feature).closedAt) fail(`${feature} did not complete Verify; run "sdlc request ${feature}" to see why.`)
+    const folder = `${cfg.specsDir}/${feature}`
+    spawnSync('git', ['add', '--', folder], { cwd: dir })
+    if (git('diff --cached --name-only', dir)) {
+      const c = spawnSync('git', ['commit', '-q', '-m', `${feature}: Verify passed on checks`], { cwd: dir, encoding: 'utf8' })
+      if (c.status !== 0) fail(`git commit failed: ${(c.stderr || c.stdout).trim()}`)
+    }
+    console.log(step('pr', feature))
+  },
+
+  // Changelog fragments (issue #62, item 10): each PR adds changelog.d/<slug>.md, so parallel PRs never
+  // touch the same lines; at release this folds them into CHANGELOG.md's "## [Unreleased]" section.
+  changelog() {
+    const folder = path.join(dir, 'changelog.d')
+    const files = fs.existsSync(folder) ? fs.readdirSync(folder).filter(f => f.endsWith('.md')).sort() : []
+    if (!files.length) return console.log('No fragments in changelog.d/.')
+    const file = path.join(dir, 'CHANGELOG.md')
+    const text = fs.existsSync(file) ? fs.readFileSync(file, 'utf8') : '# Changelog\n\n## [Unreleased]\n'
+    if (!/^## \[Unreleased\]/m.test(text)) fail('CHANGELOG.md has no "## [Unreleased]" section to add to.')
+    const entries = files.map(f => fs.readFileSync(path.join(folder, f), 'utf8').trim()).filter(Boolean).join('\n')
+    fs.writeFileSync(file, text.replace(/^## \[Unreleased\]\r?\n(\r?\n)?/m, `## [Unreleased]\n\n${entries}\n`))
+    for (const f of files) fs.rmSync(path.join(folder, f))
+    console.log(`Added ${files.length} fragment(s) to CHANGELOG.md and removed them from changelog.d/.`)
   },
 
   // Check the artefact and the lane's rules. Checks pass an automatic gate and move on; any other gate
@@ -1190,6 +1283,6 @@ if (HUMAN_VERBS.includes(cmd)) {
 }
 
 if (!commands[cmd]) {
-  fail(`${cmd ? `Unknown command: ${cmd}.\n` : ''}Usage: sdlc <init|bug|task|kind|request|cr|amend|advance|gate|tests|trace|proof|conflict|spike|review|gherkin|api|packets|tickets|retry|status|outcome|trust|metrics|retro|incident|knowledge|init-repo|pr> [feature] [...]\nA person, in their own terminal: sdlc <${[...HUMAN_VERBS, 'gate-command'].join('|')}> ...`)
+  fail(`${cmd ? `Unknown command: ${cmd}.\n` : ''}Usage: sdlc <init|bug|task|kind|request|cr|amend|advance|gate|tests|trace|proof|conflict|spike|review|gherkin|api|packets|tickets|retry|status|outcome|trust|metrics|retro|incident|knowledge|init-repo|pr|worktree|cleanup|ship|changelog> [feature] [...]\nA person, in their own terminal: sdlc <${[...HUMAN_VERBS, 'gate-command'].join('|')}> ...`)
 }
 commands[cmd]()
