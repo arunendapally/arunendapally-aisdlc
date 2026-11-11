@@ -382,9 +382,11 @@ const commands = {
     git('fetch --quiet --prune origin', dir)
     const target = baseRef(dir, cfg)
     if (!target) fail('No protected branch to compare with.')
-    const merged = new Set(git(`branch --merged ${target} --format=%(refname:short)`, dir).split('\n').filter(Boolean))
+    // Arguments go to git directly: through sh on Linux, the parentheses of a format string do not parse.
+    const out = (...args) => spawnSync('git', args, { cwd: dir, encoding: 'utf8' }).stdout ?? ''
+    const merged = new Set(out('branch', '--merged', target, '--format=%(refname:short)').split(/\r?\n/).filter(Boolean))
     // A squash merge leaves the branch unmerged in git's eyes; its remote branch is gone after the merge.
-    const gone = new Set(git('branch -vv --format=%(refname:short)%09%(upstream:track)', dir).split('\n').filter(l => /\t\[gone\]/.test(l)).map(l => l.split('\t')[0]))
+    const gone = new Set(out('branch', '--format=%(refname:short)%09%(upstream:track)').split(/\r?\n/).filter(l => /\t\[gone\]/.test(l)).map(l => l.split('\t')[0]))
     const blocks = git('worktree list --porcelain', dir).split(/\r?\n\r?\n/).filter(Boolean)
     const main = mainWorktree(dir)
     const removed = []
