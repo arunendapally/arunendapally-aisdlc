@@ -1,16 +1,39 @@
 {
   "feature": "unattended-runs",
   "lane": "light",
-  "stage": 1,
+  "stage": 4,
   "branch": "feature/unattended-runs",
   "createdAt": "2026-11-12T16:39:50.783Z",
   "stages": {
     "1": {
-      "enteredAt": "2026-11-12T16:39:50.783Z"
+      "enteredAt": "2026-11-12T16:39:50.783Z",
+      "leftAt": "2026-11-12T16:43:51.845Z"
+    },
+    "4": {
+      "enteredAt": "2026-11-12T16:43:51.845Z"
     }
   },
-  "gates": {},
+  "gates": {
+    "1": {
+      "status": "approved",
+      "by": "checks: feature branch",
+      "requestedAt": "2026-11-12T16:43:51.809Z",
+      "approvedAt": "2026-11-12T16:43:51.809Z",
+      "auto": true,
+      "fingerprint": "bbfb1eb7133d992f"
+    }
+  },
   "retries": {},
   "kinds": [],
-  "updatedAt": "2026-11-12T16:39:50.784Z"
+  "updatedAt": "2026-11-12T16:43:51.845Z",
+  "intent": {
+    "change": "Less human intervention",
+    "smallest": "Top four findings fixed",
+    "dropIf": "No measurable help",
+    "by": "Arun Endapally",
+    "at": "2026-11-12T16:41:41.608Z"
+  },
+  "revisions": {
+    "1": 1
+  }
 }

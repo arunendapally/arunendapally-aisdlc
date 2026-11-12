@@ -1,137 +1,90 @@
-# PRD: <feature>
-
-<!-- Define. Owner: product-owner agent. Gate: the product lead, asked with "sdlc ask <feature>"; under autonomy it passes on its checks.
-     One approval covers this PRD and acceptance.feature; the approver judges it in two minutes.
-     Requirements, not solutions: what people and the business need, and why, in words a user would
-     recognise. A requirement stays true whatever we build; if it would change under a different design,
-     it is design. No code, files, modules, APIs, tables, fields, frameworks, hosting or deploy mechanics:
-     those go in the design (design.md, openapi.yaml, or "## Approach" in tasks.md in the light lane). A
-     solution a person has already chosen goes in "## Constraints", with who chose it.
-     A required section with only a comment in it is empty, and the gate refuses it. Keep every "## " heading
-     exactly as written; never start a line with "# " or "## " inside a section.
-     Or: None, because <a reason about this feature>, where a section does not apply. Every claim names its
-     source (a person, a Q<n>, a fact F<n>) or is an assumption marked [unconfirmed]. Write ids plain
-     ("- A1:", "- Q1:", "- R1."): "**A1**" hides the line from the gate. Link documents; do not copy them. -->
+# PRD: unattended-runs
 
 ## Intent
 
-<!-- The person's own words: "sdlc request" writes them here; do not reword them. Under autonomy only, you write the three lines. Example:
-- Change: shoppers can keep items they are not ready to buy
-- Smallest: one saved list per signed-in shopper
-- Drop if: fewer than 2% of shoppers save anything in the first month -->
+<!-- Typed by Arun Endapally on 2026-11-12. Only a person changes it: sdlc intent <feature> change: ...; smallest: ...; drop if: ... -->
+
+- Change: Less human intervention
+- Smallest: Top four findings fixed
+- Drop if: No measurable help
 
 ## Problem
 
-<!-- At most three sentences: who has it, how often, what it costs them today, each number sourced. Example:
-Returning shoppers lose items they meant to buy later: 18% of support chats in 2026-Q3 asked to find an
-item seen before (support dashboard 2026-Q3, read by Sam, support lead). Today they search again or give up.
-     Not: "Users want a better saving experience." (no who, no how often, no cost, no source) -->
+A person running work through the plugin is stopped for things that are not decisions. In the review of 12 Nov 2026 (Arun, plugin owner) a command that only read a file was refused as a person's action, and two such refusals hold a session until someone types. The check that a test fails without the change is skipped in any repo where nobody set it up, a person starts each stage and each slice by hand, and the plugin's own first messages still say a person approves every gate.
 
 ## Users and jobs
 
-<!-- At most four: "- <user>: when <situation>, I want <motivation>, so I can <outcome>." Example:
-- Returning shopper: when I see an item I am not ready to buy, I want to keep it, so I can find it next week without searching. -->
+- Person running a feature: when I have said what the work is for, I want it to reach a raised PR without starting each stage myself, so I only decide at the intent and the PR.
+- Person running a capability: when the work is cut into slices, I want them worked in order without restating why, so a big piece of work needs one answer from me, not one per slice.
+- Agent in a session: when I only read, I want not to be refused or held, so an unattended run does not die on a search.
+- Person setting up a repo: when I start in a new repo, I want its checks proposed from what the repo already is, so tests are run and proved without my writing configuration.
 
 ## Questions asked
 
-<!-- Only questions a wrong guess would make costly: a decision that cannot be undone, a conflict with
-     existing docs, a fork that would redo most of the work. Everything else is an assumption below. Example:
-- Q1: Must a shopper be signed in to save? A: Yes; guests get no saved list. (Priya, product lead)
-- Q2: How long do saved items last? A: 90 days (recommended, accepted). (Priya)
-- Q3: Which regions launch first? unanswered
-     Or: None, because no wrong guess here is costly. -->
+None, because the four changes and their order were agreed with Arun on 12 Nov 2026 ("Yes, fix them"), and each can be undone by reverting the PR.
 
 ## Constraints
 
-<!-- Optional. Solutions a person imposed before the requirements, each with who decided; the design follows
-     them and no requirement repeats them. Example:
-- Works on the existing web shop pages; no new app. (Priya, product lead)
-- Uses the existing sign-in, unchanged. (Sam, security)
-     Or delete this section when nobody imposed one. -->
+- One branch and one PR for all four changes. (Arun, plugin owner)
+- No guard, gate or limit is loosened for a command that can change anything. (ADR-0004, the retro rule)
 
 ## Assumptions
 
-<!-- Everything you believe but did not ask or check. The tag goes last, bare. [confirmed] needs a
-     person's answer (Q<n>) or a fact (F<n>); an accepted recommendation stays [unconfirmed]. Example:
-- A1: 99% of shoppers save fewer than 200 items. [unconfirmed]
-- A2: 90 days is long enough to come back for an item (Q2). [unconfirmed]
-- A3: We know an item has sold out within one minute of it happening. [confirmed: F2] -->
+- A1: A command that only reads cannot carry out a person's action, whatever text it names. [unconfirmed]
+- A2: Repos that use the plugin today and have no proof set would rather be told at Verify than keep skipping the proof. [unconfirmed]
+- A3: A capability's reason for existing, and the result that would end it, are the same for each of its slices. [unconfirmed]
+- A4: Node, Python, Go and .NET cover the repos the plugin is used in today. [unconfirmed]
 
 ## Requirements
 
-<!-- One behaviour a user or the business can observe per line, each provable by one Gherkin scenario with real values:
-     "- R<n>. (must|should|could) <who> <does or sees what>, <within which limit>. Needs: <what the product must
-     already know, in plain words> (F<n> when a fact shows it exists today)."
-     "Needs" catches the requirement that rests on information nobody records; name the information, not the field.
-     Example:
-- R1. (must) A signed-in shopper can save an in-stock item to their saved list. Needs: who the shopper is.
-- R2. (should) A saved item that sells out shows as unavailable within 5 minutes. Needs: whether each item is in stock (F2).
-- R3. (must) A shopper with 200 saved items sees the whole list within half a second. Needs: nothing new.
-- R4. (must) Saving a 201st item is refused with "Your saved list is full (200 items)". Needs: how many items are saved.
-- R5. (must) Only the signed-in shopper can see or change their saved list. Needs: who the shopper is.
-- R6. (should) An item saved more than 90 days ago leaves the saved list (Q2). Needs: when each item was saved.
-- R7. (must) A keyboard-only shopper can save an item and open the saved list. Needs: nothing new.
-     Split any line joined by "and"; "fast", "easy", "secure" and "support X" are not requirements.
-     Not: "POST /saved returns 201", "a saved_items table", "a meta tag carries the commit sha". Say what the
-     person sees or can rely on; the design says how.
-     must: release is blocked without it. More than 7 requirements usually means two slices. -->
+- R1. (must) An agent that only reads is never refused as carrying out a person's action, whatever words the read names. Needs: which commands only read.
+- R2. (must) A refusal of a read-only step never moves a session towards being held. Needs: which commands only read.
+- R3. (must) Setting up a repo names the check that runs its tests and the check that proves them, chosen from what the repo already is, and a new repo starts with them in place. Needs: what kind of project the repo holds.
+- R4. (must) A feature whose tests were not proved to fail without the change cannot pass Verify, unless a person said, with a reason, that this repo goes without the proof. Needs: whether a person waived the proof.
+- R5. (must) One request takes a feature from its recorded intent to a raised PR, stopping only where a person holds a gate. Needs: where the feature stands.
+- R6. (must) For a capability, the person can see which slice is ready to work next, in dependency order. Needs: each slice's dependencies and where each stands.
+- R7. (should) A new slice of a capability starts with the intent a person already gave for that capability, in their words, marked as carried over. Needs: an intent a person gave for another slice of the capability.
+- R8. (must) What the plugin tells people and agents at the start of a session and in its first-read documents matches how it behaves: a person decides at the intent and the PR. Needs: nothing new.
 
 ## Non-functional requirements
 
-<!-- Each line names the requirement above that states the need, or "None, because <reason specific to
-     this feature>". Limits include input size: longest text, deepest nesting, most items, most calls a minute.
-     Naming auth, payments or personal data under Security needs the full lane: write it as an R<n>. Example:
-- Performance: R3
-- Security and privacy: R5
-- Accessibility: R7
-- Limits and quotas: R4 -->
-
-- Performance:
-- Security and privacy:
-- Accessibility:
-- Limits and quotas:
+- Performance: None, because nothing here adds work to a tool call beyond one more pattern test.
+- Security and privacy: R1 and R2 change a guard, so only commands that change nothing are let through (Constraints).
+- Accessibility: None, because there is no screen.
+- Limits and quotas: None, because no input grows with use.
 
 ## Never
 
-<!-- What the product must never claim or do, each one a reviewer could catch in copy or code. Example:
-- Never say an item is "reserved" when it is only saved.
-- Never email a shopper about a saved item unless they asked to be told. -->
+- Never let a command that writes, runs code or records a decision through as "read-only".
+- Never write or reword a person's intent; a carried-over intent is their words and says where it came from.
+- Never tell a person a gate waits for them when it passes on its checks.
 
 ## Out of scope
 
-<!-- What someone could reasonably expect that this does not do, and where it goes instead. Example:
-- Sharing a saved list: a later slice, save-share (specs/saved-items/slices.md).
-- Saved lists for guests: not planned (Q1).
-- Support staff seeing a shopper's saved list: a later slice, after a privacy review. -->
+- Running other agents (Copilot, Gemini): a separate decision, on the review's to-do.
+- Removing or enforcing the autonomy levels file: the same to-do.
+- Rewriting the README article: parked by Arun on 6 Nov 2026; only its statements about who decides are changed.
+- Choosing proof commands for Go and .NET: the setup names their test check only, and says the proof is to be set.
 
 ## Outcome metric
 
-<!-- One metric of value to users or the business, read after the lane's window (outcomeWindowDays in
-     config, or a "Read on: <date>" line here). Uptime and error rates are release probes, not outcomes. Example:
-Metric: share of saved items bought within 14 days of saving
-Baseline: none today (no saved list); the first read sets it
-Target: 8%
-Owner: Priya, product lead
-Objective: grow repeat purchases (2026-Q4 KR2)
-     Or: Metric: None, because <reason>. -->
+Metric: human stops before the PR in a dogfood run of one feature through the single request
+Baseline: 4 commands typed by a person per feature today (start, define, build, verify), from docs/getting-started.md section 3
+Target: 1
+Owner: Arun, plugin owner
+Objective: the gates-and-names capability outcome (specs/gates-and-names/slices.md)
 
 ## Open questions
 
-<!-- Every [unconfirmed] assumption and unanswered question: who settles it, and your recommendation. Example:
-- A1: who: Sam, data team. Recommend: cap at 200 (R4) and log list sizes.
-- A2: who: Priya. Recommend: 90 days, then read how old bought items were.
-- Q3: who: Priya. Recommend: UK first; the region does not change the design.
-     Or: None, because every assumption is confirmed and every question answered. -->
-
-<!-- Optional "## Dependencies": another team, service or vendor that must act first (who, what, by when).
-     Each kind adds its section (Current system, API changes, Performance budget): say what changes for the people
-     and systems that depend on it, and cite facts; the technical detail goes in the design. -->
+- A1: who: Arun. Recommend: accept; the read-only list is the one the guard already uses for guardrail files.
+- A2: who: Arun. Recommend: accept, and say it in the changelog as a change on upgrade.
+- A3: who: Arun. Recommend: accept; a slice whose reason differs gets its own intent by asking again.
+- A4: who: Arun. Recommend: accept; other stacks keep today's message.
 
 ## Definition of done
 
-<!-- Tick each item ("- [x]") once done, or write "- N/A: <reason>". The gate refuses an open item or a bare N/A. -->
-- [ ] Open questions answered or owned
-- [ ] Every requirement has a scenario in acceptance.feature
-- [ ] UX design done, if the change has a screen
-- [ ] API or data needs named, if the change has any
-- [ ] Assumptions confirmed or owned
+- [x] Open questions answered or owned
+- [x] Every requirement has a scenario in acceptance.feature
+- N/A: UX design, because the change has no screen
+- N/A: API or data needs, because the change has neither
+- [x] Assumptions confirmed or owned
