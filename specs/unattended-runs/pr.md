@@ -6,9 +6,10 @@ Spec: specs/unattended-runs/prd.md (R1 to R8). Not in this PR: other agents (Cop
 
 ## Test results
 
-Suite: 331 passed, 0 failed (baseline 319), from "sdlc gate unattended-runs"
+Suite: 334 passed, 0 failed (baseline 319 before any change), from "sdlc gate unattended-runs"
+Pre-review: 12 findings (1 blocker, 4 major, 5 minor, 2 nits), 11 fixed and 1 answered, in specs/unattended-runs/review.md
 Golden evals: 29 of 29 pass, from "npm run eval"
-New tests: tests/unattended-runs.test.mjs (AC-1 to AC-11); 11 of its 12 tests failed before the change, AC-3 passed because it pins behaviour that must not change
+New tests: tests/unattended-runs.test.mjs (AC-1 to AC-11, 15 tests); 11 of the first 12 failed before the change, AC-3 passed because it pins behaviour that must not change
 Changed test support: tests/helpers.mjs gives every test repo a proof waiver, so existing Verify tests keep their meaning
 Removed, skipped or quarantined: none
 
@@ -21,6 +22,7 @@ Removed, skipped or quarantined: none
 - Agent evals (`npm run eval:agents`) were not run; they cost tokens and no agent prompt changed.
 - The guard change was not tried in a live session: the session's hooks come from the installed plugin, not this branch.
 - Stack detection for Go and .NET has no test; only Node and Python are covered (AC-4).
+- R2 says a refused read never moves a session towards a hold. After review finding F3, a try at a secrets file is still counted, though it only reads. The spec was not amended for this: a person should judge it.
 - `sdlc next` reads slice states in the current checkout, so a slice finished on an unmerged branch reads as not complete.
 
 ## Definition of done

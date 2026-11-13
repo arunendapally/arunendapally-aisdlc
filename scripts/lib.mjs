@@ -382,7 +382,7 @@ export function parseIntent(text) {
 
 // The PRD's "## Intent" section, written from what the person typed, replacing whatever was there.
 export function withIntent(prdText, intent) {
-  const block = `## Intent\n\n<!-- Typed by ${intent.by} on ${intent.at.slice(0, 10)}. Only a person changes it: sdlc intent <feature> change: ...; smallest: ...; drop if: ... -->\n\n${INTENT_PARTS.map(([k, label]) => `- ${label}: ${intent[k]}`).join('\n')}\n`
+  const block = `## Intent\n\n<!-- Typed by ${intent.by} on ${intent.at.slice(0, 10)}${intent.inheritedFrom ? ` for ${intent.inheritedFrom}, and carried over to this slice of the same capability` : ''}. Only a person changes it: sdlc intent <feature> change: ...; smallest: ...; drop if: ... -->\n\n${INTENT_PARTS.map(([k, label]) => `- ${label}: ${intent[k]}`).join('\n')}\n`
   const lines = prdText.replace(/\r\n/g, '\n').split('\n')
   const at = lines.findIndex(l => l.trim() === '## Intent')
   if (at !== -1) {

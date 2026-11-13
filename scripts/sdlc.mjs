@@ -283,6 +283,7 @@ const commands = {
     if (capability) fs.writeFileSync(path.join(dir, prd), fs.readFileSync(path.join(dir, prd), 'utf8').replace(/^(# PRD: .*\n)/, `$1\nCapability: ${capability} (${slices})\n`))
     if (capability) copyTemplate(dir, capability, 'architecture-overview.md')
     scaffoldKinds(state)
+    if (given) audit(dir, { event: 'intent-carried', feature, from: given.feature, by: given.intent.by })
     if (capability) for (const p of roadmapProblems(fs.readFileSync(path.join(dir, slices), 'utf8'))) console.log(`Warning: ${slices}: ${p}`)
     console.log(`Created ${feature} at Define, ${lane} lane${kindNote()}. Write ${prd} and ${feat}; one approval covers both.${given ? ` Its intent is carried over from ${given.feature}, in ${given.intent.by}'s words.` : ''}`)
   },
@@ -293,11 +294,16 @@ const commands = {
     const file = path.join(dir, loadConfig(dir).specsDir, feature ?? '', 'slices.md')
     if (!feature || !fs.existsSync(file)) fail('Usage: sdlc next <capability>, for a capability with a slices.md')
     const slices = slicesOf(fs.readFileSync(file, 'utf8'))
-    const done = slug => !!readState(dir, slug)?.closedAt || !!slices.find(s => s.slug === slug)?.shipped
-    const open = slices.filter(s => !done(s.slug) && !/Status:\s*dropped\b/i.test(s.line))
+    const dropped = slug => /Status:\s*dropped\b/i.test(slices.find(s => s.slug === slug)?.line ?? '')
+    // Complete means Verify passed: work a person closed (it has a reason) was retired, not finished.
+    const retired = slug => !!readState(dir, slug)?.closedReason
+    const done = slug => (!!readState(dir, slug)?.closedAt && !retired(slug)) || !!slices.find(s => s.slug === slug)?.shipped
+    const open = slices.filter(s => !done(s.slug) && !dropped(s.slug) && !retired(s.slug))
     if (!open.length) return console.log(`Every slice of ${feature} is complete.`)
     const ready = open.find(s => s.horizon !== 'later' && s.dependsOn.every(done))
-    if (!ready) return console.log(`Nothing is ready: ${open.map(s => (s.horizon === 'later' ? `${s.slug} is placed later` : `${s.slug} waits for ${s.dependsOn.filter(d => !done(d)).join(', ')}`)).join('; ')}.`)
+    // A dependency that can never complete is named, so the slice does not wait without a reason.
+    const why = d => (!slices.some(s => s.slug === d) ? `${d} (not a slice in slices.md)` : dropped(d) ? `${d} (dropped)` : retired(d) ? `${d} (closed by a person, not finished)` : d)
+    if (!ready) return console.log(`Nothing is ready: ${open.map(s => (s.horizon === 'later' ? `${s.slug} is placed later` : `${s.slug} waits for ${s.dependsOn.filter(d => !done(d)).map(why).join(', ')}`)).join('; ')}.`)
     const state = readState(dir, ready.slug)
     console.log(`Next: ${ready.slug} (${state ? `at ${STAGES[state.stage].name}` : 'not started'}).${state ? '' : ` Start it: sdlc init ${ready.slug} --capability ${feature}`}`)
   },
@@ -1273,9 +1279,16 @@ Ask the owner: run "sdlc ask ${feature}" and put its question to them with the q
     // The checks, from what the repo already is (unattended-runs R3): written only into a config this run
     // created, from a fixed table and never from an agent's choice; otherwise proposed for a person to set.
     const has = f => fs.existsSync(path.join(dir, f))
-    const pkg = has('package.json') ? JSON.parse(fs.readFileSync(path.join(dir, 'package.json'), 'utf8')) : null
+    let pkg = null
+    try {
+      if (has('package.json')) pkg = JSON.parse(fs.readFileSync(path.join(dir, 'package.json'), 'utf8'))
+    } catch {
+      console.log('package.json could not be read, so no checks were detected: a person sets them (sdlc gate-command, sdlc proof-command).')
+    }
     const deps = { ...pkg?.dependencies, ...pkg?.devDependencies }
-    const found = pkg ? { gateCommand: pkg.scripts?.gate ? 'npm run gate' : pkg.scripts?.test ? 'npm test' : '', proofCommand: deps.vitest ? 'npx vitest run {files}' : deps.jest ? 'npx jest {files}' : /node\s+--test/.test(pkg.scripts?.test ?? '') ? 'node --test {files}' : '' }
+    // npm init's placeholder test script always fails: it is no test check.
+    const tests = pkg?.scripts?.test && !/no test specified/.test(pkg.scripts.test)
+    const found = pkg ? { gateCommand: pkg.scripts?.gate ? 'npm run gate' : tests ? 'npm test' : '', proofCommand: deps.vitest ? 'npx vitest run {files}' : deps.jest ? 'npx jest {files}' : /node\s+--test/.test(pkg.scripts?.test ?? '') ? 'node --test {files}' : '' }
       : has('pyproject.toml') || has('requirements.txt') ? { gateCommand: 'pytest', proofCommand: 'pytest {files}', runtimeCommand: 'python --version' }
       : has('go.mod') ? { gateCommand: 'go test ./...', proofCommand: '', runtimeCommand: 'go version' }
       : fs.readdirSync(dir).some(f => /\.(sln|csproj)$/.test(f)) ? { gateCommand: 'dotnet test', proofCommand: '', runtimeCommand: 'dotnet --version' } : null
