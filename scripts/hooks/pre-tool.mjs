@@ -42,6 +42,8 @@ const readDenials = () => {
 // bypassPermissions is the person deciding no guard should stop this session (ADR-0006). Only their
 // own pause still does. Every bypassed refusal is audited, so the PR review sees what passed.
 const mode = input.permission_mode
+// A refusal of a command that only reads is never counted towards the hold (unattended-runs R2).
+let counts = true
 const decide = (permissionDecision, reason, rule) => {
   if (mode === 'bypassPermissions' && rule !== 'paused') {
     audit(dir, { event: 'pre-tool', tool, decision: 'bypassed', would: permissionDecision, reason, rule, mode, session })
@@ -49,7 +51,8 @@ const decide = (permissionDecision, reason, rule) => {
   }
   audit(dir, { event: 'pre-tool', tool, decision: permissionDecision, reason, rule, session })
   let text = `${reason} (guard: ${rule})${INSTEAD[rule] ? ` ${INSTEAD[rule]}` : ''}`
-  if (permissionDecision === 'deny' && rule !== 'held') {
+  if (permissionDecision === 'deny' && rule !== 'held' && !counts) text = `${text} ${ANSWER}`
+  else if (permissionDecision === 'deny' && rule !== 'held') {
     const all = readDenials()
     const mine = all[session] ?? {}
     mine[rule] = (mine[rule] ?? 0) + 1
@@ -180,6 +183,11 @@ if (tool === 'Bash' || tool === 'PowerShell') {
   const blankText = t => t.replace(/(\s(?:--body|-b|--title|-t)\s+)('[^']*'|"(?:[^"\\$`]|\\.)*")/g, '$1""')
   const code = p => (ghText(p) ? blankText(p.text) : isData(p) ? p.text : [p.text, ...p.heredocs.map(h => h.body)].join('\n'))
   const scan = parts.filter(ghText).reduce((t, p) => t.replace(p.text, blankText(p.text)), c)
+  // A segment that only reads (unattended-runs R1): a read verb, no redirect, substitution or heredoc.
+  // Naming a person's command or the prompt hook in a search or a cat is not running it.
+  const readOnly = p => !p.unsure && !p.heredocs.length && !/[>`]|\$\(|[<>]\(/.test(p.text.replace(/(^|[ \t])([12&]?>[ \t]*\/dev\/null|2>&1)(?=[ \t]|$)/g, ' ')) && !/\s--(pre|output)\b/.test(p.text) &&
+    (/^(cat|grep|rg|head|tail|less|jq|type|ls|stat|wc|Get-Content|Select-String)\b/i.test(p.text) || /^git\s+(status|diff|log|show)\b/.test(p.text) || /^sed\s+-n\s+(['"]?)\d+(,\d+)?p\1(\s+[^\s'"]+)+$/.test(p.text))
+  counts = !parts.every(readOnly)
 
   // A push is judged on its own arguments: a protected branch in any form, a +refspec, a force flag.
   const protectedRef = new RegExp(atCfg.protectedBranches.map(b => `(?:^|[\\s:/+])${b}(?:\\s|$|["')])`).join('|'))
@@ -205,7 +213,8 @@ if (tool === 'Bash' || tool === 'PowerShell') {
   if (onProtected && /\bgit\s+(commit|merge|rebase|cherry-pick|reset)\b/.test(c) && git('rev-parse --verify -q HEAD', at) !== '') deny(`You are on ${branch}. Work on a feature branch in its own worktree.`, 'commit-protected')
   // A person may let agents run a command the guard would hand back: "bashAllow" patterns in the config.
   const allowed = (cfg.bashAllow ?? []).map(a => new RegExp(a, 'i'))
-  const human = allowed.length ? parts.filter(p => !allowed.some(a => a.test(p.text))).map(code).join('\n') : scan
+  const acts = parts.filter(p => !readOnly(p))
+  const human = allowed.length ? acts.filter(p => !allowed.some(a => a.test(p.text))).map(code).join('\n') : acts.length === parts.length ? scan : acts.map(code).join('\n')
   for (const p of cfg.deployPatterns) {
     if (new RegExp(p, 'i').test(human)) deny(`"${c.slice(0, 60)}" merges, deploys, changes settings or records a human decision. A human runs it.`, 'human-action')
   }

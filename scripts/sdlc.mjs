@@ -273,7 +273,10 @@ const commands = {
     const slices = capability && `${loadConfig(dir).specsDir}/${capability}/slices.md`
     if (capability && !fs.existsSync(path.join(dir, slices))) fail(`No ${slices}: write the capability's outcome and slices there first (template: slices.md).`)
     const lane = rest.includes('--full') ? 'full' : 'light'
-    const state = createFeature(dir, { feature, lane, branch: flag('branch'), extra: { kinds: kinds(), ...(capability ? { capability } : {}) } })
+    // A capability's intent is given once (unattended-runs R7): a new slice starts with the words a person
+    // gave another slice, marked as carried over. One carried over is never carried again.
+    const given = capability && listFeatures(dir).find(s => s.capability === capability && s.intent && !s.intent.inheritedFrom)
+    const state = createFeature(dir, { feature, lane, branch: flag('branch'), extra: { kinds: kinds(), ...(capability ? { capability } : {}), ...(given ? { intent: { ...given.intent, inheritedFrom: given.feature } } : {}) } })
     const prd = copyTemplate(dir, feature, 'prd.md')
     const feat = copyTemplate(dir, feature, 'acceptance.feature')
     // The script writes the line: the PRD itself waits for the person's intent.
@@ -281,7 +284,22 @@ const commands = {
     if (capability) copyTemplate(dir, capability, 'architecture-overview.md')
     scaffoldKinds(state)
     if (capability) for (const p of roadmapProblems(fs.readFileSync(path.join(dir, slices), 'utf8'))) console.log(`Warning: ${slices}: ${p}`)
-    console.log(`Created ${feature} at Define, ${lane} lane${kindNote()}. Write ${prd} and ${feat}; one approval covers both.`)
+    console.log(`Created ${feature} at Define, ${lane} lane${kindNote()}. Write ${prd} and ${feat}; one approval covers both.${given ? ` Its intent is carried over from ${given.feature}, in ${given.intent.by}'s words.` : ''}`)
+  },
+
+  // The slice of a capability to work next (unattended-runs R6): the first not complete, not placed later,
+  // whose dependencies are complete. It reads the states in this checkout.
+  next() {
+    const file = path.join(dir, loadConfig(dir).specsDir, feature ?? '', 'slices.md')
+    if (!feature || !fs.existsSync(file)) fail('Usage: sdlc next <capability>, for a capability with a slices.md')
+    const slices = slicesOf(fs.readFileSync(file, 'utf8'))
+    const done = slug => !!readState(dir, slug)?.closedAt || !!slices.find(s => s.slug === slug)?.shipped
+    const open = slices.filter(s => !done(s.slug) && !/Status:\s*dropped\b/i.test(s.line))
+    if (!open.length) return console.log(`Every slice of ${feature} is complete.`)
+    const ready = open.find(s => s.horizon !== 'later' && s.dependsOn.every(done))
+    if (!ready) return console.log(`Nothing is ready: ${open.map(s => (s.horizon === 'later' ? `${s.slug} is placed later` : `${s.slug} waits for ${s.dependsOn.filter(d => !done(d)).join(', ')}`)).join('; ')}.`)
+    const state = readState(dir, ready.slug)
+    console.log(`Next: ${ready.slug} (${state ? `at ${STAGES[state.stage].name}` : 'not started'}).${state ? '' : ` Start it: sdlc init ${ready.slug} --capability ${feature}`}`)
   },
 
   // A small change with no new behaviour to specify (a dependency bump, config, a refactor, docs).
@@ -948,7 +966,7 @@ Ask the owner: run "sdlc ask ${feature}" and put its question to them with the q
     // A hotfix proves itself after the merge, on the protected branch.
     if (!state.closedAt) onBranch(state)
     const cfg = loadConfig(dir)
-    if (!cfg.proofCommand) fail('No proofCommand in .ai-sdlc/config.json. A human sets it, for example "npx jest {files}" or "pytest {files}". Until then, the PR says under "## Not verified" that the proof did not run.')
+    if (!cfg.proofCommand) fail('No proofCommand in .ai-sdlc/config.json. A human sets it in their terminal: sdlc proof-command <command>, for example "npx jest {files}" or "pytest {files}".')
     if (state.lane === 'hotfix' && !state.closedAt) fail('A hotfix proves its repro after the merge, so the fix is never held up: run this once it has shipped.')
     const files = flag('files')?.split(',').map(f => f.trim()).filter(Boolean)
     if (!fs.existsSync(path.join(dir, cfg.specsDir, feature, 'acceptance.feature')) && !files?.length) fail(`${feature} has no acceptance.feature: name the tests to prove with --files a,b`)
@@ -1252,20 +1270,45 @@ Ask the owner: run "sdlc ask ${feature}" and put its question to them with the q
     }
     walk(path.join(plugin, 'templates', 'repo'), '', '')
     console.log(copied.length ? `Added:\n- ${copied.join('\n- ')}` : 'Nothing to add: every file already exists.')
+    // The checks, from what the repo already is (unattended-runs R3): written only into a config this run
+    // created, from a fixed table and never from an agent's choice; otherwise proposed for a person to set.
+    const has = f => fs.existsSync(path.join(dir, f))
+    const pkg = has('package.json') ? JSON.parse(fs.readFileSync(path.join(dir, 'package.json'), 'utf8')) : null
+    const deps = { ...pkg?.dependencies, ...pkg?.devDependencies }
+    const found = pkg ? { gateCommand: pkg.scripts?.gate ? 'npm run gate' : pkg.scripts?.test ? 'npm test' : '', proofCommand: deps.vitest ? 'npx vitest run {files}' : deps.jest ? 'npx jest {files}' : /node\s+--test/.test(pkg.scripts?.test ?? '') ? 'node --test {files}' : '' }
+      : has('pyproject.toml') || has('requirements.txt') ? { gateCommand: 'pytest', proofCommand: 'pytest {files}', runtimeCommand: 'python --version' }
+      : has('go.mod') ? { gateCommand: 'go test ./...', proofCommand: '', runtimeCommand: 'go version' }
+      : fs.readdirSync(dir).some(f => /\.(sln|csproj)$/.test(f)) ? { gateCommand: 'dotnet test', proofCommand: '', runtimeCommand: 'dotnet --version' } : null
+    if (found?.gateCommand) {
+      const file = configFile(dir)
+      const cfg = JSON.parse(fs.readFileSync(file, 'utf8'))
+      const set = Object.entries(found).filter(([, v]) => v)
+      if (copied.some(f => f.endsWith('/config.json'))) {
+        fs.writeFileSync(file, JSON.stringify({ ...cfg, ...Object.fromEntries(set) }, null, 2) + '\n')
+        console.log(`Checks set from what the repo holds: ${set.map(([k, v]) => `${k} "${v}"`).join(', ')}. A person can change them in ${relPath(dir, file)}.`)
+      } else {
+        const unset = set.filter(([k]) => ['gateCommand', 'proofCommand'].includes(k) && !cfg[k])
+        if (unset.length) console.log(`Proposed from what the repo holds, for a person to set in their terminal: ${unset.map(([k, v]) => `sdlc ${k === 'gateCommand' ? 'gate' : 'proof'}-command ${v}`).join('; ')}`)
+      }
+      if (!found.proofCommand) console.log('No proof check is known for this stack: a person sets one (sdlc proof-command <command>), or waives it with a reason ("proofWaived" in the repo config).')
+    }
     if (!git('rev-parse --is-inside-work-tree', dir)) console.log('Note: this folder is not a git repository.')
   },
 }
 
 // The gate command, set once by a person in the main worktree's config (issue #62, item 1). The guard
 // refuses it to agents: an agent that chose its own gate could weaken it.
-if (cmd === 'gate-command') {
+if (cmd === 'gate-command' || cmd === 'proof-command') {
+  const key = cmd === 'gate-command' ? 'gateCommand' : 'proofCommand'
   const command = [feature, ...rest].filter(Boolean).join(' ').trim()
-  if (!command) fail('Usage: sdlc gate-command <command>, for example: sdlc gate-command npm test')
-  const file = path.join(mainWorktree(dir) ?? dir, '.ai-sdlc', 'config.json')
+  if (!command) fail(`Usage: sdlc ${cmd} <command>, for example: sdlc ${cmd} ${key === 'gateCommand' ? 'npm test' : 'node --test {files}'}`)
+  // A worktree that carries its own config reads that one, so that is the one to change.
+  const own = path.join(dir, '.ai-sdlc', 'config.json')
+  const file = fs.existsSync(own) ? own : path.join(mainWorktree(dir) ?? dir, '.ai-sdlc', 'config.json')
   const cfg = fs.existsSync(file) ? JSON.parse(fs.readFileSync(file, 'utf8')) : {}
   fs.mkdirSync(path.dirname(file), { recursive: true })
-  fs.writeFileSync(file, JSON.stringify({ ...cfg, gateCommand: command }, null, 2) + '\n')
-  console.log(`gateCommand is "${command}" in ${file}. Commit .ai-sdlc/config.json so every clone has it; every worktree of this clone uses it now.`)
+  fs.writeFileSync(file, JSON.stringify({ ...cfg, [key]: command }, null, 2) + '\n')
+  console.log(`${key} is "${command}" in ${file}. Commit .ai-sdlc/config.json so every clone has it; every worktree of this clone uses it now.`)
   process.exit(0)
 }
 
@@ -1283,6 +1326,6 @@ if (HUMAN_VERBS.includes(cmd)) {
 }
 
 if (!commands[cmd]) {
-  fail(`${cmd ? `Unknown command: ${cmd}.\n` : ''}Usage: sdlc <init|bug|task|kind|request|cr|amend|advance|gate|tests|trace|proof|conflict|spike|review|gherkin|api|packets|tickets|retry|status|outcome|trust|metrics|retro|incident|knowledge|init-repo|pr|worktree|cleanup|ship|changelog> [feature] [...]\nA person, in their own terminal: sdlc <${[...HUMAN_VERBS, 'gate-command'].join('|')}> ...`)
+  fail(`${cmd ? `Unknown command: ${cmd}.\n` : ''}Usage: sdlc <init|bug|task|kind|request|cr|amend|advance|gate|tests|trace|proof|conflict|spike|review|gherkin|api|packets|tickets|retry|status|outcome|trust|metrics|retro|incident|knowledge|init-repo|pr|worktree|cleanup|ship|changelog|next> [feature] [...]\nA person, in their own terminal: sdlc <${[...HUMAN_VERBS, 'gate-command', 'proof-command'].join('|')}> ...`)
 }
 commands[cmd]()

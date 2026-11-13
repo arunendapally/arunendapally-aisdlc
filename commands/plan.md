@@ -14,6 +14,6 @@ Plan for the capability `$ARGUMENTS`. You are the `cto`, with the `product-owner
 3. **Going live.** Prefer `compatible`, then `flag <NAME>`, and only when neither works `after <slug>, because <reason>`. A sequence shows tight coupling: say why, or cut the slices differently.
 4. **Horizons.** `now` is being built, `next` is ready to start, `later` is re-planned before it starts.
 5. **Check.** Run `node "${CLAUDE_PLUGIN_ROOT}/scripts/sdlc.mjs" status`: it lists the slices under now, next and later, marks enablers, and names any slice that goes live after another with no reason. A slice's Define request is refused until that is fixed.
-6. **Start the now slices.** One feature per slice: `node "${CLAUDE_PLUGIN_ROOT}/scripts/sdlc.mjs" init <slug> --capability $ARGUMENTS`, then `/ai-sdlc:define <slug>`.
+6. **Start the now slices.** One feature per slice: `node "${CLAUDE_PLUGIN_ROOT}/scripts/sdlc.mjs" init <slug> --capability $ARGUMENTS`, then `/ai-sdlc:define <slug>`. Or run `/ai-sdlc:run $ARGUMENTS`, which works the slices in dependency order to their PRs.
 
 **Gate:** none. The roadmap is a record; each slice's Define gate is where a person decides.
