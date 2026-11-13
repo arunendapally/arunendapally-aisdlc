@@ -1,7 +1,7 @@
 {
   "feature": "unattended-runs",
   "lane": "light",
-  "stage": 4,
+  "stage": 5,
   "branch": "feature/unattended-runs",
   "createdAt": "2026-11-12T16:39:50.783Z",
   "stages": {
@@ -10,7 +10,11 @@
       "leftAt": "2026-11-12T16:43:51.845Z"
     },
     "4": {
-      "enteredAt": "2026-11-12T16:43:51.845Z"
+      "enteredAt": "2026-11-12T16:43:51.845Z",
+      "leftAt": "2026-11-13T01:42:44.441Z"
+    },
+    "5": {
+      "enteredAt": "2026-11-13T01:42:44.441Z"
     }
   },
   "gates": {
@@ -21,11 +25,19 @@
       "approvedAt": "2026-11-12T16:43:51.809Z",
       "auto": true,
       "fingerprint": "bbfb1eb7133d992f"
+    },
+    "4": {
+      "status": "approved",
+      "by": "checks: checks (gate green, small diff)",
+      "requestedAt": "2026-11-13T01:42:44.018Z",
+      "approvedAt": "2026-11-13T01:42:44.018Z",
+      "auto": true,
+      "fingerprint": "f753b14ddfb35282"
     }
   },
   "retries": {},
   "kinds": [],
-  "updatedAt": "2026-11-13T01:40:58.977Z",
+  "updatedAt": "2026-11-13T01:42:44.441Z",
   "intent": {
     "change": "Less human intervention",
     "smallest": "Top four findings fixed",
@@ -48,5 +60,6 @@
   },
   "baseline": 331,
   "baselineRuntime": "v24.19.0",
-  "proofBase": "a13d05174f3a2409bd2dcd2a7ae6690d5c200bf4"
+  "proofBase": "a13d05174f3a2409bd2dcd2a7ae6690d5c200bf4",
+  "sizeChecked": 95
 }
