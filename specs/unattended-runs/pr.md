@@ -8,16 +8,35 @@ Spec: specs/unattended-runs/prd.md (R1 to R8). Not in this PR: other agents (Cop
 
 Suite: 334 passed, 0 failed (baseline 319 before any change), from "sdlc gate unattended-runs"
 Pre-review: 12 findings (1 blocker, 4 major, 5 minor, 2 nits), 11 fixed and 1 answered, in specs/unattended-runs/review.md
+Proof: "sdlc proof unattended-runs" passed against a13d051: AC-1 to AC-11 fail on the base code and pass here, 1 test file locked
 Golden evals: 29 of 29 pass, from "npm run eval"
+Guard cases from the review: tests/read-only-guard.test.mjs (3 tests)
 New tests: tests/unattended-runs.test.mjs (AC-1 to AC-11, 15 tests); 11 of the first 12 failed before the change, AC-3 passed because it pins behaviour that must not change
 Changed test support: tests/helpers.mjs gives every test repo a proof waiver, so existing Verify tests keep their meaning
 Removed, skipped or quarantined: none
 
 ## Pre-review
 
+Risk: high, because the change loosens a guard (which shell commands count as only reading, and which refusals count towards the hold) and changes the Verify gate for every full or light feature in a repo with no proof check.
+Open findings: 0
+Look here first: scripts/hooks/pre-tool.mjs:200 (the allowlist that decides a command only reads: can any read verb still run code or write a file from its own arguments? F1 was reopened twice on this), scripts/hooks/pre-tool.mjs:61 (which refusals stay out of the denial count: read-slices always, other all-read refusals except secret, secrets-file and production), scripts/sdlc.mjs:1262 (an agent-run init-repo writes the gate command from a fixed table, preferring a scripts.gate that whoever edits package.json controls)
+Lenses run: correctness, simplicity, tests, security
+Revert: git revert of the merge commit; no data to back out. A repo that set proofWaived or proofCommand keeps it, which the base ignores or uses as before.
+Checked mechanically: checklist items 2, 9, 13, 22 and 25 against the diff; every AC-1 to AC-11 scenario walked through the code; the guard run on pipe, here-string, xargs, prefix, PowerShell and option cases with a stand-in pattern; the test proof (AC-1 to AC-11 fail on the base and pass on the branch); no new dependencies; no secrets in the diff
+Could not check: whether other read-verb options run code beyond those tried (git diff and git log with --ext-diff or textconv run a configured driver, as on the base); the Go and .NET detection paths; intent carry-over from a sibling whose state is on an unmerged branch
+
+## Security results
+
+The security lens of the pre-review ran on the guard change only; no scanner ran. It found F1 (blocker, reopened twice, now an allowlist), F3 (tries at secrets were not counted) and F6 (names that only start like a read verb), all fixed. A person should accept or reject the remaining judgement under "Look here first".
+
+## QA verdict
+
+None, because the change has no screen and no journey to explore; the guard was probed case by case instead, and those cases are committed as tests.
+
 ## Not verified
 
-- The test proof on the base commit: this repo has no proof check yet (see the note to the reviewer below).
+- The proof judges the test file as a whole (no JUnit report), so AC-3, whose tests pin behaviour that must not change, is counted as failing on the base with the rest.
+- `sdlc proof-command` rewrote the whole of `.ai-sdlc/config.json` in JSON's long form when Arun set the proof check, as `gate-command` does; the diff of that file is mostly layout.
 - `/ai-sdlc:run` has not been run end to end by an agent; AC-7 checks only what the command says.
 - Agent evals (`npm run eval:agents`) were not run; they cost tokens and no agent prompt changed.
 - The guard change was not tried in a live session: the session's hooks come from the installed plugin, not this branch.

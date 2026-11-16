@@ -37,7 +37,7 @@
   },
   "retries": {},
   "kinds": [],
-  "updatedAt": "2026-11-13T01:57:36.232Z",
+  "updatedAt": "2026-11-16T09:25:47.091Z",
   "intent": {
     "change": "Less human intervention",
     "smallest": "Top four findings fixed",
@@ -59,17 +59,46 @@
     },
     "5": {
       "ok": true,
-      "count": 334,
-      "at": "2026-11-13T01:57:35.909Z",
-      "tree": "495d956ca71e2500",
+      "count": 336,
+      "at": "2026-11-16T09:25:46.208Z",
+      "tree": "3f7b771f58d49bda",
       "runs": 1,
       "runtime": "v24.19.0"
     }
   },
-  "baseline": 334,
+  "baseline": 336,
   "baselineRuntime": "v24.19.0",
   "proofBase": "a13d05174f3a2409bd2dcd2a7ae6690d5c200bf4",
   "sizeChecked": 95,
   "lastPacketHead": "fec209c",
-  "ledgerIds": []
+  "ledgerIds": [],
+  "proof": {
+    "ok": true,
+    "problems": [],
+    "base": "a13d051",
+    "files": {
+      "tests/unattended-runs.test.mjs": "42fed3cef79284e4"
+    },
+    "acs": [
+      "AC-1",
+      "AC-2",
+      "AC-3",
+      "AC-4",
+      "AC-5",
+      "AC-6",
+      "AC-7",
+      "AC-8",
+      "AC-9",
+      "AC-10",
+      "AC-11"
+    ],
+    "perTest": false,
+    "at": "2026-11-13T02:04:22.922Z"
+  },
+  "lock": {
+    "files": {
+      "tests/unattended-runs.test.mjs": "42fed3cef79284e4"
+    },
+    "at": "2026-11-13T02:04:22.922Z"
+  }
 }

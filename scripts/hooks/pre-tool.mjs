@@ -192,7 +192,13 @@ if (tool === 'Bash' || tool === 'PowerShell') {
   const scan = parts.filter(ghText).reduce((t, p) => t.replace(p.text, blankText(p.text)), c)
   // A segment that only reads (unattended-runs R1): a read verb, no redirect, substitution or heredoc.
   // Naming a person's command or the prompt hook in a search or a cat is not running it.
-  const readOnly = p => !p.unsure && !p.heredocs.length && noWrite(p.text) && !/\s--(pre|output)\b/.test(p.text) &&
+  // A read verb can still run code from its own arguments (pre-review F1): a PowerShell group "(cmd)" or
+  // script block "{cmd}", rg's --pre and --hostname-bin, less +!cmd. So a read is an allowlist, not a list
+  // of tricks: outside quotes only names, paths, globs and options, and none of the options that run a
+  // program or write a file (git takes any unique prefix of --output).
+  const bare = t => t.replace(/(^|[ \t])([12&]?>[ \t]*\/dev\/null|2>&1)(?=[ \t]|$)/g, ' ').replace(/'[^']*'|"[^"$`\\]*"/g, '')
+  const runsCode = t => !/^[\w\s./\\:=,@%+*?~^-]*$/.test(bare(t)) || /\s--(pre|hostname-bin|ou[a-z-]*)\b/.test(t) || /^less\b.*\s\+/i.test(t)
+  const readOnly = p => !p.unsure && !p.heredocs.length && noWrite(p.text) && !runsCode(p.text) &&
     (READS.test(p.text) || /^git\s+(status|diff|log|show)(?=\s|$)/.test(p.text) || SED_PRINT.test(p.text))
   // Only a command whose every segment reads: one read piped into anything else is judged whole, as before.
   const allReads = parts.every(readOnly)
