@@ -89,3 +89,57 @@ Feature: Runs that need a person only at the intent and the PR
     Then it is told a person decides at the intent and the PR
     And it is not told that people own every gate or that gates are approved only by typing
     And the README, the plugin's description and the getting-started guide do not tell a person to type an approval for each gate
+
+  @R9 @AC-12 @unit
+  Scenario: An answer given in the main checkout is recorded in the feature's worktree
+    Given the feature "saved-items" lives in its own worktree and the session runs in the main checkout
+    When the person answers the three intent questions for "saved-items"
+    Then the intent is recorded in the worktree's copy of "saved-items"
+    And no feature named "saved-items" is started in the main checkout
+
+  @R10 @AC-13 @unit
+  Scenario Outline: A one-line program cannot change a proved test
+    Given a feature whose proof locked "tests/save.test.mjs"
+    When an agent runs <program> naming "tests/save.test.mjs"
+    Then it is <result>
+
+    Examples:
+      | program                            | result  |
+      | a one-line node program            | refused |
+      | a one-line python program          | refused |
+      | the test runner on that file       | allowed |
+      | a read of that file                | allowed |
+
+  @R11 @AC-14 @unit
+  Scenario Outline: Code is not changed on the protected branch before work is started
+    Given a repo that runs the plugin, on its protected branch, with no work started there
+    When an agent writes <file>
+    Then it is <result>
+
+    Examples:
+      | file              | result                                  |
+      | src/app.js        | refused, naming the start command       |
+      | docs/notes.md     | allowed                                 |
+
+  @R11 @AC-15 @unit
+  Scenario: A repo that does not run the plugin is left alone
+    Given a repo with no plugin settings, on its protected branch
+    When an agent writes "src/app.js"
+    Then it is allowed
+
+  @R12 @AC-16 @unit
+  Scenario Outline: A folder tree outside the repo cannot be deleted
+    When an agent deletes <target> with its whole tree
+    Then it is <result>
+
+    Examples:
+      | target                         | result  |
+      | a folder above the repo        | refused |
+      | the home folder                | refused |
+      | a build folder inside the repo | allowed |
+
+  @R13 @AC-17 @unit
+  Scenario: Setup gives a repo no autonomy levels file
+    Given a new repo
+    When the repo is set up
+    Then it has no autonomy levels file, and the getting-started guide lists none

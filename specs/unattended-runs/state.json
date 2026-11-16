@@ -1,43 +1,35 @@
 {
   "feature": "unattended-runs",
   "lane": "light",
-  "stage": 5,
+  "stage": 4,
   "branch": "feature/unattended-runs",
   "createdAt": "2026-11-12T16:39:50.783Z",
   "stages": {
     "1": {
-      "enteredAt": "2026-11-12T16:39:50.783Z",
-      "leftAt": "2026-11-12T16:43:51.845Z"
+      "enteredAt": "2026-11-16T10:04:37.021Z",
+      "leftAt": "2026-11-16T10:04:47.117Z"
     },
     "4": {
-      "enteredAt": "2026-11-12T16:43:51.845Z",
-      "leftAt": "2026-11-13T01:42:44.441Z"
+      "enteredAt": "2026-11-16T10:04:47.117Z"
     },
     "5": {
-      "enteredAt": "2026-11-13T01:42:44.441Z"
+      "enteredAt": "2026-11-13T01:42:44.441Z",
+      "leftAt": "2026-11-16T10:04:37.021Z"
     }
   },
   "gates": {
     "1": {
       "status": "approved",
       "by": "checks: feature branch",
-      "requestedAt": "2026-11-12T16:43:51.809Z",
-      "approvedAt": "2026-11-12T16:43:51.809Z",
+      "requestedAt": "2026-11-16T10:04:46.803Z",
+      "approvedAt": "2026-11-16T10:04:46.803Z",
       "auto": true,
-      "fingerprint": "bbfb1eb7133d992f"
-    },
-    "4": {
-      "status": "approved",
-      "by": "checks: checks (gate green, small diff)",
-      "requestedAt": "2026-11-13T01:42:44.018Z",
-      "approvedAt": "2026-11-13T01:42:44.018Z",
-      "auto": true,
-      "fingerprint": "f753b14ddfb35282"
+      "fingerprint": "6521ddbe0c622e84"
     }
   },
   "retries": {},
   "kinds": [],
-  "updatedAt": "2026-11-16T09:25:47.091Z",
+  "updatedAt": "2026-11-16T10:04:47.117Z",
   "intent": {
     "change": "Less human intervention",
     "smallest": "Top four findings fixed",
@@ -46,7 +38,7 @@
     "at": "2026-11-12T16:41:41.608Z"
   },
   "revisions": {
-    "1": 1
+    "1": 2
   },
   "gateRuns": {
     "4": {

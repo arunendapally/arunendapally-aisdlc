@@ -45,11 +45,20 @@ None, because the four changes and their order were agreed with Arun on 12 Nov 2
 - R6. (must) For a capability, the person can see which slice is ready to work next, in dependency order. Needs: each slice's dependencies and where each stands.
 - R7. (should) A new slice of a capability starts with the intent a person already gave for that capability, in their words, marked as carried over. Needs: an intent a person gave for another slice of the capability.
 - R8. (must) What the plugin tells people and agents at the start of a session and in its first-read documents matches how it behaves: a person decides at the intent and the PR. Needs: nothing new.
+- R9. (must) A person's answer to a question is recorded for the feature it was asked about, wherever that feature's work lives, and never starts another feature by mistake. Needs: where each feature's work lives.
+- R10. (must) An agent cannot change a proved test through a one-line program either. Needs: which tests are proved.
+- R11. (must) An agent that starts changing code on the protected branch of a repo that runs the plugin, with no work started there, is refused and told how to start the work. Needs: whether work is started on the branch.
+- R12. (must) An agent cannot delete a folder tree outside the repo it is working in. Needs: where the repo ends.
+- R13. (should) Setting up a repo gives it no settings that nothing reads. Needs: nothing new.
+
+## Changes since v1
+
+Arun asked on 16 Nov 2026 for the rest of the open items to be fixed where they still make sense, and chose to amend this feature rather than raise a change request. R9 to R13 are new; R1 to R8 are unchanged and built. R9 and R10 come from the dogfood run of 6 Nov (answers recorded in the wrong folder; a proved test changed through a one-line program). R11 and R12 are the two guard changes Arun decided on 7 Nov. R13 removes the autonomy levels file, which the review of 12 Nov found no code reads. Added effort: about 80 counted code lines on top of 124, still one PR under the light lane's 300.
 
 ## Non-functional requirements
 
 - Performance: None, because nothing here adds work to a tool call beyond one more pattern test.
-- Security and privacy: R1 and R2 change a guard, so only commands that change nothing are let through (Constraints).
+- Security and privacy: R1 and R2 change a guard, so only commands that change nothing are let through (Constraints). R10 to R12 add refusals and loosen nothing.
 - Accessibility: None, because there is no screen.
 - Limits and quotas: None, because no input grows with use.
 
@@ -62,7 +71,8 @@ None, because the four changes and their order were agreed with Arun on 12 Nov 2
 ## Out of scope
 
 - Running other agents (Copilot, Gemini): a separate decision, on the review's to-do.
-- Removing or enforcing the autonomy levels file: the same to-do.
+- Collapsing the several ways a repo grants autonomy into one: a design decision for Arun; only the unread levels file goes (R13).
+- The other dogfood flaws of 6 Nov (stacked PRs sized against main, facts gone stale after a spec revision, slow gate runs): each needs a design first.
 - Rewriting the README article: parked by Arun on 6 Nov 2026; only its statements about who decides are changed.
 - Choosing proof commands for Go and .NET: the setup names their test check only, and says the proof is to be set.
 

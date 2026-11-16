@@ -18,7 +18,7 @@ Removed, skipped or quarantined: none
 ## Pre-review
 
 Risk: high, because the change loosens a guard (which shell commands count as only reading, and which refusals count towards the hold) and changes the Verify gate for every full or light feature in a repo with no proof check.
-Open findings: 0
+Open findings: 0 (nits left open: F13)
 Look here first: scripts/hooks/pre-tool.mjs:200 (the allowlist that decides a command only reads: can any read verb still run code or write a file from its own arguments? F1 was reopened twice on this), scripts/hooks/pre-tool.mjs:61 (which refusals stay out of the denial count: read-slices always, other all-read refusals except secret, secrets-file and production), scripts/sdlc.mjs:1262 (an agent-run init-repo writes the gate command from a fixed table, preferring a scripts.gate that whoever edits package.json controls)
 Lenses run: correctness, simplicity, tests, security
 Revert: git revert of the merge commit; no data to back out. A repo that set proofWaived or proofCommand keeps it, which the base ignores or uses as before.
@@ -41,6 +41,8 @@ None, because the change has no screen and no journey to explore; the guard was 
 - Agent evals (`npm run eval:agents`) were not run; they cost tokens and no agent prompt changed.
 - The guard change was not tried in a live session: the session's hooks come from the installed plugin, not this branch.
 - Stack detection for Go and .NET has no test; only Node and Python are covered (AC-4).
+- The allowlist turns away some ordinary reads: unquoted square or curly brackets and an exclamation mark, and double-quoted text holding a dollar or a backslash. Such a command only loses the new exemption and is judged as before.
+- The reviewer judged the hook's decisions, not what real PowerShell and bash do with the hand-built cases.
 - R2 says a refused read never moves a session towards a hold. After review finding F3, a try at a secrets file is still counted, though it only reads. The spec was not amended for this: a person should judge it.
 - `sdlc next` reads slice states in the current checkout, so a slice finished on an unmerged branch reads as not complete.
 
