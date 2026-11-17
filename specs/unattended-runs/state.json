@@ -1,43 +1,35 @@
 {
   "feature": "unattended-runs",
   "lane": "light",
-  "stage": 5,
+  "stage": 4,
   "branch": "feature/unattended-runs",
   "createdAt": "2026-11-12T16:39:50.783Z",
   "stages": {
     "1": {
-      "enteredAt": "2026-11-12T16:39:50.783Z",
-      "leftAt": "2026-11-12T16:43:51.845Z"
+      "enteredAt": "2026-11-17T14:23:08.680Z",
+      "leftAt": "2026-11-17T14:23:09.789Z"
     },
     "4": {
-      "enteredAt": "2026-11-12T16:43:51.845Z",
-      "leftAt": "2026-11-13T01:42:44.441Z"
+      "enteredAt": "2026-11-17T14:23:09.789Z"
     },
     "5": {
-      "enteredAt": "2026-11-13T01:42:44.441Z"
+      "enteredAt": "2026-11-13T01:42:44.441Z",
+      "leftAt": "2026-11-17T14:23:08.680Z"
     }
   },
   "gates": {
     "1": {
       "status": "approved",
       "by": "checks: feature branch",
-      "requestedAt": "2026-11-12T16:43:51.809Z",
-      "approvedAt": "2026-11-12T16:43:51.809Z",
+      "requestedAt": "2026-11-17T14:23:09.690Z",
+      "approvedAt": "2026-11-17T14:23:09.690Z",
       "auto": true,
-      "fingerprint": "bbfb1eb7133d992f"
-    },
-    "4": {
-      "status": "approved",
-      "by": "checks: checks (gate green, small diff)",
-      "requestedAt": "2026-11-13T01:42:44.018Z",
-      "approvedAt": "2026-11-13T01:42:44.018Z",
-      "auto": true,
-      "fingerprint": "f753b14ddfb35282"
+      "fingerprint": "5b72a8691be45329"
     }
   },
   "retries": {},
   "kinds": [],
-  "updatedAt": "2026-11-17T10:47:55.002Z",
+  "updatedAt": "2026-11-17T14:23:09.789Z",
   "intent": {
     "change": "Less human intervention",
     "smallest": "Top four findings fixed",
@@ -46,7 +38,7 @@
     "at": "2026-11-12T16:41:41.608Z"
   },
   "revisions": {
-    "1": 1
+    "1": 2
   },
   "gateRuns": {
     "4": {
@@ -59,14 +51,14 @@
     },
     "5": {
       "ok": true,
-      "count": 343,
-      "at": "2026-11-17T10:47:54.483Z",
-      "tree": "1000481b1c501c9a",
+      "count": 344,
+      "at": "2026-11-17T11:46:43.866Z",
+      "tree": "d9f79e28a1d26d92",
       "runs": 1,
       "runtime": "v24.19.0"
     }
   },
-  "baseline": 343,
+  "baseline": 344,
   "baselineRuntime": "v24.19.0",
   "proofBase": "a13d05174f3a2409bd2dcd2a7ae6690d5c200bf4",
   "sizeChecked": 95,
@@ -77,7 +69,8 @@
     "problems": [],
     "base": "a13d051",
     "files": {
-      "tests/unattended-runs.test.mjs": "42fed3cef79284e4"
+      "tests/unattended-runs.test.mjs": "42fed3cef79284e4",
+      "tests/unattended-runs-edges.test.mjs": "968c56d4e4037c30"
     },
     "acs": [
       "AC-1",
@@ -90,15 +83,22 @@
       "AC-8",
       "AC-9",
       "AC-10",
-      "AC-11"
+      "AC-11",
+      "AC-12",
+      "AC-13",
+      "AC-14",
+      "AC-15",
+      "AC-16",
+      "AC-17"
     ],
     "perTest": false,
-    "at": "2026-11-13T02:04:22.922Z"
+    "at": "2026-11-17T14:21:52.241Z"
   },
   "lock": {
     "files": {
-      "tests/unattended-runs.test.mjs": "42fed3cef79284e4"
+      "tests/unattended-runs.test.mjs": "42fed3cef79284e4",
+      "tests/unattended-runs-edges.test.mjs": "968c56d4e4037c30"
     },
-    "at": "2026-11-13T02:04:22.922Z"
+    "at": "2026-11-17T14:21:52.241Z"
   }
 }

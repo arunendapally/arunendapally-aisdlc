@@ -50,10 +50,11 @@ None, because the four changes and their order were agreed with Arun on 12 Nov 2
 - R11. (must) An agent that starts changing code on the protected branch of a repo that runs the plugin, with no work started there, is refused and told how to start the work. Needs: whether work is started on the branch.
 - R12. (must) An agent cannot delete a folder tree outside the repo it is working in. Needs: where the repo ends.
 - R13. (should) Setting up a repo gives it no settings that nothing reads. Needs: nothing new.
+- R14. (must) A decision recorded about a feature while its tests are running is kept when the run ends. Needs: where the feature stands when the run ends.
 
 ## Changes since v1
 
-Arun asked on 16 Nov 2026 for the rest of the open items to be fixed where they still make sense, and chose to amend this feature rather than raise a change request. R9 to R13 are new; R1 to R8 are unchanged and built. R9 and R10 come from the dogfood run of 6 Nov (answers recorded in the wrong folder; a proved test changed through a one-line program). R11 and R12 are the two guard changes Arun decided on 7 Nov. R13 removes the autonomy levels file, which the review of 12 Nov found no code reads. Added effort: about 80 counted code lines on top of 124, still one PR under the light lane's 300.
+Arun asked on 16 Nov 2026 for the rest of the open items to be fixed where they still make sense, and chose to amend this feature rather than raise a change request. R9 to R13 are new; R1 to R8 are unchanged and built. R9 and R10 come from the dogfood run of 6 Nov (answers recorded in the wrong folder; a proved test changed through a one-line program). R11 and R12 are the two guard changes Arun decided on 7 Nov. R13 removes the autonomy levels file, which the review of 12 Nov found no code reads. R14 was found while building v2 on 17 Nov: a test run started before the amendment wrote its old copy of the feature's record back when it ended, and the amendment and its approval were lost. Added effort: about 80 counted code lines on top of 124, still one PR under the light lane's 300.
 
 ## Non-functional requirements
 

@@ -143,3 +143,10 @@ Feature: Runs that need a person only at the intent and the PR
     Given a new repo
     When the repo is set up
     Then it has no autonomy levels file, and the getting-started guide lists none
+
+  @R14 @AC-18 @unit
+  Scenario: A spec change made during a test run survives the run
+    Given a feature at Build whose test run takes a while
+    When the feature is sent back to Define while the run is going
+    Then after the run the feature is still at Define
+    And the run is not recorded, with a message to run it again
