@@ -1,7 +1,7 @@
 {
   "feature": "unattended-runs",
   "lane": "light",
-  "stage": 4,
+  "stage": 5,
   "branch": "feature/unattended-runs",
   "createdAt": "2026-11-12T16:39:50.783Z",
   "stages": {
@@ -10,11 +10,12 @@
       "leftAt": "2026-11-17T14:23:09.789Z"
     },
     "4": {
-      "enteredAt": "2026-11-17T14:23:09.789Z"
+      "enteredAt": "2026-11-17T14:23:09.789Z",
+      "leftAt": "2026-11-17T14:47:31.732Z"
     },
     "5": {
-      "enteredAt": "2026-11-13T01:42:44.441Z",
-      "leftAt": "2026-11-17T14:23:08.680Z"
+      "enteredAt": "2026-11-17T14:47:31.732Z",
+      "leftAt": "2026-11-17T14:58:57.315Z"
     }
   },
   "gates": {
@@ -25,11 +26,27 @@
       "approvedAt": "2026-11-17T14:23:09.690Z",
       "auto": true,
       "fingerprint": "5b72a8691be45329"
+    },
+    "4": {
+      "status": "approved",
+      "by": "checks: checks (gate green, small diff)",
+      "requestedAt": "2026-11-17T14:47:31.030Z",
+      "approvedAt": "2026-11-17T14:47:31.030Z",
+      "auto": true,
+      "fingerprint": "708e0efa23485ddc"
+    },
+    "5": {
+      "status": "approved",
+      "by": "checks: checks (gate green, review clean)",
+      "requestedAt": "2026-11-17T14:58:55.803Z",
+      "approvedAt": "2026-11-17T14:58:55.803Z",
+      "auto": true,
+      "fingerprint": "708e0efa23485ddc"
     }
   },
   "retries": {},
   "kinds": [],
-  "updatedAt": "2026-11-17T14:47:07.825Z",
+  "updatedAt": "2026-11-17T14:58:57.317Z",
   "intent": {
     "change": "Less human intervention",
     "smallest": "Top four findings fixed",
@@ -51,9 +68,9 @@
     },
     "5": {
       "ok": true,
-      "count": 344,
-      "at": "2026-11-17T11:46:43.866Z",
-      "tree": "d9f79e28a1d26d92",
+      "count": 349,
+      "at": "2026-11-17T14:58:38.021Z",
+      "tree": "6d11d074ce17f388",
       "runs": 1,
       "runtime": "v24.19.0"
     }
@@ -62,15 +79,41 @@
   "baselineRuntime": "v24.19.0",
   "proofBase": "a13d05174f3a2409bd2dcd2a7ae6690d5c200bf4",
   "sizeChecked": 95,
-  "lastPacketHead": "fec209c",
-  "ledgerIds": [],
+  "lastPacketHead": "12eaa6b",
+  "ledgerIds": [
+    "F1",
+    "F2",
+    "F3",
+    "F4",
+    "F5",
+    "F6",
+    "F7",
+    "F8",
+    "F9",
+    "F10",
+    "F11",
+    "F13",
+    "F14",
+    "F15",
+    "F16",
+    "F17",
+    "F18",
+    "F19",
+    "F21",
+    "F22",
+    "F23",
+    "F24",
+    "F20",
+    "F12"
+  ],
   "proof": {
     "ok": true,
     "problems": [],
     "base": "a13d051",
     "files": {
       "tests/unattended-runs.test.mjs": "42fed3cef79284e4",
-      "tests/unattended-runs-edges.test.mjs": "968c56d4e4037c30"
+      "tests/unattended-runs-edges.test.mjs": "968c56d4e4037c30",
+      "tests/gate-state.test.mjs": "290f3f5ffd014a79"
     },
     "acs": [
       "AC-1",
@@ -89,16 +132,89 @@
       "AC-14",
       "AC-15",
       "AC-16",
-      "AC-17"
+      "AC-17",
+      "AC-18"
     ],
     "perTest": false,
-    "at": "2026-11-17T14:21:52.241Z"
+    "at": "2026-11-17T14:48:58.350Z"
   },
   "lock": {
     "files": {
       "tests/unattended-runs.test.mjs": "42fed3cef79284e4",
-      "tests/unattended-runs-edges.test.mjs": "968c56d4e4037c30"
+      "tests/unattended-runs-edges.test.mjs": "968c56d4e4037c30",
+      "tests/gate-state.test.mjs": "290f3f5ffd014a79"
     },
-    "at": "2026-11-17T14:21:52.241Z"
+    "at": "2026-11-17T14:48:58.350Z"
+  },
+  "riskTier": "high",
+  "reviewedSha": "12eaa6b8558f0dd6f2232e633e9f48360ec18b5a",
+  "reviewedFiles": [
+    ".ai-sdlc/autonomy.json",
+    ".ai-sdlc/config.json",
+    ".claude-plugin/marketplace.json",
+    ".claude-plugin/plugin.json",
+    "README.md",
+    "changelog.d/unattended-runs.md",
+    "commands/plan.md",
+    "commands/run.md",
+    "commands/start.md",
+    "commands/verify.md",
+    "docs/getting-started.md",
+    "scripts/hooks/answers.mjs",
+    "scripts/hooks/pre-tool.mjs",
+    "scripts/hooks/session-start.mjs",
+    "scripts/hooks/user-prompt.mjs",
+    "scripts/lib.mjs",
+    "scripts/loop.mjs",
+    "scripts/sdlc.mjs",
+    "skills/org-ai-sdlc/SKILL.md",
+    "specs/trace-index/state.json",
+    "specs/unattended-runs/acceptance.feature",
+    "specs/unattended-runs/pr.md",
+    "specs/unattended-runs/prd.md",
+    "specs/unattended-runs/review-packet.md",
+    "specs/unattended-runs/review.md",
+    "specs/unattended-runs/state.json",
+    "specs/unattended-runs/tasks.md",
+    "templates/repo/.ai-sdlc/autonomy.json",
+    "tests/delete-guard.test.mjs",
+    "tests/gate-state.test.mjs",
+    "tests/helpers.mjs",
+    "tests/read-only-guard.test.mjs",
+    "tests/unattended-runs-edges.test.mjs",
+    "tests/unattended-runs.test.mjs"
+  ],
+  "reviewedHashes": {
+    ".claude-plugin/marketplace.json": "64ee1f99c8764c5d",
+    ".claude-plugin/plugin.json": "aa00d5b9d7118f08",
+    "README.md": "ae97cb1745680b07",
+    "changelog.d/unattended-runs.md": "8b96ba0030308218",
+    "commands/plan.md": "328d8b33ce293f4f",
+    "commands/run.md": "c67f6e122aa3e497",
+    "commands/start.md": "ae2c26a50b4a0e96",
+    "commands/verify.md": "dc79269742ecf4fa",
+    "docs/getting-started.md": "2b197cc75a66e948",
+    "scripts/hooks/answers.mjs": "63427949e7696801",
+    "scripts/hooks/pre-tool.mjs": "8a5065143f2c7b5b",
+    "scripts/hooks/session-start.mjs": "3bb30ea1df0cfc18",
+    "scripts/hooks/user-prompt.mjs": "80ddc5787755449c",
+    "scripts/lib.mjs": "57918f27d86f265d",
+    "scripts/loop.mjs": "340f560f1192837c",
+    "scripts/sdlc.mjs": "0b73112e48fede5c",
+    "skills/org-ai-sdlc/SKILL.md": "818c1e2ae165eb2b",
+    "tests/delete-guard.test.mjs": "55ac14cd045074fa",
+    "tests/gate-state.test.mjs": "290f3f5ffd014a79",
+    "tests/helpers.mjs": "7c8223ffae795545",
+    "tests/read-only-guard.test.mjs": "9fa4944e1f1269c8",
+    "tests/unattended-runs-edges.test.mjs": "968c56d4e4037c30",
+    "tests/unattended-runs.test.mjs": "42fed3cef79284e4"
+  },
+  "closedAt": "2026-11-17T14:58:57.315Z",
+  "outcome": {
+    "metric": "human stops before the PR in a dogfood run of one feature through the single request",
+    "owner": "Arun, plugin owner",
+    "due": "2026-11-24T14:58:57.317Z",
+    "status": "open",
+    "openedAt": "2026-11-17T14:58:57.317Z"
   }
 }

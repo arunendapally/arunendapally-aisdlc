@@ -8,12 +8,12 @@ Spec: specs/unattended-runs/prd.md (R1 to R14, v2). Not in this PR: other agents
 
 ## Test results
 
-Suite: 334 passed, 0 failed (baseline 319 before any change), from "sdlc gate unattended-runs"
-Pre-review: 12 findings (1 blocker, 4 major, 5 minor, 2 nits), 11 fixed and 1 answered, in specs/unattended-runs/review.md
-Proof: "sdlc proof unattended-runs" passed against a13d051: AC-1 to AC-11 fail on the base code and pass here, 1 test file locked
+Suite: 349 passed, 0 failed (baseline 319 before any change), from "sdlc gate unattended-runs"
+Pre-review: 24 findings over five rounds (1 blocker reopened twice, 9 major, 10 minor, 4 nits), 21 fixed, 2 answered, 1 nit open, in specs/unattended-runs/review.md
+Proof: "sdlc proof unattended-runs" passed against a13d051: AC-1 to AC-18 fail on the base code and pass here, 3 test files locked
 Golden evals: 29 of 29 pass, from "npm run eval"
-Guard cases from the review: tests/read-only-guard.test.mjs (3 tests)
-New tests: tests/unattended-runs.test.mjs (AC-1 to AC-11, 15 tests); 11 of the first 12 failed before the change, AC-3 passed because it pins behaviour that must not change
+Guard cases from the review: tests/read-only-guard.test.mjs (3 tests), tests/delete-guard.test.mjs (3 tests)
+New tests: tests/unattended-runs.test.mjs (AC-1 to AC-11, 15 tests), tests/unattended-runs-edges.test.mjs (AC-12 to AC-17, 7 tests), tests/gate-state.test.mjs (AC-18, 2 tests); 11 of the first 12 failed before the change, AC-3 passed because it pins behaviour that must not change
 Changed test support: tests/helpers.mjs gives every test repo a proof waiver, so existing Verify tests keep their meaning
 Removed, skipped or quarantined: none
 
@@ -52,6 +52,6 @@ None, because the change has no screen and no journey to explore; the guard was 
 
 ## Definition of done
 
-- [ ] Pre-review has no open findings
+- [x] Pre-review has no open findings
 - [x] Not verified is honest
-- [ ] PR raised from the feature branch
+- N/A: the PR is raised by "sdlc pr" from feature/unattended-runs straight after this gate passes, so it cannot exist while the gate runs
