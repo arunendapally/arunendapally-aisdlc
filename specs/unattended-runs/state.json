@@ -1,35 +1,43 @@
 {
   "feature": "unattended-runs",
   "lane": "light",
-  "stage": 4,
+  "stage": 5,
   "branch": "feature/unattended-runs",
   "createdAt": "2026-11-12T16:39:50.783Z",
   "stages": {
     "1": {
-      "enteredAt": "2026-11-16T10:04:37.021Z",
-      "leftAt": "2026-11-16T10:04:47.117Z"
+      "enteredAt": "2026-11-12T16:39:50.783Z",
+      "leftAt": "2026-11-12T16:43:51.845Z"
     },
     "4": {
-      "enteredAt": "2026-11-16T10:04:47.117Z"
+      "enteredAt": "2026-11-12T16:43:51.845Z",
+      "leftAt": "2026-11-13T01:42:44.441Z"
     },
     "5": {
-      "enteredAt": "2026-11-13T01:42:44.441Z",
-      "leftAt": "2026-11-16T10:04:37.021Z"
+      "enteredAt": "2026-11-13T01:42:44.441Z"
     }
   },
   "gates": {
     "1": {
       "status": "approved",
       "by": "checks: feature branch",
-      "requestedAt": "2026-11-16T10:04:46.803Z",
-      "approvedAt": "2026-11-16T10:04:46.803Z",
+      "requestedAt": "2026-11-12T16:43:51.809Z",
+      "approvedAt": "2026-11-12T16:43:51.809Z",
       "auto": true,
-      "fingerprint": "6521ddbe0c622e84"
+      "fingerprint": "bbfb1eb7133d992f"
+    },
+    "4": {
+      "status": "approved",
+      "by": "checks: checks (gate green, small diff)",
+      "requestedAt": "2026-11-13T01:42:44.018Z",
+      "approvedAt": "2026-11-13T01:42:44.018Z",
+      "auto": true,
+      "fingerprint": "f753b14ddfb35282"
     }
   },
   "retries": {},
   "kinds": [],
-  "updatedAt": "2026-11-16T10:04:47.117Z",
+  "updatedAt": "2026-11-16T10:07:34.972Z",
   "intent": {
     "change": "Less human intervention",
     "smallest": "Top four findings fixed",
@@ -38,7 +46,7 @@
     "at": "2026-11-12T16:41:41.608Z"
   },
   "revisions": {
-    "1": 2
+    "1": 1
   },
   "gateRuns": {
     "4": {
@@ -51,14 +59,14 @@
     },
     "5": {
       "ok": true,
-      "count": 336,
-      "at": "2026-11-16T09:25:46.208Z",
-      "tree": "3f7b771f58d49bda",
+      "count": 337,
+      "at": "2026-11-16T10:07:34.206Z",
+      "tree": "8b4738baeec32a9e",
       "runs": 1,
       "runtime": "v24.19.0"
     }
   },
-  "baseline": 336,
+  "baseline": 337,
   "baselineRuntime": "v24.19.0",
   "proofBase": "a13d05174f3a2409bd2dcd2a7ae6690d5c200bf4",
   "sizeChecked": 95,

@@ -3,9 +3,10 @@
 // A denial is an answer, not a failed check (ADR-0004, failure F1): each one says so, they are counted
 // per session by the rule that fired, and past denialCap the session may only read until a human types.
 import fs from 'node:fs'
+import os from 'node:os'
 import path from 'node:path'
 import { spawnSync } from 'node:child_process'
-import { STAGES, root, git, loadConfig, isPaused, isProbe, readState, listFeatures, matches, relPath, readStdin, audit, autonomy, runtimePath } from '../lib.mjs'
+import { STAGES, root, git, loadConfig, isPaused, isProbe, readState, listFeatures, matches, relPath, readStdin, audit, autonomy, runtimePath, configFile } from '../lib.mjs'
 import { segments } from '../segments.mjs'
 
 const SECRET = /(AKIA[0-9A-Z]{16}|-----BEGIN [A-Z ]*PRIVATE KEY-----|ghp_[A-Za-z0-9]{36}|github_pat_[A-Za-z0-9_]{40,}|xox[baprs]-[A-Za-z0-9-]{10,}|sk-[A-Za-z0-9_-]{32,})/
@@ -19,6 +20,8 @@ const INSTEAD = {
   'guardrail-file': 'Instead: change feature state through sdlc.mjs; a person edits guardrail files.',
   production: 'Instead: read-only probes (get, list, describe, logs) are allowed.',
   'bug-scope': 'Instead: a version-only bump of package.json is allowed in the bug lane; anything else in that file is a feature.',
+  'start-first': 'Instead: /ai-sdlc:start <what you want> (or sdlc worktree <lane> <slug>), then work in the worktree it opens.',
+  'delete-outside': 'Instead: delete inside the repo you work in, or give the person the command.',
 }
 const ANSWER = 'This is a final answer, not an error: do not retry, rephrase, wrap it in a script or reach for another tool. Give the user the command once if one is needed, then stop.'
 
@@ -133,6 +136,7 @@ const repoAt = p => {
   return git('rev-parse --show-toplevel', p)
 }
 let at = dir
+let cwdNow = input.cwd ?? dir
 const file = WRITES.includes(tool) ? path.resolve(dir, ti.file_path ?? ti.notebook_path ?? '') : ''
 if (file && outside(file)) {
   const other = repoAt(path.dirname(file))
@@ -147,6 +151,7 @@ if (cd) {
   let to = cd[1] ?? cd[2] ?? cd[3]
   if (process.platform === 'win32') to = to.replace(/^\/([a-z])(?=\/|$)/i, '$1:')
   to = path.resolve(input.cwd ?? dir, to)
+  cwdNow = to
   if (outside(to)) at = repoAt(to) || to
 }
 const atCfg = at === dir ? cfg : loadConfig(at)
@@ -168,6 +173,26 @@ const shellWrites = t => {
   if (/^(mv|rm|tee|touch|truncate|Move-Item|Remove-Item|Set-Content|Add-Content|Out-File)$/i.test(w[0]) || (w[0] === 'sed' && w.some(a => /^(-i|--in-place)/.test(a)))) out.push(...w.slice(1))
   if (/^(cp|Copy-Item)$/i.test(w[0])) out.push(w.at(-1))
   return out
+}
+// A one-line program writes whatever it names, out of sight of the checks above (unattended-runs R10).
+const INTERPRETER = /^(node|deno|bun|python3?|py|ruby|perl|sh|bash|zsh|pwsh|powershell)(\.exe)?(\s|$)/i
+const inlineProgram = p => INTERPRETER.test(p.text) && (/\s(-e|--eval|-p|--print|-c|-Command|eval)(\s|=|$)/i.test(p.text) || p.heredocs.length > 0)
+// The trees a segment deletes recursively (unattended-runs R12): rm with -r, Remove-Item -Recurse, rd /s.
+const treeDeletes = t => {
+  const w = (t.trim().match(/"[^"]*"|'[^']*'|\S+/g) ?? []).map(unquote)
+  const flags = w.slice(1).filter(a => /^(-|\/[sq]$)/i.test(a))
+  const recursive = (/^rm$/.test(w[0]) && flags.some(a => a === '--recursive' || /^-[a-zA-Z]*[rR]/.test(a))) ||
+    (/^(Remove-Item|ri|rm|rmdir|rd|del)$/i.test(w[0]) && flags.some(a => /^-r(ecurse)?$/i.test(a) || /^\/s$/i.test(a)))
+  return recursive ? w.slice(1).filter(a => a && !flags.includes(a)) : []
+}
+// Where a deleted path is, or null when the guard cannot tell (a variable it cannot see, or a Windows path
+// on another system): such a delete is treated as outside.
+const whereIs = (t, base) => {
+  let p = t.replace(/^(~|\$HOME|\$\{HOME\}|\$env:USERPROFILE|%USERPROFILE%)(?=[\\/]|$)/i, os.homedir())
+  if (/[$`%]/.test(p)) return null
+  if (process.platform === 'win32') p = p.replace(/^\/([a-z])(?=\/|$)/i, '$1:')
+  else if (/^[A-Za-z]:[\\/]/.test(p)) return null
+  return path.resolve(base, p)
 }
 
 if (tool === 'Bash' || tool === 'PowerShell') {
@@ -258,6 +283,18 @@ if (tool === 'Bash' || tool === 'PowerShell') {
     const target = writeTarget(p)
     if (target) testLock(target)
     for (const t of shellWrites(p.text)) testLock(t)
+    if (inlineProgram(p)) {
+      const program = [p.text, ...p.heredocs.map(h => h.body)].join('\n').replace(/\\/g, '/').toLowerCase()
+      const hit = locked.find(f => program.includes(f.toLowerCase()))
+      if (hit) testLock(hit)
+    }
+    for (const t of treeDeletes(p.text)) {
+      // The repo the command runs in: a cd into a folder that is no repo leaves the session's repo in charge.
+      const repo = repoAt(cwdNow) || dir
+      const where = whereIs(t, cwdNow)
+      const r = where && path.relative(repo, where)
+      if (!where || r.startsWith('..') || path.isAbsolute(r)) deny(`"${c.slice(0, 60)}" deletes ${t}, ${where ? 'a folder tree outside this repo' : 'a path the guard cannot resolve'} (${repo}). Agents delete trees only inside the repo they work in.`, 'delete-outside')
+    }
     if (target && (matches(target, cfg.denyPaths) || matches(target, cfg.askPaths))) deny(`${target} is a guardrail, CI or ownership file: a shell write to it is never allowed. Use the Write tool, which asks a human.`, 'guardrail-command')
     if (guardrail.test(code(p)) && !exempt(p)) deny('Commands may not touch feature state, guardrails, settings, CI or ownership files. To read a feature\'s state, run "sdlc status <feature> --json" or use the Read tool. Otherwise use sdlc.mjs, or ask a human.', 'guardrail-command')
   }
@@ -312,6 +349,9 @@ if (prd) {
 const feature = listFeatures(dir).find(s => s.branch === branch)
 const isDoc = rel.startsWith(`${cfg.specsDir}/`) || rel.startsWith('docs/') || rel.endsWith('.md')
 if (feature && feature.stage < 4 && !isDoc) deny(`${feature.feature} is at ${STAGES[feature.stage].name}. Code waits for Build.`, 'code-before-build')
+// Code on the protected branch waits for started work (unattended-runs R11), in a repo that runs the plugin
+// and has a first commit. Documents may change anywhere.
+if (onProtected && !feature && !isDoc && fs.existsSync(configFile(dir)) && git('rev-parse --verify -q HEAD', at) !== '') deny(`${rel} is code on ${branch}, where no work is started. Start the work with /ai-sdlc:start <what you want>: it opens a branch in its own worktree, where code can change.`, 'start-first')
 // A bug fix may carry its version bump (issue #62, item 2): an Edit that changes only the "version" line.
 const VERSION = /^\s*"version"\s*:\s*"[^"\n]+",?\s*$/
 const versionOnly = tool === 'Edit' && /package\.json$/.test(rel) && VERSION.test(ti.old_string ?? '') && VERSION.test(ti.new_string ?? '')

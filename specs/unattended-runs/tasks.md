@@ -39,6 +39,21 @@ The arguable choice: an agent-run setup writes the gate command. It comes from a
 - [x] T8 [R8] files: scripts/hooks/session-start.mjs, .claude-plugin/plugin.json, .claude-plugin/marketplace.json, README.md, docs/getting-started.md, skills/org-ai-sdlc/SKILL.md, tests/unattended-runs.test.mjs test: AC-11 depends-on: [T7] Say who decides, everywhere a person or agent reads first.
   - done when: AC-11 passes.
   - traps: none
+- [x] T9 [R9] files: scripts/lib.mjs, scripts/hooks/answers.mjs, scripts/hooks/user-prompt.mjs, tests/unattended-runs-edges.test.mjs test: AC-12 depends-on: [] Record a decision in the checkout where its feature lives.
+  - done when: AC-12 passes; a feature in no checkout still records where the session is.
+  - traps: none
+- [x] T10 [R10] files: scripts/hooks/pre-tool.mjs, tests/unattended-runs-edges.test.mjs test: AC-13 depends-on: [] Refuse an inline program that names a proved test.
+  - done when: AC-13 passes; running the test file is still allowed.
+  - traps: none
+- [x] T11 [R11] files: scripts/hooks/pre-tool.mjs, tests/unattended-runs-edges.test.mjs test: AC-14, AC-15 depends-on: [] Refuse code edits on the protected branch before work is started.
+  - done when: AC-14 and AC-15 pass; a repo with no first commit is not refused.
+  - traps: none
+- [x] T12 [R12] files: scripts/hooks/pre-tool.mjs, tests/unattended-runs-edges.test.mjs test: AC-16 depends-on: [] Refuse a recursive delete outside the repo.
+  - done when: AC-16 passes.
+  - traps: none
+- [x] T13 [R13] files: templates/repo/.ai-sdlc/autonomy.json, docs/getting-started.md, tests/unattended-runs-edges.test.mjs test: AC-17 depends-on: [] Remove the autonomy levels file nothing reads.
+  - done when: AC-17 passes. The file is a guardrail path, so a person removes it.
+  - traps: none
 
 ## Definition of done
 

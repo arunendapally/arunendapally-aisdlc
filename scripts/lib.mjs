@@ -279,6 +279,20 @@ export function writeState(dir, state) {
   fs.writeFileSync(file, JSON.stringify(state, null, 2) + '\n')
 }
 
+// Where a feature's work lives (unattended-runs R9): the checkout of this repo whose copy of the feature is
+// on the feature's own branch, else any checkout that has it, else dir. A person answering in the main
+// checkout records for the feature in its worktree, and never starts a second copy.
+export function featureDir(dir, feature) {
+  if (!feature || !/^[a-z0-9][a-z0-9-]*$/.test(feature)) return dir
+  const has = d => fs.existsSync(path.join(d, loadConfig(d).specsDir, feature, 'state.json'))
+  const trees = git('worktree list --porcelain', dir).split(/\r?\n\r?\n/).filter(Boolean)
+    .map(b => ({ where: b.match(/^worktree (.+)$/m)?.[1], branch: b.match(/^branch refs\/heads\/(.+)$/m)?.[1] }))
+    .filter(t => t.where && fs.existsSync(t.where) && has(t.where))
+  const own = trees.find(t => t.branch && readState(t.where, feature)?.branch === t.branch)
+  if (own) return path.resolve(own.where)
+  return has(dir) ? dir : trees[0] ? path.resolve(trees[0].where) : dir
+}
+
 export function listFeatures(dir) {
   const specs = path.join(dir, loadConfig(dir).specsDir)
   if (!fs.existsSync(specs)) return []

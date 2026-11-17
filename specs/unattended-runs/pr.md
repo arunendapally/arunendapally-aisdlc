@@ -2,7 +2,8 @@
 
 Runs need a person only at the intent and the PR: reads are not refused as a person's action, setup sets the checks, the proof is required, and one request runs a feature or a capability's slices.
 A command that only reads is no longer refused for naming a person's command, and its refusals do not count towards the hold. `sdlc init-repo` sets the gate and proof checks from what a new repo holds and proposes them for an existing one. Verify refuses a full or light feature with no proof check unless a person waived it (`proofWaived`). `sdlc next <capability>`, a carried-over capability intent and `/ai-sdlc:run` take work from the intent to the PR. The first-read messages and docs say a person decides at the intent and the PR.
-Spec: specs/unattended-runs/prd.md (R1 to R8). Not in this PR: other agents (Copilot, Gemini), the autonomy levels file, a rewrite of the README article.
+Amended to v2 at Arun's choice (16 Nov): a person's answer is recorded in the checkout where its feature lives, an inline program cannot change a proved test, code on the protected branch waits for started work, a recursive delete outside the repo is refused, and setup no longer copies the autonomy levels file nothing reads.
+Spec: specs/unattended-runs/prd.md (R1 to R13, v2). Not in this PR: other agents (Copilot, Gemini), collapsing the ways a repo grants autonomy, the other 6 Nov dogfood flaws, a rewrite of the README article.
 
 ## Test results
 

@@ -108,7 +108,6 @@ The first `/ai-sdlc:start` copied this kit into your repo:
 | `CONSTITUTION.md` | The principles every stage checks against. Edit it to fit your product. |
 | `.claude/rules/ai-sdlc.md` | The rules every agent follows in this repo |
 | `.ai-sdlc/config.json` | Your settings. Agents cannot edit this folder. |
-| `.ai-sdlc/autonomy.json` | Autonomy levels per activity |
 | `knowledge/` | The agents' memory, one Markdown page per subject |
 | `standards/` | Engineering and testing standards, the review checklist, the traps log |
 | `.github/` | Workflows, PR template, CODEOWNERS, the ruleset |
