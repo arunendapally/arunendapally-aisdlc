@@ -40,6 +40,16 @@ test('AC-13 a one-line program cannot change a proved test', () => {
   assert.equal(r.bash('node --test tests/save.test.mjs'), 'allow')
   assert.equal(r.bash('cat tests/save.test.mjs'), 'allow')
   assert.equal(r.bash('node -e "console.log(1)"'), 'allow', 'a one-liner that names no proved test is not refused')
+  // Pre-review F19: however the interpreter is reached and the path is written.
+  for (const command of [
+    'node -pe "require(\'fs\').writeFileSync(\'tests/save.test.mjs\', \'\')"',
+    'perl -i -pe "s/a/b/" tests/save.test.mjs',
+    'env node -e "require(\'fs\').writeFileSync(\'tests/save.test.mjs\', \'\')"',
+    '/usr/bin/node -e "require(\'fs\').writeFileSync(\'tests/save.test.mjs\', \'\')"',
+    'python3.12 -c "open(\'tests/save.test.mjs\', \'w\')"',
+    'F=tests/save.test.mjs node -e "require(\'fs\').writeFileSync(process.env.F, \'\')"',
+    'node -e "require(\'fs\').writeFileSync(\'tests\\\\save.test.mjs\', \'\')"',
+  ]) assert.equal(r.bash(command), 'deny', command)
 })
 
 test('AC-14 code is not changed on the protected branch before work is started', () => {
@@ -48,6 +58,13 @@ test('AC-14 code is not changed on the protected branch before work is started',
   assert.equal(code.decision, 'deny')
   assert.match(code.reason, /\/ai-sdlc:start/)
   assert.equal(r.write('docs/notes.md'), 'allow')
+  // Pre-review F18: the shell is no way round it.
+  assert.equal(r.bash('echo x > src/app.js'), 'deny')
+  assert.equal(r.bash('echo x > docs/notes.md'), 'allow')
+  assert.equal(r.bash('git status > /dev/null'), 'allow')
+  // Pre-review F17: a worktree nested in the main checkout is judged on its own branch.
+  assert.equal(r.sdlc('worktree', 'light', 'nested').status, 0)
+  assert.equal(r.write('.claude/worktrees/nested/src/app.js'), 'allow')
   r.git('checkout', '-q', 'feature/demo')
   assert.equal(r.write('src/app.js'), 'allow', 'a branch of its own is not the protected branch')
 })
@@ -65,8 +82,20 @@ test('AC-16 a folder tree outside the repo cannot be deleted', () => {
     'rm -rf $UNKNOWN_DIR', `rm -rf ${path.join(os.tmpdir(), 'scratch-x').split(path.sep).join('/')}`, 'cd .. && rm -rf other-repo']) {
     assert.equal(r.bash(command), 'deny', command)
   }
-  for (const command of ['rm -rf build', 'rm -rf ./dist node_modules', 'rm ../notes.txt', 'Remove-Item -Recurse -Force .\\build', 'rm -f old.log']) {
+  for (const command of ['rm -rf build', 'rm -rf ./dist node_modules', 'rm ../notes.txt', 'Remove-Item -Recurse -Force .\\build', 'rm -f old.log',
+    'git clean -fdx', 'find . -name "*.tmp" -delete', 'npx rimraf dist', 'Remove-Item -Force C:\\temp\\file.txt']) {
     assert.equal(r.bash(command), 'allow', command)
+  }
+})
+
+test('AC-16 a delete the guard cannot place, or of the repo itself, is refused', () => {
+  const r = makeRepo()
+  // Pre-review F14 to F16: other deleters, other ways of moving, the repo's root and history, a sibling repo.
+  for (const command of ['/bin/rm -rf ../x', 'command rm -rf ../x', '\\rm -rf ../x', 'sudo rm -rf ../x', 'echo ../x | xargs rm -rf',
+    'find .. -delete', 'find .. -exec rm -rf {} +', 'npx rimraf ../x', 'git -C ../x clean -fdx', 'Remove-Item -Rec ../x',
+    'Remove-Item -Recurse:$true ../x', 'Get-Item ../x | Remove-Item -Recurse', 'pushd .. && rm -rf x', '(cd .. && rm -rf x)',
+    'cd src && cd ../.. && rm -rf x', 'rm -rf ~root', 'rm -rf ~-', 'rm -rf .', 'rm -rf .git', 'rm -rf .git/hooks', 'cd ../other && rm -rf src']) {
+    assert.equal(r.bash(command), 'deny', command)
   }
 })
 
