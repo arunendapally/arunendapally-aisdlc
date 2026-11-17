@@ -177,7 +177,7 @@ const shellWrites = t => {
 // A one-line program writes whatever it names, out of sight of the checks above (unattended-runs R10): any
 // interpreter, however it is reached (env, VAR=x, a path, a version), fed code by a flag or a heredoc.
 // A path the program builds from pieces is not seen here; the Verify proof's file hashes still catch it.
-const INTERPRETER = /^(?:env\s+)?(?:\w+=\S*\s+)*(?:\S*[\\/])?(node|deno|bun|python[\d.]*|py|ruby|perl|sh|bash|zsh|pwsh|powershell)(\.exe)?(\s|$)/i
+const INTERPRETER = /^(?:env\s+)?(?:\w+=\S*\s+)*(?:(?:npx|bunx|pnpm\s+(?:dlx|exec)|yarn\s+dlx)\s+)?(?:\S*[\\/])?(node|deno|bun|python[\d.]*|py|ruby|perl|sh|bash|zsh|pwsh|powershell)(\.exe)?(\s|$)/i
 const inlineProgram = p => INTERPRETER.test(p.text) && (/\s-[a-z]{0,3}[epc](\s|$)/.test(p.text) || /\s(--eval|--print|-Command|eval)(\s|=|$)/i.test(p.text) || p.heredocs.length > 0)
 // What a segment deletes as a tree (unattended-runs R12), as [path, may it be the repo root]. Any deleter the
 // segment names counts, wherever it stands (xargs rm, sudo rm, npx rimraf); one with no path it names
@@ -190,10 +190,15 @@ const treeDeletes = t => {
   if (toolName(w[0] ?? '') === 'find' && w.some(a => a === '-delete' || /^-exec(dir)?$/.test(a))) {
     const end = w.findIndex((a, i) => i > 0 && /^[-(!\\]/.test(a))
     const paths = w.slice(1, end === -1 ? w.length : end)
-    const filtered = w.some(a => /^-i?(name|path)$/.test(a))
+    const filtered = w.some(a => /^-(i?(name|path)|empty)$/.test(a))
     return (paths.length ? paths : ['.']).map(x => [x, filtered])
   }
   // git clean removes what git does not track, in the repo it is pointed at: the root is its usual target.
+  // Mirroring tools delete in their destination; git worktree remove deletes a worktree's folder.
+  const operands = w.filter(a => !a.startsWith('-'))
+  if (toolName(w[0] ?? '') === 'rsync' && w.some(a => /^--del/.test(a))) return [[operands.length > 2 ? operands.at(-1) : '', false]]
+  if (toolName(w[0] ?? '') === 'robocopy' && w.some(a => /^\/(mir|purge)$/i.test(a))) return [[w.filter(a => !a.startsWith('/'))[2] ?? '', false]]
+  if (toolName(w[0] ?? '') === 'git' && w.includes('worktree') && w.includes('remove')) return [[operands[operands.indexOf('remove') + 1] ?? '', false]]
   if (toolName(w[0] ?? '') === 'git' && w.includes('clean')) return [[w.includes('-C') ? w[w.indexOf('-C') + 1] ?? '' : '.', true]]
   const at = w.findIndex(a => DELETERS.includes(toolName(a)))
   if (at === -1) return []
@@ -212,6 +217,7 @@ const whereIs = (t, base) => {
   if (/[$`%~]/.test(p)) return null
   if (process.platform === 'win32') p = p.replace(/^\/([a-z])(?=\/|$)/i, '$1:')
   else if (/^[A-Za-z]:[\\/]/.test(p)) return null
+  else p = p.replace(/\\/g, '/')
   return path.resolve(base, p)
 }
 
@@ -231,9 +237,10 @@ const startFirst = (target, base) => {
 
 if (tool === 'Bash' || tool === 'PowerShell') {
   const c = ti.command ?? ''
-  // Whether the guard knows the folder each segment runs in: one leading cd is followed, any other move is not.
-  const moves = (c.match(/(^|[\s;&|(])(cd|chdir|pushd|popd|Set-Location|Push-Location|Pop-Location|sl)(?=[\s;&|)]|$)/gi) ?? []).length
-  const baseKnown = moves <= (cd ? 1 : 0) && !/[()]/.test(c.replace(/'[^']*'|"[^"]*"/g, ''))
+  // Whether the guard knows the folder a segment runs in, from the command up to it: one leading cd is
+  // followed, any other move or a bracket (a subshell) is not.
+  const knownBase = upto => (upto.match(/(^|[\s;&|(])(cd|chdir|pushd|popd|Set-Location|Push-Location|Pop-Location|sl)(?=[\s;&|)]|$)/gi) ?? []).length <= (cd ? 1 : 0) &&
+    !/[()]/.test(upto.replace(/'[^']*'|"[^"]*"/g, ''))
   // Each segment is judged on what it runs (docs/decisions/2026-10-23-bash-guard-targets.md). A heredoc
   // body is data only when a quoted delimiter feeds it to a file write or a commit message; fed to
   // anything else, or unquoted (so $( ) runs), it is code and is judged with its segment. When the
@@ -331,7 +338,7 @@ if (tool === 'Bash' || tool === 'PowerShell') {
       // Judged against the session's repo, never one a cd points at: deleting cannot be undone. Its root and
       // its history are the person's too. Where the command may have moved (a later cd, pushd, a subshell),
       // the guard cannot tell where the path is.
-      const where = baseKnown ? whereIs(t, cwdNow) : null
+      const where = knownBase(c.slice(0, Math.max(0, c.indexOf(p.text))) + p.text) ? whereIs(t, cwdNow) : null
       const r = where && path.relative(dir, where).replace(/\\/g, '/')
       const own = where && !r.startsWith('..') && !path.isAbsolute(r) && (r !== '' || rootOk) && !/^\.git(\/|$)/.test(r)
       if (!own) deny(`"${c.slice(0, 60)}" deletes ${t || 'what it is fed'}, ${where ? 'which is this repo itself, its history or a folder outside it' : 'a path the guard cannot resolve'} (${dir}). Agents delete trees only inside the repo they work in.`, 'delete-outside')

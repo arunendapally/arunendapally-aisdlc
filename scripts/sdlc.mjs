@@ -846,6 +846,12 @@ Ask the owner: run "sdlc ask ${feature}" and put its question to them with the q
       if (r.status !== 0 && repeats === 1) break
     }
     const out = runs[runs.length - 1].out
+    // A run takes minutes, and what was recorded meanwhile wins (unattended-runs R14). A feature that moved
+    // to another stage was judged at the wrong one, so that run is not recorded.
+    const latest = readState(dir, feature)
+    if (latest.stage !== state.stage) fail(`${feature} moved from ${STAGES[state.stage].name} to ${STAGES[latest.stage].name} while the gate ran, so this run is not recorded. Run the gate again.`)
+    for (const k of Object.keys(state)) delete state[k]
+    Object.assign(state, latest)
     const count = runs[0].count
     const flaky = runs.length > 1 && (new Set(runs.map(r => r.ok)).size > 1 || new Set(runs.map(r => r.count)).size > 1)
     const leaked = runs.some(r => r.leaked)
