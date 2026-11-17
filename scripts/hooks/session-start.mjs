@@ -4,7 +4,7 @@ import { check } from '../knowledge.mjs'
 import { overdueOutcomes } from '../loop.mjs'
 
 const dir = root(readStdin().cwd)
-const lines = ['[ai-sdlc] This repo runs the org AI SDLC. Process: the org-ai-sdlc skill. Humans own every gate.']
+const lines = ['[ai-sdlc] This repo runs the org AI SDLC. Process: the org-ai-sdlc skill. Work ends at a raised PR, and a person decides at the intent and the PR; a gate that waits names its owner.']
 if (isPaused(dir)) lines.push('AGENTS ARE PAUSED by a human. Do not write or run anything until a human types "sdlc resume".')
 if (isFrozen(dir)) lines.push('The error budget is spent: no new full or light features (sdlc init is refused); bug, hotfix and reliability work comes first.')
 for (const s of listFeatures(dir).filter(s => !s.closedAt)) {
@@ -22,5 +22,5 @@ if (kb.count) {
   lines.push('Knowledge: knowledge/ is empty. As you learn this codebase, write pages there (see the knowledge template) so the next session starts knowing it.')
 }
 for (const p of promotable(dir)) lines.push(`AUTONOMY: gate ${p.key} has ${p.streak} clean approvals in a row. Tell the human they can promote it with "sdlc trust ${p.key.replace(':', ' ')}".`)
-lines.push('Gates are approved only by a human typing "sdlc approve <feature> <stage>". Never claim a gate is passed.')
+lines.push('A gate passes only when "sdlc request" says so, or a person answers its "sdlc ask" question. Never claim a gate is passed.')
 console.log(lines.join('\n'))

@@ -167,11 +167,12 @@ export function lockedFiles(state) {
   return Object.keys(p.files).filter(f => !freed.includes(f))
 }
 
-// What the Verify gate requires of the proof. Without a proofCommand it only warns, and the PR must
-// say the proof did not run.
+// What the Verify gate requires of the proof. Without a proofCommand it refuses, unless a person waived
+// the proof for this repo with a reason ("proofWaived"); then it warns, and the PR must say the proof did not run.
 export function proofProblems(dir, state, artefactText, cfg = loadConfig(dir)) {
   if (!['full', 'light'].includes(state.lane)) return { problems: [], warning: null }
   if (state.spike) return { problems: ['this slice is a spike: spike code merges only once a non-spike slice replaces it (sdlc spike <feature> --off)'], warning: null }
+  if (!cfg.proofCommand && !(typeof cfg.proofWaived === 'string' && cfg.proofWaived.trim())) return { problems: ['no proof check is set, so nothing shows the tests fail without the change. A person sets it in their terminal (sdlc proof-command "<command>", for example node --test {files}), or waives it for this repo with a reason: "proofWaived": "<why>" in the repo config'], warning: null }
   if (!cfg.proofCommand) {
     const notVerified = section(artefactText, '## Not verified') ?? ''
     return {

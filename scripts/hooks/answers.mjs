@@ -6,7 +6,7 @@
 import path from 'node:path'
 import { spawnSync } from 'node:child_process'
 import { fileURLToPath } from 'node:url'
-import { STAGES, root, readState, readStdin } from '../lib.mjs'
+import { STAGES, root, readState, readStdin, featureDir } from '../lib.mjs'
 
 const input = readStdin()
 if (input.tool_name !== 'AskUserQuestion' || input.agent_id) process.exit(0)
@@ -20,9 +20,11 @@ for (const m of text.matchAll(/\\?"((?:[^"\\]|\\.)+?)\\?"=\\?"((?:[^"\\]|\\.)*?)
 const answer = q => answers[q.question]?.trim()
 
 const said = []
-const record = prompt => {
+// Each answer is recorded where its feature's work lives, not in the session's folder (unattended-runs R9).
+const record = (prompt, feature) => {
   const hook = path.join(path.dirname(fileURLToPath(import.meta.url)), 'user-prompt.mjs')
-  const r = spawnSync('node', [hook], { cwd: dir, input: JSON.stringify({ prompt, cwd: dir, session_id: input.session_id }), encoding: 'utf8' })
+  const home = featureDir(dir, feature)
+  const r = spawnSync('node', [hook], { cwd: home, input: JSON.stringify({ prompt, cwd: home, session_id: input.session_id }), encoding: 'utf8' })
   said.push(r.stdout.trim() ? JSON.parse(r.stdout).hookSpecificOutput.additionalContext.replace(/^\[ai-sdlc\] /, '') : 'Nothing recorded.')
 }
 const plain = s => s.replace(/[;\n]+/g, ',').replace(/\s+/g, ' ').trim()
@@ -31,12 +33,12 @@ for (const q of questions) {
   const gate = q.question?.match(/\[gate ([a-z0-9-]+) (\d) ([0-9a-f]*)\]$/)
   if (!gate || !answer(q)) continue
   const [, feature, stage, fp] = gate
-  const current = readState(dir, feature)?.gates?.[stage]
+  const current = readState(featureDir(dir, feature), feature)?.gates?.[stage]
   if (current?.status !== 'waiting' || !current.fingerprint?.startsWith(fp)) {
     said.push(`${STAGES[stage]?.name ?? `Gate ${stage}`} for ${feature}: the question no longer matches what is waiting, so nothing was recorded. Run "sdlc ask ${feature}" again.`)
     continue
   }
-  record(answer(q) === 'Approve' ? `sdlc approve ${feature} ${stage}` : `sdlc reject ${feature} ${stage} ${plain(answer(q) === 'Send back' ? 'sent back from the question, no reason given' : answer(q))}`)
+  record(answer(q) === 'Approve' ? `sdlc approve ${feature} ${stage}` : `sdlc reject ${feature} ${stage} ${plain(answer(q) === 'Send back' ? 'sent back from the question, no reason given' : answer(q))}`, feature)
 }
 
 for (const q of questions) {
@@ -44,9 +46,9 @@ for (const q of questions) {
   const conflict = q.question?.match(/\[conflict ([a-z0-9-]+) (AC-\d+) (\d+)\]$/)
   const choice = { 'Change the test': 'change', 'Keep the test': 'keep' }[answer(q)]
   if (!conflict || !choice) continue
-  const open = readState(dir, conflict[1])?.conflicts?.[conflict[2]]
+  const open = readState(featureDir(dir, conflict[1]), conflict[1])?.conflicts?.[conflict[2]]
   if (open?.status !== 'open' || open.at.replace(/\D/g, '') !== conflict[3]) said.push(`The conflict on ${conflict[2]} for ${conflict[1]}: the question no longer matches what is open, so nothing was recorded. Run "sdlc ask ${conflict[1]}" again.`)
-  else record(`sdlc settle ${conflict[1]} ${conflict[2]} ${choice}`)
+  else record(`sdlc settle ${conflict[1]} ${conflict[2]} ${choice}`, conflict[1])
 }
 
 const intent = questions.filter(q => /\[intent [a-z0-9-]+\]$/.test(q.question ?? ''))
@@ -54,7 +56,7 @@ if (intent.length) {
   const feature = intent[0].question.match(/\[intent ([a-z0-9-]+)\]$/)[1]
   const part = header => intent.find(q => q.header?.toLowerCase() === header)
   const parts = [['change', 'change'], ['smallest', 'smallest'], ['drop if', 'drop if']].map(([h, label]) => [label, part(h) && answer(part(h))])
-  if (parts.every(([, a]) => a)) record(`sdlc intent ${feature} ${parts.map(([label, a]) => `${label}: ${plain(a)}`).join('; ')}`)
+  if (parts.every(([, a]) => a)) record(`sdlc intent ${feature} ${parts.map(([label, a]) => `${label}: ${plain(a)}`).join('; ')}`, feature)
   else said.push(`The intent for ${feature} needs all three answers; nothing was recorded.`)
 }
 

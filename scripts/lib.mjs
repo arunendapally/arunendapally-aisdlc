@@ -115,9 +115,9 @@ export const DEFAULT_CONFIG = {
   deployPatterns: ['vercel\\b.*(--prod|--target[= ]production|\\bpromote\\b|\\balias\\b)', 'terraform\\s+apply', 'netlify\\s+deploy\\b.*--prod', 'fly(ctl)?\\s+deploy\\b',
     'firebase\\s+deploy\\b', 'wrangler\\s+(deploy|publish)\\b', '(npm|pnpm|yarn)\\s+(run\\s+)?deploy\\b', 'kubectl\\s+(apply|delete|rollout)', 'helm\\s+(install|upgrade)', 'npm\\s+publish',
     'gh\\s+pr\\s+merge', 'gh\\s+release\\s+create', 'gh\\s+(ruleset|secret|repo\\s+edit)\\b', 'gh\\s+api\\b.*(-X|--method)\\s*(?!GET\\b)[A-Z]+', 'git\\s+config\\b.*\\balias\\.',
-    '\\bsdlc\\s+(settle|approve|reject|lane|hotfix|intent|autonomy|trust|distrust|resume|unfreeze|close|gate-command)\\b',
+    '\\bsdlc\\s+(settle|approve|reject|lane|hotfix|intent|autonomy|trust|distrust|resume|unfreeze|close|gate-command|proof-command)\\b',
     // The same verbs through the CLI's terminal path, and the hook fed a prompt by hand, are a person's alone.
-    '\\bsdlc\\.mjs["\']?\\s+(settle|approve|reject|lane|hotfix|intent|autonomy|distrust|resume|unfreeze|close|gate-command)\\b', 'hooks[\\\\/]user-prompt\\.mjs'],
+    '\\bsdlc\\.mjs["\']?\\s+(settle|approve|reject|lane|hotfix|intent|autonomy|distrust|resume|unfreeze|close|gate-command|proof-command)\\b', 'hooks[\\\\/]user-prompt\\.mjs'],
   // Production is touched only by read-only probes: a command matching these must also be a probe.
   prodPatterns: ['\\b(aws|gcloud|az)\\b.*\\bprod(uction)?\\b', 'kubectl\\b.*--context[= ]\\S*prod'],
   // House-style text bans apply to these files. A repo can widen it, for example to "**".
@@ -279,6 +279,20 @@ export function writeState(dir, state) {
   fs.writeFileSync(file, JSON.stringify(state, null, 2) + '\n')
 }
 
+// Where a feature's work lives (unattended-runs R9): the checkout of this repo whose copy of the feature is
+// on the feature's own branch, else any checkout that has it, else dir. A person answering in the main
+// checkout records for the feature in its worktree, and never starts a second copy.
+export function featureDir(dir, feature) {
+  if (!feature || !/^[a-z0-9][a-z0-9-]*$/.test(feature)) return dir
+  const has = d => fs.existsSync(path.join(d, loadConfig(d).specsDir, feature, 'state.json'))
+  const trees = git('worktree list --porcelain', dir).split(/\r?\n\r?\n/).filter(Boolean)
+    .map(b => ({ where: b.match(/^worktree (.+)$/m)?.[1], branch: b.match(/^branch refs\/heads\/(.+)$/m)?.[1] }))
+    .filter(t => t.where && fs.existsSync(t.where) && has(t.where))
+  const own = trees.find(t => t.branch && readState(t.where, feature)?.branch === t.branch)
+  if (own) return path.resolve(own.where)
+  return has(dir) ? dir : trees[0] ? path.resolve(trees[0].where) : dir
+}
+
 export function listFeatures(dir) {
   const specs = path.join(dir, loadConfig(dir).specsDir)
   if (!fs.existsSync(specs)) return []
@@ -346,6 +360,8 @@ export function slicesOf(text) {
     horizon: line.match(/Horizon:\s*(now|next|later)\b/i)?.[1].toLowerCase() ?? 'now',
     enabler: /Kind:\s*enabler\b/i.test(line),
     goesLive: line.match(/Goes live:\s*([^.\n]+)/i)?.[1].trim() ?? '',
+    dependsOn: (line.match(/Depends on:\s*([^.\n]+)/i)?.[1] ?? '').split(',').map(s => s.trim()).filter(s => s && !/^none$/i.test(s)),
+    shipped: /Status:\s*shipped\b/i.test(line),
   }))
 }
 
@@ -380,7 +396,7 @@ export function parseIntent(text) {
 
 // The PRD's "## Intent" section, written from what the person typed, replacing whatever was there.
 export function withIntent(prdText, intent) {
-  const block = `## Intent\n\n<!-- Typed by ${intent.by} on ${intent.at.slice(0, 10)}. Only a person changes it: sdlc intent <feature> change: ...; smallest: ...; drop if: ... -->\n\n${INTENT_PARTS.map(([k, label]) => `- ${label}: ${intent[k]}`).join('\n')}\n`
+  const block = `## Intent\n\n<!-- Typed by ${intent.by} on ${intent.at.slice(0, 10)}${intent.inheritedFrom ? ` for ${intent.inheritedFrom}, and carried over to this slice of the same capability` : ''}. Only a person changes it: sdlc intent <feature> change: ...; smallest: ...; drop if: ... -->\n\n${INTENT_PARTS.map(([k, label]) => `- ${label}: ${intent[k]}`).join('\n')}\n`
   const lines = prdText.replace(/\r\n/g, '\n').split('\n')
   const at = lines.findIndex(l => l.trim() === '## Intent')
   if (at !== -1) {

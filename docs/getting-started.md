@@ -40,15 +40,15 @@ claude plugin update ai-sdlc@arunendapally-aisdlc
 
    The first time, this copies the repo kit in (section 6 lists it) and never overwrites a file that already exists. Then it picks the lane and opens a feature branch.
 
-2. **Set your gate command** in `.ai-sdlc/config.json`: the one command that runs your types, lint and tests, for example `"gateCommand": "npm run gate"`, or for Node's built-in runner `"node --test \"test/**/*.test.mjs\""` (quoted, so node expands it on every shell; on Node 22, `node --test test/` fails: a folder is read as a module). If your tests do not run on Node, set `runtimeCommand` too (for example `"python --version"`). Run it once by hand before the first feature. Agents cannot edit this file, so you do it. Build refuses to pass without it.
+2. **Check your gate command** in `.ai-sdlc/config.json`. In a new repo the first start sets `gateCommand` and `proofCommand` from what the repo holds (a `package.json` test script, `pyproject.toml`, `go.mod`, a .NET project); in a repo that already has a config it proposes them, and you set them in your terminal with `sdlc gate-command <command>` and `sdlc proof-command <command>`. The gate is the one command that runs your types, lint and tests, for example `"gateCommand": "npm run gate"`, or for Node's built-in runner `"node --test \"test/**/*.test.mjs\""` (quoted, so node expands it on every shell; on Node 22, `node --test test/` fails: a folder is read as a module). If your tests do not run on Node, set `runtimeCommand` too (for example `"python --version"`). Run it once by hand before the first feature. Agents cannot edit this file, so you do it. Build refuses to pass without it.
 
-3. **Say what it is for.** Before any spec is written, type your intent in the Claude Code prompt (not a terminal), in your own words:
+3. **Say what it is for.** Before any spec is written, the agent asks you three questions (what changes, the smallest version, what would make you drop it) and you pick or write each answer. You can also type it in the Claude Code prompt (not a terminal):
 
    ```
    sdlc intent saved-items change: shoppers can come back to items they liked; smallest: a save button and a saved list; drop if: under 5% of shoppers save anything in two weeks
    ```
 
-   Only you can type it; agents build to it and show it back to you at every approval.
+   Only you can give it; agents build to it and show it back to you at every approval. A slice of a capability starts with the intent you gave the capability. To run the rest in one request: `/ai-sdlc:run saved-items`.
 
 4. **Answer, and approve when asked.** The agents ask their questions, write the spec, then build and test. On the feature's own branch the spec passes on its checks; when `gateOwners` names you, or the work is not on its branch, you approve by typing in the prompt, and the approval moves the feature on by itself:
 
@@ -108,7 +108,6 @@ The first `/ai-sdlc:start` copied this kit into your repo:
 | `CONSTITUTION.md` | The principles every stage checks against. Edit it to fit your product. |
 | `.claude/rules/ai-sdlc.md` | The rules every agent follows in this repo |
 | `.ai-sdlc/config.json` | Your settings. Agents cannot edit this folder. |
-| `.ai-sdlc/autonomy.json` | Autonomy levels per activity |
 | `knowledge/` | The agents' memory, one Markdown page per subject |
 | `standards/` | Engineering and testing standards, the review checklist, the traps log |
 | `.github/` | Workflows, PR template, CODEOWNERS, the ruleset |
@@ -119,7 +118,7 @@ When more than one person uses it, or before the first release, a human does the
 1. **Name who approves what**, by git user name. Leave a list empty to let anyone at the keyboard approve.
    - `"gateOwners": { "1": ["Product Lead"], "3": ["Architect"], "5": ["Tech Lead"] }`
    - `"trustOwners": ["CTO"]` for who may promote gates, if you turn earned trust on.
-2. **Set your proof command**, so a feature's tests prove they depend on the change (ADR-0002). `sdlc proof` runs it twice on the test files that name the feature's criteria: on your branch, where they must pass, and on the base commit's code, where they must fail. `{files}` becomes the quoted test files. Examples: `"proofCommand": "npx jest {files}"`, `"pytest {files}"`, `"node --test {files}"`. To judge each criterion on its own, also write a JUnit report to `{report}`, for example `"npx jest {files} --reporters=jest-junit"` with `JEST_JUNIT_OUTPUT_FILE={report}`. Without it, Verify only warns and the PR must say under `## Not verified` that the proof did not run. If one level needs tools the proof command lacks (a browser suite), list it in `"proofSkipLevels": ["e2e"]`: the proof leaves those tests to their own run and says which criteria it did not prove.
+2. **Set your proof command**, so a feature's tests prove they depend on the change (ADR-0002). `sdlc proof` runs it twice on the test files that name the feature's criteria: on your branch, where they must pass, and on the base commit's code, where they must fail. `{files}` becomes the quoted test files. Examples: `"proofCommand": "npx jest {files}"`, `"pytest {files}"`, `"node --test {files}"`. To judge each criterion on its own, also write a JUnit report to `{report}`, for example `"npx jest {files} --reporters=jest-junit"` with `JEST_JUNIT_OUTPUT_FILE={report}`. Without it, Verify is refused for a full or light feature, unless you waive the proof for the repo with a reason (`"proofWaived": "<why>"`); then the PR must say under `## Not verified` that the proof did not run. If one level needs tools the proof command lacks (a browser suite), list it in `"proofSkipLevels": ["e2e"]`: the proof leaves those tests to their own run and says which criteria it did not prove.
 3. **Replace the teams** in `.github/CODEOWNERS` with your own.
 4. **Turn on the GitHub ruleset.** This is the real enforcement; the hooks only fail sooner.
 

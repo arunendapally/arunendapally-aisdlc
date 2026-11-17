@@ -56,7 +56,7 @@ export function makeRepo(branch = 'feature/demo') {
     },
     // ADR-0007: on the feature branch Define and Design pass on checks unless gateOwners names a person, so
     // tests keep the person's path by naming the test person; tests of the branch rule pass gateOwners: {}.
-    config: cfg => api.put('.ai-sdlc/config.json', JSON.stringify({ gateOwners: PERSON_GATES, ...cfg })),
+    config: cfg => api.put('.ai-sdlc/config.json', JSON.stringify({ gateOwners: PERSON_GATES, proofWaived: 'a test repo', ...cfg })),
     // Fill a document's sections with content, in the given order.
     fill: (file, headings, extra = '') => api.put(file, headings.map(h => `${h}\n\nFilled.\n`).join('\n') + extra),
     // A bare "origin" holding main, so release checks have a remote to look at.

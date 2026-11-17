@@ -18,7 +18,8 @@
       "leftAt": "2026-11-07T14:20:10.199Z"
     },
     "6": {
-      "enteredAt": "2026-11-07T14:20:10.199Z"
+      "enteredAt": "2026-11-07T14:20:10.199Z",
+      "leftAt": "2026-11-17T09:31:17.953Z"
     }
   },
   "gates": {
@@ -52,7 +53,7 @@
     "brownfield"
   ],
   "capability": "gates-and-names",
-  "updatedAt": "2026-11-07T14:20:10.199Z",
+  "updatedAt": "2026-11-17T09:31:17.958Z",
   "revisions": {
     "1": 1
   },
@@ -115,5 +116,6 @@
     "skills/org-ai-sdlc/templates/adr.md": "84673e437bc75971",
     "templates/repo/docs/adr/0000-template.md": "84673e437bc75971",
     "tests/trace-index.test.mjs": "c312dbf481675c98"
-  }
+  },
+  "closedAt": "2026-11-17T09:31:17.953Z"
 }

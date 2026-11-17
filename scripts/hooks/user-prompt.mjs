@@ -3,11 +3,11 @@
 import fs from 'node:fs'
 import path from 'node:path'
 import { STAGES, root, git, loadConfig, readState, writeState, missingHeadings, isFrozen, createFeature, copyTemplate,
-  readTrust, writeTrust, promotable, readStdin, audit, lessonPaid, overduePostmortems, parseIntent, INTENT_PARTS, runtimePath } from '../lib.mjs'
+  readTrust, writeTrust, promotable, readStdin, audit, lessonPaid, overduePostmortems, parseIntent, INTENT_PARTS, runtimePath, featureDir } from '../lib.mjs'
 import { advanceFeature, gateFingerprint } from '../loop.mjs'
 
 const input = readStdin()
-const dir = root(input.cwd)
+let dir = root(input.cwd)
 const raw = (input.prompt ?? '').replace(/\r\n/g, '\n')
 // Checked on 27 Oct: a subagent's report reaches this hook as a prompt in the parent's session, wrapped
 // in <agent-message>. It is another agent's text, never a person's: it records nothing and releases
@@ -46,6 +46,8 @@ if (!m) {
   process.exit(0)
 }
 const [, verb, feature, stageText, note] = m
+// A decision about a feature is recorded where its work lives (unattended-runs R9), typed or clicked.
+dir = featureDir(dir, feature)
 const who = git('config user.name', dir) || process.env.USERNAME || process.env.USER || 'unknown human'
 
 // Earned autonomy: a human promotes a gate that has earned it, or demotes any gate.

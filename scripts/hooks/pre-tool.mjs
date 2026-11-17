@@ -3,9 +3,10 @@
 // A denial is an answer, not a failed check (ADR-0004, failure F1): each one says so, they are counted
 // per session by the rule that fired, and past denialCap the session may only read until a human types.
 import fs from 'node:fs'
+import os from 'node:os'
 import path from 'node:path'
 import { spawnSync } from 'node:child_process'
-import { STAGES, root, git, loadConfig, isPaused, isProbe, readState, listFeatures, matches, relPath, readStdin, audit, autonomy, runtimePath } from '../lib.mjs'
+import { STAGES, root, git, loadConfig, isPaused, isProbe, readState, listFeatures, matches, relPath, readStdin, audit, autonomy, runtimePath, configFile } from '../lib.mjs'
 import { segments } from '../segments.mjs'
 
 const SECRET = /(AKIA[0-9A-Z]{16}|-----BEGIN [A-Z ]*PRIVATE KEY-----|ghp_[A-Za-z0-9]{36}|github_pat_[A-Za-z0-9_]{40,}|xox[baprs]-[A-Za-z0-9-]{10,}|sk-[A-Za-z0-9_-]{32,})/
@@ -19,6 +20,8 @@ const INSTEAD = {
   'guardrail-file': 'Instead: change feature state through sdlc.mjs; a person edits guardrail files.',
   production: 'Instead: read-only probes (get, list, describe, logs) are allowed.',
   'bug-scope': 'Instead: a version-only bump of package.json is allowed in the bug lane; anything else in that file is a feature.',
+  'start-first': 'Instead: /ai-sdlc:start <what you want> (or sdlc worktree <lane> <slug>), then work in the worktree it opens.',
+  'delete-outside': 'Instead: delete inside the repo you work in, or give the person the command.',
 }
 const ANSWER = 'This is a final answer, not an error: do not retry, rephrase, wrap it in a script or reach for another tool. Give the user the command once if one is needed, then stop.'
 
@@ -42,6 +45,15 @@ const readDenials = () => {
 // bypassPermissions is the person deciding no guard should stop this session (ADR-0006). Only their
 // own pause still does. Every bypassed refusal is audited, so the PR review sees what passed.
 const mode = input.permission_mode
+// A refusal of a read is not counted towards the hold (unattended-runs R2): a large file read whole, by
+// any tool, and a shell command made only of reads. A try at a secret is always counted, so the hold
+// still stops an agent that keeps trying another way in.
+let counts = true
+const ALWAYS_COUNTED = ['secret', 'secrets-file', 'production']
+// Read verbs end at whitespace or the end, so "cat.sh" and "git diff-x" are not reads.
+const READS = /^(cat|grep|rg|head|tail|less|jq|type|ls|stat|wc|Get-Content|Select-String)(?=\s|$)/i
+const SED_PRINT = /^sed\s+-n\s+(['"]?)\d+(,\d+)?p\1(\s+[^\s'"]+)+$/
+const noWrite = t => !/[>`]|\$\(|[<>]\(|<<</.test(t.replace(/(^|[ \t])([12&]?>[ \t]*\/dev\/null|2>&1)(?=[ \t]|$)/g, ' '))
 const decide = (permissionDecision, reason, rule) => {
   if (mode === 'bypassPermissions' && rule !== 'paused') {
     audit(dir, { event: 'pre-tool', tool, decision: 'bypassed', would: permissionDecision, reason, rule, mode, session })
@@ -49,7 +61,8 @@ const decide = (permissionDecision, reason, rule) => {
   }
   audit(dir, { event: 'pre-tool', tool, decision: permissionDecision, reason, rule, session })
   let text = `${reason} (guard: ${rule})${INSTEAD[rule] ? ` ${INSTEAD[rule]}` : ''}`
-  if (permissionDecision === 'deny' && rule !== 'held') {
+  if (permissionDecision === 'deny' && (rule === 'read-slices' || (!counts && !ALWAYS_COUNTED.includes(rule)))) text = `${text} ${ANSWER}`
+  else if (permissionDecision === 'deny' && rule !== 'held') {
     const all = readDenials()
     const mine = all[session] ?? {}
     mine[rule] = (mine[rule] ?? 0) + 1
@@ -123,6 +136,7 @@ const repoAt = p => {
   return git('rev-parse --show-toplevel', p)
 }
 let at = dir
+let cwdNow = input.cwd ?? dir
 const file = WRITES.includes(tool) ? path.resolve(dir, ti.file_path ?? ti.notebook_path ?? '') : ''
 if (file && outside(file)) {
   const other = repoAt(path.dirname(file))
@@ -137,6 +151,7 @@ if (cd) {
   let to = cd[1] ?? cd[2] ?? cd[3]
   if (process.platform === 'win32') to = to.replace(/^\/([a-z])(?=\/|$)/i, '$1:')
   to = path.resolve(input.cwd ?? dir, to)
+  cwdNow = to
   if (outside(to)) at = repoAt(to) || to
 }
 const atCfg = at === dir ? cfg : loadConfig(at)
@@ -159,9 +174,73 @@ const shellWrites = t => {
   if (/^(cp|Copy-Item)$/i.test(w[0])) out.push(w.at(-1))
   return out
 }
+// A one-line program writes whatever it names, out of sight of the checks above (unattended-runs R10): any
+// interpreter, however it is reached (env, VAR=x, a path, a version), fed code by a flag or a heredoc.
+// A path the program builds from pieces is not seen here; the Verify proof's file hashes still catch it.
+const INTERPRETER = /^(?:env\s+)?(?:\w+=\S*\s+)*(?:(?:npx|bunx|pnpm\s+(?:dlx|exec)|yarn\s+dlx)\s+)?(?:\S*[\\/])?(node|deno|bun|python[\d.]*|py|ruby|perl|sh|bash|zsh|pwsh|powershell)(\.exe)?(\s|$)/i
+const inlineProgram = p => INTERPRETER.test(p.text) && (/\s-[a-z]{0,3}[epc](\s|$)/.test(p.text) || /\s(--eval|--print|-Command|eval)(\s|=|$)/i.test(p.text) || p.heredocs.length > 0)
+// What a segment deletes as a tree (unattended-runs R12), as [path, may it be the repo root]. Any deleter the
+// segment names counts, wherever it stands (xargs rm, sudo rm, npx rimraf); one with no path it names
+// deletes what it is fed, which the guard cannot see, so its path is '' and it is refused.
+const DELETERS = ['rm', 'rmdir', 'rd', 'del', 'erase', 'rimraf', 'remove-item', 'ri']
+const toolName = a => a.replace(/^\\/, '').replace(/^.*[\\/]/, '').replace(/\.(exe|cmd)$/i, '').toLowerCase()
+const treeDeletes = t => {
+  const w = (t.trim().match(/"[^"]*"|'[^']*'|\S+/g) ?? []).map(unquote)
+  // find walks a tree: its paths come before its first expression. A name filter means it deletes matches.
+  if (toolName(w[0] ?? '') === 'find' && w.some(a => a === '-delete' || /^-exec(dir)?$/.test(a))) {
+    const end = w.findIndex((a, i) => i > 0 && /^[-(!\\]/.test(a))
+    const paths = w.slice(1, end === -1 ? w.length : end)
+    const filtered = w.some(a => /^-(i?(name|path)|empty)$/.test(a))
+    return (paths.length ? paths : ['.']).map(x => [x, filtered])
+  }
+  // git clean removes what git does not track, in the repo it is pointed at: the root is its usual target.
+  // Mirroring tools delete in their destination; git worktree remove deletes a worktree's folder.
+  const operands = w.filter(a => !a.startsWith('-'))
+  if (toolName(w[0] ?? '') === 'rsync' && w.some(a => /^--del/.test(a))) return [[operands.length > 2 ? operands.at(-1) : '', false]]
+  if (toolName(w[0] ?? '') === 'robocopy' && w.some(a => /^\/(mir|purge)$/i.test(a))) return [[w.filter(a => !a.startsWith('/'))[2] ?? '', false]]
+  if (toolName(w[0] ?? '') === 'git' && w.includes('worktree') && w.includes('remove')) return [[operands[operands.indexOf('remove') + 1] ?? '', false]]
+  if (toolName(w[0] ?? '') === 'git' && w.includes('clean')) return [[w.includes('-C') ? w[w.indexOf('-C') + 1] ?? '' : '.', true]]
+  const at = w.findIndex(a => DELETERS.includes(toolName(a)))
+  if (at === -1) return []
+  const args = w.slice(at + 1)
+  const flag = a => /^-/.test(a) || /^\/[sq]$/i.test(a)
+  const recursive = toolName(w[at]) === 'rimraf' || args.some(a => /^-[fiRrdvI]*[rR][fiRrdvI]*$/.test(a) || /^--rec/.test(a) || /^-r(e(c(u(r(s(e)?)?)?)?)?)?(:\S*)?$/i.test(a) || /^\/s$/i.test(a))
+  if (!recursive) return []
+  const paths = args.filter(a => a && !flag(a))
+  return (paths.length ? paths : ['']).map(x => [x, false])
+}
+// Where a deleted path is, or null when the guard cannot tell (empty, a variable or a tilde form it cannot
+// see, or a Windows path on another system): such a delete is refused.
+const whereIs = (t, base) => {
+  if (!t) return null
+  let p = t.replace(/^(~|\$HOME|\$\{HOME\}|\$env:USERPROFILE|%USERPROFILE%)(?=[\\/]|$)/i, os.homedir())
+  if (/[$`%~]/.test(p)) return null
+  if (process.platform === 'win32') p = p.replace(/^\/([a-z])(?=\/|$)/i, '$1:')
+  else if (/^[A-Za-z]:[\\/]/.test(p)) return null
+  else p = p.replace(/\\/g, '/')
+  return path.resolve(base, p)
+}
+
+// Documents may change anywhere; everything else is code (unattended-runs R11).
+const isDocPath = r => r.startsWith(`${cfg.specsDir}/`) || r.startsWith('docs/') || /\.md$/i.test(r)
+// Code on the protected branch waits for started work (R11), in a repo that runs the plugin and has a
+// first commit. Judged by the checkout the file is in: a worktree nested in the main checkout has its own branch.
+const startFirst = (target, base) => {
+  const full = path.resolve(base, target)
+  const home = repoAt(path.dirname(full)) || at
+  const r = path.relative(home, full).replace(/\\/g, '/')
+  if (r.startsWith('..') || path.isAbsolute(r) || isDocPath(r)) return
+  const b = path.resolve(home) === path.resolve(at) ? branch : git('rev-parse --abbrev-ref HEAD', home)
+  if (!loadConfig(home).protectedBranches.includes(b) || listFeatures(home).some(s => s.branch === b)) return
+  if (fs.existsSync(configFile(home)) && git('rev-parse --verify -q HEAD', home) !== '') deny(`${r} is code on ${b}, where no work is started. Start the work with /ai-sdlc:start <what you want>: it opens a branch in its own worktree, where code can change.`, 'start-first')
+}
 
 if (tool === 'Bash' || tool === 'PowerShell') {
   const c = ti.command ?? ''
+  // Whether the guard knows the folder a segment runs in, from the command up to it: one leading cd is
+  // followed, any other move or a bracket (a subshell) is not.
+  const knownBase = upto => (upto.match(/(^|[\s;&|(])(cd|chdir|pushd|popd|Set-Location|Push-Location|Pop-Location|sl)(?=[\s;&|)]|$)/gi) ?? []).length <= (cd ? 1 : 0) &&
+    !/[()]/.test(upto.replace(/'[^']*'|"[^"]*"/g, ''))
   // Each segment is judged on what it runs (docs/decisions/2026-10-23-bash-guard-targets.md). A heredoc
   // body is data only when a quoted delimiter feeds it to a file write or a commit message; fed to
   // anything else, or unquoted (so $( ) runs), it is code and is judged with its segment. When the
@@ -180,6 +259,19 @@ if (tool === 'Bash' || tool === 'PowerShell') {
   const blankText = t => t.replace(/(\s(?:--body|-b|--title|-t)\s+)('[^']*'|"(?:[^"\\$`]|\\.)*")/g, '$1""')
   const code = p => (ghText(p) ? blankText(p.text) : isData(p) ? p.text : [p.text, ...p.heredocs.map(h => h.body)].join('\n'))
   const scan = parts.filter(ghText).reduce((t, p) => t.replace(p.text, blankText(p.text)), c)
+  // A segment that only reads (unattended-runs R1): a read verb, no redirect, substitution or heredoc.
+  // Naming a person's command or the prompt hook in a search or a cat is not running it.
+  // A read verb can still run code from its own arguments (pre-review F1): a PowerShell group "(cmd)" or
+  // script block "{cmd}", rg's --pre and --hostname-bin, less +!cmd. So a read is an allowlist, not a list
+  // of tricks: outside quotes only names, paths, globs and options, and none of the options that run a
+  // program or write a file (git takes any unique prefix of --output).
+  const bare = t => t.replace(/(^|[ \t])([12&]?>[ \t]*\/dev\/null|2>&1)(?=[ \t]|$)/g, ' ').replace(/'[^']*'|"[^"$`\\]*"/g, '')
+  const runsCode = t => !/^[\w\s./\\:=,@%+*?~^-]*$/.test(bare(t)) || /\s--(pre|hostname-bin|ou[a-z-]*)\b/.test(t) || /^less\b.*\s\+/i.test(t)
+  const readOnly = p => !p.unsure && !p.heredocs.length && noWrite(p.text) && !runsCode(p.text) &&
+    (READS.test(p.text) || /^git\s+(status|diff|log|show)(?=\s|$)/.test(p.text) || SED_PRINT.test(p.text))
+  // Only a command whose every segment reads: one read piped into anything else is judged whole, as before.
+  const allReads = parts.every(readOnly)
+  counts = !allReads
 
   // A push is judged on its own arguments: a protected branch in any form, a +refspec, a force flag.
   const protectedRef = new RegExp(atCfg.protectedBranches.map(b => `(?:^|[\\s:/+])${b}(?:\\s|$|["')])`).join('|'))
@@ -205,7 +297,7 @@ if (tool === 'Bash' || tool === 'PowerShell') {
   if (onProtected && /\bgit\s+(commit|merge|rebase|cherry-pick|reset)\b/.test(c) && git('rev-parse --verify -q HEAD', at) !== '') deny(`You are on ${branch}. Work on a feature branch in its own worktree.`, 'commit-protected')
   // A person may let agents run a command the guard would hand back: "bashAllow" patterns in the config.
   const allowed = (cfg.bashAllow ?? []).map(a => new RegExp(a, 'i'))
-  const human = allowed.length ? parts.filter(p => !allowed.some(a => a.test(p.text))).map(code).join('\n') : scan
+  const human = allReads ? '' : allowed.length ? parts.filter(p => !allowed.some(a => a.test(p.text))).map(code).join('\n') : scan
   for (const p of cfg.deployPatterns) {
     if (new RegExp(p, 'i').test(human)) deny(`"${c.slice(0, 60)}" merges, deploys, changes settings or records a human decision. A human runs it.`, 'human-action')
   }
@@ -220,7 +312,7 @@ if (tool === 'Bash' || tool === 'PowerShell') {
   const guardrail = /(state\.json|\.ai-sdlc|PAUSED|BUDGET_FROZEN|(^|[^\w.-])settings(\.local)?\.json|\.github[\\/]workflows|CODEOWNERS)/i
   // Sending output to /dev/null, or stderr to stdout, writes no file (finding G1 of the unit-converter
   // run). Exact bytes only: ASCII space or tab around it, lower case. Process substitution runs code.
-  const plain = t => !/[>`]|\$\(|[<>]\(/.test(t.replace(/<<-?\s*'\w+'/g, '').replace(/(^|[ \t])([12&]?>[ \t]*\/dev\/null|2>&1)(?=[ \t]|$)/g, ' '))
+  const plain = t => noWrite(t.replace(/<<-?\s*'\w+'/g, ''))
   const exempt = p => {
     if (p.unsure || !quotedOnly(p)) return false
     const t = p.text
@@ -228,13 +320,29 @@ if (tool === 'Bash' || tool === 'PowerShell') {
     if (/^node\s+("[^"]*sdlc\.mjs"|\S*sdlc\.mjs)(\s+[\w.=-]+)*\s*$/.test(t)) return true
     if (!plain(t)) return false
     if (/^git\s+(add|commit|status|diff|log|show)\b/.test(t)) return true
-    if (/^sed\s+-n\s+(['"]?)\d+(,\d+)?p\1(\s+[^\s'"]+)+$/.test(t)) return true
-    return /^(cat|grep|rg|head|tail|less|jq|type|ls|stat|wc|Get-Content|Select-String)\b/i.test(t) && !/\s--pre\b/.test(t) && !p.heredocs.length
+    if (SED_PRINT.test(t)) return true
+    return READS.test(t) && !/\s--pre\b/.test(t) && !p.heredocs.length
   }
   for (const p of parts) {
     const target = writeTarget(p)
     if (target) testLock(target)
     for (const t of shellWrites(p.text)) testLock(t)
+    if (onProtected) for (const t of [target, ...shellWrites(p.text)].filter(t => t && !t.startsWith('-') && !/^(\/dev\/null|nul|\$null)$/i.test(t))) startFirst(t, cwdNow)
+    if (inlineProgram(p)) {
+      // Any run of slashes or backslashes reads as one, so an escaped Windows path is still the same file.
+      const program = [p.text, ...p.heredocs.map(h => h.body)].join('\n').replace(/[\\/]+/g, '/').toLowerCase()
+      const hit = locked.find(f => program.includes(f.toLowerCase()))
+      if (hit) testLock(hit)
+    }
+    for (const [t, rootOk] of treeDeletes(p.text)) {
+      // Judged against the session's repo, never one a cd points at: deleting cannot be undone. Its root and
+      // its history are the person's too. Where the command may have moved (a later cd, pushd, a subshell),
+      // the guard cannot tell where the path is.
+      const where = knownBase(c.slice(0, Math.max(0, c.indexOf(p.text))) + p.text) ? whereIs(t, cwdNow) : null
+      const r = where && path.relative(dir, where).replace(/\\/g, '/')
+      const own = where && !r.startsWith('..') && !path.isAbsolute(r) && (r !== '' || rootOk) && !/^\.git(\/|$)/.test(r)
+      if (!own) deny(`"${c.slice(0, 60)}" deletes ${t || 'what it is fed'}, ${where ? 'which is this repo itself, its history or a folder outside it' : 'a path the guard cannot resolve'} (${dir}). Agents delete trees only inside the repo they work in.`, 'delete-outside')
+    }
     if (target && (matches(target, cfg.denyPaths) || matches(target, cfg.askPaths))) deny(`${target} is a guardrail, CI or ownership file: a shell write to it is never allowed. Use the Write tool, which asks a human.`, 'guardrail-command')
     if (guardrail.test(code(p)) && !exempt(p)) deny('Commands may not touch feature state, guardrails, settings, CI or ownership files. To read a feature\'s state, run "sdlc status <feature> --json" or use the Read tool. Otherwise use sdlc.mjs, or ask a human.', 'guardrail-command')
   }
@@ -287,8 +395,9 @@ if (prd) {
 
 // Code on a feature branch waits until the feature reaches Build.
 const feature = listFeatures(dir).find(s => s.branch === branch)
-const isDoc = rel.startsWith(`${cfg.specsDir}/`) || rel.startsWith('docs/') || rel.endsWith('.md')
+const isDoc = isDocPath(rel)
 if (feature && feature.stage < 4 && !isDoc) deny(`${feature.feature} is at ${STAGES[feature.stage].name}. Code waits for Build.`, 'code-before-build')
+if (onProtected) startFirst(file, dir)
 // A bug fix may carry its version bump (issue #62, item 2): an Edit that changes only the "version" line.
 const VERSION = /^\s*"version"\s*:\s*"[^"\n]+",?\s*$/
 const versionOnly = tool === 'Edit' && /package\.json$/.test(rel) && VERSION.test(ti.old_string ?? '') && VERSION.test(ti.new_string ?? '')
