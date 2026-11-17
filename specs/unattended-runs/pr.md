@@ -55,3 +55,5 @@ None, because the change has no screen and no journey to explore; the guard was 
 - [x] Pre-review has no open findings
 - [x] Not verified is honest
 - N/A: the PR is raised by "sdlc pr" from feature/unattended-runs straight after this gate passes, so it cannot exist while the gate runs
+
+🤖 Generated with [Claude Code](https://claude.com/claude-code)
