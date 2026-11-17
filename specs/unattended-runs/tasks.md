@@ -54,6 +54,9 @@ The arguable choice: an agent-run setup writes the gate command. It comes from a
 - [x] T13 [R13] files: templates/repo/.ai-sdlc/autonomy.json, docs/getting-started.md, tests/unattended-runs-edges.test.mjs test: AC-17 depends-on: [] Remove the autonomy levels file nothing reads.
   - done when: AC-17 passes. The file is a guardrail path, so a person removes it.
   - traps: none
+- [x] T14 [R14] files: scripts/sdlc.mjs, tests/gate-state.test.mjs test: AC-18 depends-on: [] Read the feature's record again after a gate run, before writing it.
+  - done when: AC-18 passes; a run whose feature moved stage meanwhile records nothing.
+  - traps: none
 
 ## Definition of done
 

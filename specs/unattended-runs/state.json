@@ -29,7 +29,7 @@
   },
   "retries": {},
   "kinds": [],
-  "updatedAt": "2026-11-17T14:23:09.789Z",
+  "updatedAt": "2026-11-17T14:47:07.825Z",
   "intent": {
     "change": "Less human intervention",
     "smallest": "Top four findings fixed",
@@ -43,9 +43,9 @@
   "gateRuns": {
     "4": {
       "ok": true,
-      "count": 331,
-      "at": "2026-11-13T01:40:58.546Z",
-      "tree": "8c4dc0ad89c9d95a",
+      "count": 349,
+      "at": "2026-11-17T14:47:07.050Z",
+      "tree": "594db2abbbcf9f68",
       "runs": 1,
       "runtime": "v24.19.0"
     },
@@ -58,7 +58,7 @@
       "runtime": "v24.19.0"
     }
   },
-  "baseline": 344,
+  "baseline": 349,
   "baselineRuntime": "v24.19.0",
   "proofBase": "a13d05174f3a2409bd2dcd2a7ae6690d5c200bf4",
   "sizeChecked": 95,
