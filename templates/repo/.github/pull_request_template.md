@@ -65,4 +65,4 @@ AC-3 (e2e): the live page shows the new price -->
 <!-- Tick each item ("- [x]") once done, or write "- N/A: <reason>". The gate refuses an open item or a bare N/A. -->
 - [ ] Pre-review has no open findings
 - [ ] Not verified is honest
-- [ ] PR raised from the feature branch
+- [ ] Work committed on the feature branch

@@ -1,0 +1,73 @@
+{
+  "feature": "pr-checklist-before-pr",
+  "lane": "task",
+  "stage": 5,
+  "branch": "task/pr-checklist-before-pr",
+  "createdAt": "2026-11-18T12:10:46.879Z",
+  "stages": {
+    "4": {
+      "enteredAt": "2026-11-18T12:10:46.879Z",
+      "leftAt": "2026-11-18T14:30:17.208Z"
+    },
+    "5": {
+      "enteredAt": "2026-11-18T14:30:17.208Z",
+      "leftAt": "2026-11-18T14:30:27.561Z"
+    }
+  },
+  "gates": {
+    "4": {
+      "status": "approved",
+      "by": "checks: checks (gate green, small diff)",
+      "requestedAt": "2026-11-18T14:30:16.352Z",
+      "approvedAt": "2026-11-18T14:30:16.352Z",
+      "auto": true,
+      "fingerprint": "e14e47df8c6a9152"
+    },
+    "5": {
+      "status": "approved",
+      "by": "checks: checks (gate green, review clean)",
+      "requestedAt": "2026-11-18T14:30:25.577Z",
+      "approvedAt": "2026-11-18T14:30:25.577Z",
+      "auto": true,
+      "fingerprint": "e14e47df8c6a9152"
+    }
+  },
+  "retries": {},
+  "kinds": [],
+  "updatedAt": "2026-11-18T14:30:27.562Z",
+  "gateRuns": {
+    "4": {
+      "ok": true,
+      "count": 349,
+      "at": "2026-11-18T14:28:53.285Z",
+      "tree": "f8ac9c7fc6e6723d",
+      "runs": 1,
+      "runtime": "v24.19.0"
+    }
+  },
+  "baseline": 349,
+  "baselineRuntime": "v24.19.0",
+  "proofBase": "58170099d34205a253c5c3d4c980e83e25d9bf05",
+  "sizeChecked": 0,
+  "riskTier": "high",
+  "lastPacketHead": "4aff837",
+  "ledgerIds": [],
+  "reviewedSha": "4aff83726f986d6f0986a226ac8f4a6ad5bc1711",
+  "reviewedFiles": [
+    ".github/pull_request_template.md",
+    "changelog.d/pr-checklist-before-pr.md",
+    "skills/org-ai-sdlc/templates/pr.md",
+    "specs/pr-checklist-before-pr/state.json",
+    "specs/pr-checklist-before-pr/task.md",
+    "templates/repo/.github/pull_request_template.md",
+    "specs/pr-checklist-before-pr/review-packet.md",
+    "specs/pr-checklist-before-pr/review.md"
+  ],
+  "reviewedHashes": {
+    ".github/pull_request_template.md": "073ed50343527f95",
+    "changelog.d/pr-checklist-before-pr.md": "48d95b01369305f5",
+    "skills/org-ai-sdlc/templates/pr.md": "073ed50343527f95",
+    "templates/repo/.github/pull_request_template.md": "073ed50343527f95"
+  },
+  "closedAt": "2026-11-18T14:30:27.561Z"
+}
