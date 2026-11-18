@@ -250,6 +250,8 @@ const goBack = (state, [back, name, what], cfg = loadConfig(dir)) => {
   const now = new Date().toISOString()
   state.stages[state.stage] = { ...state.stages[state.stage], leftAt: now }
   for (const s of Object.keys(state.gates)) if (Number(s) >= back) delete state.gates[s]
+  // Gate runs on the old version go too: a stale Verify count would read as below the baseline.
+  for (const s of Object.keys(state.gateRuns ?? {})) if (Number(s) >= back) delete state.gateRuns[s]
   state.stage = back
   state.stages[back] = { enteredAt: now }
   writeState(dir, state)

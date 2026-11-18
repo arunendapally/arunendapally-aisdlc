@@ -1,0 +1,16 @@
+{
+  "feature": "amend-drops-gate-runs",
+  "lane": "bug",
+  "stage": 4,
+  "branch": "bug/amend-drops-gate-runs",
+  "createdAt": "2026-11-18T12:09:23.541Z",
+  "stages": {
+    "4": {
+      "enteredAt": "2026-11-18T12:09:23.541Z"
+    }
+  },
+  "gates": {},
+  "retries": {},
+  "kinds": [],
+  "updatedAt": "2026-11-18T12:09:23.553Z"
+}
