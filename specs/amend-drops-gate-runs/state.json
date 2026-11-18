@@ -1,0 +1,90 @@
+{
+  "feature": "amend-drops-gate-runs",
+  "lane": "bug",
+  "stage": 5,
+  "branch": "bug/amend-drops-gate-runs",
+  "createdAt": "2026-11-18T12:09:23.541Z",
+  "stages": {
+    "4": {
+      "enteredAt": "2026-11-18T12:09:23.541Z",
+      "leftAt": "2026-11-18T14:29:19.135Z"
+    },
+    "5": {
+      "enteredAt": "2026-11-18T14:29:19.135Z",
+      "leftAt": "2026-11-18T14:29:30.979Z"
+    }
+  },
+  "gates": {
+    "4": {
+      "status": "approved",
+      "by": "checks: checks (repro red, gate green, small diff)",
+      "requestedAt": "2026-11-18T14:29:18.112Z",
+      "approvedAt": "2026-11-18T14:29:18.112Z",
+      "auto": true,
+      "fingerprint": "6361c77b5a1cd886"
+    },
+    "5": {
+      "status": "approved",
+      "by": "checks: checks (gate green, review clean)",
+      "requestedAt": "2026-11-18T14:29:28.117Z",
+      "approvedAt": "2026-11-18T14:29:28.117Z",
+      "auto": true,
+      "fingerprint": "6361c77b5a1cd886"
+    }
+  },
+  "retries": {},
+  "kinds": [],
+  "updatedAt": "2026-11-18T14:29:30.979Z",
+  "proof": {
+    "ok": true,
+    "problems": [],
+    "base": "5817009",
+    "files": {
+      "tests/amend-drops-gate-runs.test.mjs": "2e329a8fcfacbb33"
+    },
+    "acs": [
+      "the repro"
+    ],
+    "perTest": false,
+    "at": "2026-11-18T12:10:00.004Z"
+  },
+  "lock": {
+    "files": {
+      "tests/amend-drops-gate-runs.test.mjs": "2e329a8fcfacbb33"
+    },
+    "at": "2026-11-18T12:10:00.004Z"
+  },
+  "gateRuns": {
+    "4": {
+      "ok": true,
+      "count": 350,
+      "at": "2026-11-18T14:28:08.873Z",
+      "tree": "b6eb5be0694a517b",
+      "runs": 1,
+      "runtime": "v24.19.0"
+    }
+  },
+  "baseline": 350,
+  "baselineRuntime": "v24.19.0",
+  "proofBase": "58170099d34205a253c5c3d4c980e83e25d9bf05",
+  "sizeChecked": 2,
+  "riskTier": "medium",
+  "lastPacketHead": "c04f061",
+  "ledgerIds": [],
+  "reviewedSha": "c04f0612b545a01a321407a250e11e75f6dc16a7",
+  "reviewedFiles": [
+    "changelog.d/amend-drops-gate-runs.md",
+    "scripts/sdlc.mjs",
+    "specs/amend-drops-gate-runs/bug.md",
+    "specs/amend-drops-gate-runs/state.json",
+    "tests/amend-drops-gate-runs.test.mjs",
+    "specs/amend-drops-gate-runs/review-packet.md",
+    "specs/amend-drops-gate-runs/review.md"
+  ],
+  "reviewedHashes": {
+    "changelog.d/amend-drops-gate-runs.md": "0f5df71a22ae143d",
+    "scripts/sdlc.mjs": "e336da472d39474d",
+    "tests/amend-drops-gate-runs.test.mjs": "2e329a8fcfacbb33"
+  },
+  "closedAt": "2026-11-18T14:29:30.979Z"
+}
