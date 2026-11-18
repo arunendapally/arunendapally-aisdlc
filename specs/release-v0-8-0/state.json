@@ -1,0 +1,16 @@
+{
+  "feature": "release-v0-8-0",
+  "lane": "task",
+  "stage": 4,
+  "branch": "release/v0.8.0",
+  "createdAt": "2026-11-18T04:20:55.362Z",
+  "stages": {
+    "4": {
+      "enteredAt": "2026-11-18T04:20:55.362Z"
+    }
+  },
+  "gates": {},
+  "retries": {},
+  "kinds": [],
+  "updatedAt": "2026-11-18T04:20:55.363Z"
+}
