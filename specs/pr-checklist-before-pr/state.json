@@ -1,0 +1,16 @@
+{
+  "feature": "pr-checklist-before-pr",
+  "lane": "task",
+  "stage": 4,
+  "branch": "task/pr-checklist-before-pr",
+  "createdAt": "2026-11-18T12:10:46.879Z",
+  "stages": {
+    "4": {
+      "enteredAt": "2026-11-18T12:10:46.879Z"
+    }
+  },
+  "gates": {},
+  "retries": {},
+  "kinds": [],
+  "updatedAt": "2026-11-18T12:10:46.881Z"
+}

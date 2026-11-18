@@ -1,0 +1,1 @@
+- **The PR checklist asks only what holds before the PR** (pr-checklist-before-pr). The definition of done in `pr.md` and the PR templates asks for "Work committed on the feature branch" instead of "PR raised from the feature branch", which Verify checked before `sdlc pr` raises the PR.
