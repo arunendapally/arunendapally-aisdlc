@@ -25,12 +25,20 @@ None, because no script, hook or check changes: only one line of template text, 
 
 ## Test results
 
-<!-- filled from the gate run on this commit -->
+Suite: 349 passed, 0 failed (baseline 349), from "sdlc gate pr-checklist-before-pr"
+Gate: green, golden evals F1 to F5 caught, PR size 0 of 200 code lines
+Removed, skipped or quarantined: none
 
 ## Pre-review
 
-<!-- written after the gate -->
+Risk: high, because .github/pull_request_template.md is under .github/, though the change is one line of template text in each of three files
+Open findings: 0
+Look here first: skills/org-ai-sdlc/templates/pr.md:68 (is "Work committed on the feature branch" the item you want, or should the line go?)
+Lenses run: correctness, docs accuracy (tech lead, no subagent: 3 lines)
+Revert: git revert of the merge commit; no data to back out
+Checked mechanically: the three templates stay identical (tests/review.test.mjs:176 in the gate); no other file in skills, templates, agents or docs says "PR raised"; no em dashes in the diff
+Could not check: PRs already open from the old template keep the old item
 
 ## Not verified
 
-<!-- filled after the gate -->
+PRs already open from the old template keep the old item; nothing rewrites them.
