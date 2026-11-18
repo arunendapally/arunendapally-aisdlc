@@ -12,5 +12,18 @@
   "gates": {},
   "retries": {},
   "kinds": [],
-  "updatedAt": "2026-11-18T04:20:55.363Z"
+  "updatedAt": "2026-11-18T04:45:54.528Z",
+  "gateRuns": {
+    "4": {
+      "ok": true,
+      "count": 349,
+      "at": "2026-11-18T04:45:50.969Z",
+      "tree": "727cd927f5cbf5dd",
+      "runs": 1,
+      "runtime": "v24.19.0"
+    }
+  },
+  "baseline": 349,
+  "baselineRuntime": "v24.19.0",
+  "proofBase": "58170099d34205a253c5c3d4c980e83e25d9bf05"
 }
