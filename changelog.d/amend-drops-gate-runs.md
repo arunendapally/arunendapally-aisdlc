@@ -1,0 +1,1 @@
+- **Fixed: going back to Define or Design drops the old gate runs** (amend-drops-gate-runs). `sdlc amend`, or a spec or design drift, now drops the Build and Verify gate runs with their approvals, so Verify no longer reads an old run's count as below a baseline the new Build raised. Test in `tests/amend-drops-gate-runs.test.mjs`.
