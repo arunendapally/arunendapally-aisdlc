@@ -31,12 +31,22 @@ changelog.d/amend-drops-gate-runs.md: the changelog fragment.
 
 ## Test results
 
-<!-- filled from the gate run on this commit -->
+Repro: tests/amend-drops-gate-runs.test.mjs red on the base (5817009), green on this commit ("sdlc proof amend-drops-gate-runs" passed)
+Suite: 350 passed, 0 failed (baseline 350), from "sdlc gate amend-drops-gate-runs"
+Gate: green, golden evals F1 to F5 caught, PR size 2 of 200 code lines
+Removed, skipped or quarantined: none
 
 ## Pre-review
 
-<!-- written after the gate -->
+Risk: medium, because it changes code (scripts/sdlc.mjs) and touches no high-risk path
+Open findings: 0
+Look here first: scripts/sdlc.mjs:252 (dropping the Build run too means a red run after going back reads as red-first, not a regression; is that what you want?)
+Lenses run: correctness, tests (tech lead, no subagent: 2 code lines)
+Revert: git revert of the merge commit; no data to back out. Features already sent back keep their stale runs until the gate runs again.
+Checked mechanically: goBack is the only path that moves a feature back by drift or amend (scripts/sdlc.mjs:249, called at 502 and 755); the reopen path at 488 already drops the Verify run; the baseline is untouched, so the ratchet holds; the proof failed on 5817009 and passes here
+Could not check: a feature mid-flight in another repo that went back before this fix
 
 ## Not verified
 
-<!-- filled after the gate -->
+A feature in another repo that went back before this fix keeps its stale gate runs until its gate runs again.
+The trap line under Root cause is not added to standards/traps.md.

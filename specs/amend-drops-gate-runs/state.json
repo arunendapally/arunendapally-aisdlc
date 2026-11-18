@@ -12,5 +12,37 @@
   "gates": {},
   "retries": {},
   "kinds": [],
-  "updatedAt": "2026-11-18T12:09:23.553Z"
+  "updatedAt": "2026-11-18T14:28:11.818Z",
+  "proof": {
+    "ok": true,
+    "problems": [],
+    "base": "5817009",
+    "files": {
+      "tests/amend-drops-gate-runs.test.mjs": "2e329a8fcfacbb33"
+    },
+    "acs": [
+      "the repro"
+    ],
+    "perTest": false,
+    "at": "2026-11-18T12:10:00.004Z"
+  },
+  "lock": {
+    "files": {
+      "tests/amend-drops-gate-runs.test.mjs": "2e329a8fcfacbb33"
+    },
+    "at": "2026-11-18T12:10:00.004Z"
+  },
+  "gateRuns": {
+    "4": {
+      "ok": true,
+      "count": 350,
+      "at": "2026-11-18T14:28:08.873Z",
+      "tree": "b6eb5be0694a517b",
+      "runs": 1,
+      "runtime": "v24.19.0"
+    }
+  },
+  "baseline": 350,
+  "baselineRuntime": "v24.19.0",
+  "proofBase": "58170099d34205a253c5c3d4c980e83e25d9bf05"
 }
