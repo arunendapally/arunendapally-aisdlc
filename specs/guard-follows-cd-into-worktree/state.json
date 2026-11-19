@@ -1,18 +1,40 @@
 {
   "feature": "guard-follows-cd-into-worktree",
   "lane": "bug",
-  "stage": 4,
+  "stage": 5,
   "branch": "bug/guard-follows-cd-into-worktree",
   "createdAt": "2026-11-19T08:13:46.495Z",
   "stages": {
     "4": {
-      "enteredAt": "2026-11-19T08:13:46.495Z"
+      "enteredAt": "2026-11-19T08:13:46.495Z",
+      "leftAt": "2026-11-19T08:23:17.320Z"
+    },
+    "5": {
+      "enteredAt": "2026-11-19T08:23:17.320Z",
+      "leftAt": "2026-11-19T08:23:22.021Z"
     }
   },
-  "gates": {},
+  "gates": {
+    "4": {
+      "status": "approved",
+      "by": "checks: checks (repro red, gate green, small diff)",
+      "requestedAt": "2026-11-19T08:23:16.972Z",
+      "approvedAt": "2026-11-19T08:23:16.972Z",
+      "auto": true,
+      "fingerprint": "00baf429a113b3ee"
+    },
+    "5": {
+      "status": "approved",
+      "by": "checks: checks (gate green, review clean)",
+      "requestedAt": "2026-11-19T08:23:21.275Z",
+      "approvedAt": "2026-11-19T08:23:21.275Z",
+      "auto": true,
+      "fingerprint": "00baf429a113b3ee"
+    }
+  },
   "retries": {},
   "kinds": [],
-  "updatedAt": "2026-11-19T08:22:55.038Z",
+  "updatedAt": "2026-11-19T08:23:22.021Z",
   "proof": {
     "ok": true,
     "problems": [],
@@ -44,5 +66,25 @@
   },
   "baseline": 351,
   "baselineRuntime": "v24.19.0",
-  "proofBase": "34890617a0c31441cf8529eef498545f07d7461e"
+  "proofBase": "34890617a0c31441cf8529eef498545f07d7461e",
+  "sizeChecked": 4,
+  "riskTier": "medium",
+  "lastPacketHead": "d9a5186",
+  "ledgerIds": [],
+  "reviewedSha": "d9a5186175adb6cdc29db86ccb534ce472361f98",
+  "reviewedFiles": [
+    "changelog.d/guard-follows-cd-into-worktree.md",
+    "scripts/hooks/pre-tool.mjs",
+    "specs/guard-follows-cd-into-worktree/bug.md",
+    "specs/guard-follows-cd-into-worktree/state.json",
+    "tests/guard-follows-cd-into-worktree.test.mjs",
+    "specs/guard-follows-cd-into-worktree/review-packet.md",
+    "specs/guard-follows-cd-into-worktree/review.md"
+  ],
+  "reviewedHashes": {
+    "changelog.d/guard-follows-cd-into-worktree.md": "17f9767bb189445f",
+    "scripts/hooks/pre-tool.mjs": "6bc8b02a08680a8d",
+    "tests/guard-follows-cd-into-worktree.test.mjs": "5688f9d514a62fad"
+  },
+  "closedAt": "2026-11-19T08:23:22.021Z"
 }
