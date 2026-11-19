@@ -31,7 +31,10 @@ changelog.d/guard-follows-cd-into-worktree.md: the changelog fragment.
 
 ## Test results
 
-<!-- filled from the gate run on this commit -->
+Repro: tests/guard-follows-cd-into-worktree.test.mjs red on the base (3489061), green on this commit ("sdlc proof guard-follows-cd-into-worktree" passed)
+Suite: 351 passed, 0 failed (baseline 351), from "sdlc gate guard-follows-cd-into-worktree"
+Gate: green, golden evals caught, PR size 4 of 200 code lines
+Removed, skipped or quarantined: none
 
 ## Pre-review
 
@@ -45,4 +48,6 @@ Could not check: a cd written as PowerShell Set-Location into a worktree, live (
 
 ## Not verified
 
-<!-- filled after the gate -->
+A live subagent commit from a main-checkout session: only the hook test ran, since the installed plugin (0.8.0) predates this fix.
+PowerShell Set-Location into a worktree: covered by the same regex, not run.
+The trap line under Root cause is not added to standards/traps.md.

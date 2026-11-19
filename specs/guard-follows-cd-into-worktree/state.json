@@ -12,5 +12,37 @@
   "gates": {},
   "retries": {},
   "kinds": [],
-  "updatedAt": "2026-11-19T08:13:46.497Z"
+  "updatedAt": "2026-11-19T08:22:55.038Z",
+  "proof": {
+    "ok": true,
+    "problems": [],
+    "base": "3489061",
+    "files": {
+      "tests/guard-follows-cd-into-worktree.test.mjs": "5688f9d514a62fad"
+    },
+    "acs": [
+      "the repro"
+    ],
+    "perTest": false,
+    "at": "2026-11-19T08:14:43.199Z"
+  },
+  "lock": {
+    "files": {
+      "tests/guard-follows-cd-into-worktree.test.mjs": "5688f9d514a62fad"
+    },
+    "at": "2026-11-19T08:14:43.199Z"
+  },
+  "gateRuns": {
+    "4": {
+      "ok": true,
+      "count": 351,
+      "at": "2026-11-19T08:22:54.474Z",
+      "tree": "494cc7b14efa1521",
+      "runs": 1,
+      "runtime": "v24.19.0"
+    }
+  },
+  "baseline": 351,
+  "baselineRuntime": "v24.19.0",
+  "proofBase": "34890617a0c31441cf8529eef498545f07d7461e"
 }
