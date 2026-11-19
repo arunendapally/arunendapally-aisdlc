@@ -1,0 +1,16 @@
+{
+  "feature": "guard-follows-cd-into-worktree",
+  "lane": "bug",
+  "stage": 4,
+  "branch": "bug/guard-follows-cd-into-worktree",
+  "createdAt": "2026-11-19T08:13:46.495Z",
+  "stages": {
+    "4": {
+      "enteredAt": "2026-11-19T08:13:46.495Z"
+    }
+  },
+  "gates": {},
+  "retries": {},
+  "kinds": [],
+  "updatedAt": "2026-11-19T08:13:46.497Z"
+}

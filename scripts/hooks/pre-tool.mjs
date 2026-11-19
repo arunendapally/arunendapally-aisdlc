@@ -152,7 +152,9 @@ if (cd) {
   if (process.platform === 'win32') to = to.replace(/^\/([a-z])(?=\/|$)/i, '$1:')
   to = path.resolve(input.cwd ?? dir, to)
   cwdNow = to
-  if (outside(to)) at = repoAt(to) || to
+  // A worktree nested in this checkout (.claude/worktrees/<slug>) has its own branch: judge that one.
+  const top = repoAt(to)
+  if (outside(to) || (top && path.resolve(top) !== path.resolve(dir))) at = top || to
 }
 const atCfg = at === dir ? cfg : loadConfig(at)
 const branch = git('rev-parse --abbrev-ref HEAD', at)
