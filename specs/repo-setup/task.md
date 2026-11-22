@@ -24,9 +24,16 @@ Removed, skipped or quarantined: none
 
 ## Pre-review
 
-Pending.
+Risk: high, because every change is under .github (CI, owners and the branch ruleset), a path that always needs a person.
+Open findings: 0 (nits left open: F7, F8)
+Look here first: .github/scripts/check-gates.mjs:34 (F3: gate-approvals needs an approver who is not the author, so it is red on every PR in a one-person repo; second reviewer or a different rule is your call), .github/rulesets/main.json:10 (required_signatures: none of this branch's commits are signed, so only a GitHub-side squash merge would pass), .github/rulesets/main.json:15 (require_code_owner_review and require_last_push_approval: with you as the only owner and author, no PR can merge without an admin bypass once the ruleset is applied and F6 names a real owner)
+Lenses run: correctness, simplicity, security, operability (tests: no test changes; the scripts are exact template copies covered by the plugin's own suite)
+Revert: git revert of the merge commit; no data to back out. If .github/rulesets/main.json was applied to GitHub, delete that ruleset first, or every PR stays blocked on checks that no longer exist.
+Checked mechanically: every kit file equals templates/repo except the three changes the PR names; pr-body passes on this body (task lane reads as full: Summary, Test results, Pre-review, Not verified); pr-size counts 353 changed lines against the CI limit of 400 (the local gate counts 0 because kit copies are excluded); gate-approvals finds gate 4 approved in specs/repo-setup/state.json, then fails on reviews (F3); gitleaks needs no licence on a personal account and no secret patterns appear in the branch's commits; dependency-review has no lock file to diff; publish-docs skips (CONFLUENCE_BASE_URL unset); review-sla runs only from main; tests-and-golden-evals is the job name in evals.yml, so the ruleset context resolves; permissions are read-only on PR events, untrusted PR fields reach scripts only through env, no pull_request_target; F1 and F2 pass the ledger rules at d414069 (a fixed row may name the file its fix removed).
+Could not check: how the workflows actually behave on GitHub (they have not run; F4 is read from the actions' source on their default branches, not the pinned v2 and v4 tags); whether a GitHub-side squash merge satisfies required_signatures for this repo; actions are pinned by major tag, not commit SHA, as in evals.yml.
 
 ## Not verified
 
-The new GitHub workflows have not run on GitHub yet; they run on this PR.
-.github/rulesets/main.json is a file only: applying it to GitHub is a person's step.
+The new GitHub workflows have not run on GitHub yet; they run on this PR. F4 (secrets and dependencies failing on a review event) is read from the actions' source, not seen in a run.
+.github/rulesets/main.json is a file only: applying it to GitHub is a person's step, and with one person it blocks every merge without an admin bypass (F3, F6, required_signatures, require_code_owner_review).
+review-sla.yml and publish-docs.yml run only from main, so this PR does not exercise them.

@@ -4,6 +4,7 @@
 name: ai-sdlc
 on:
   pull_request:
+    types: [opened, synchronize, reopened, edited]
   pull_request_review:
     types: [submitted, dismissed]
 permissions:
@@ -46,6 +47,7 @@ jobs:
         run: node .github/scripts/check-gates.mjs
 
   secrets:
+    if: github.event_name == 'pull_request'
     runs-on: ubuntu-latest
     steps:
       - uses: actions/checkout@v4
@@ -56,6 +58,7 @@ jobs:
           GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
 
   dependencies:
+    if: github.event_name == 'pull_request'
     runs-on: ubuntu-latest
     steps:
       - uses: actions/checkout@v4
