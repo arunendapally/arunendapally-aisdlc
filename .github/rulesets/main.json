@@ -28,7 +28,7 @@
           { "context": "gate-approvals" },
           { "context": "secrets" },
           { "context": "dependencies" },
-          { "context": "build-and-test" }
+          { "context": "tests-and-golden-evals" }
         ]
       }
     }

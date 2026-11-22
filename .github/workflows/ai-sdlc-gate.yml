@@ -63,11 +63,4 @@ jobs:
         with:
           fail-on-severity: critical
 
-  build-and-test:
-    runs-on: ubuntu-latest
-    steps:
-      - uses: actions/checkout@v4
-      # Replace with your stack: types, lint, whole suite, end-to-end, accessibility, mutation on changed guards.
-      - name: Full gate
-        run: |
-          if [ -f package.json ]; then npm ci && npm run gate --if-present && npm test --if-present; else echo "Add your gate here" && exit 1; fi
+  # This repo's full gate is tests-and-golden-evals in evals.yml.

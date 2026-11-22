@@ -1,35 +1,45 @@
 {
   "feature": "repo-setup",
   "lane": "task",
-  "stage": 4,
+  "stage": 5,
   "branch": "task/repo-setup",
   "createdAt": "2026-11-06T08:51:52.251Z",
   "stages": {
     "4": {
-      "enteredAt": "2026-11-06T08:51:52.251Z"
+      "enteredAt": "2026-11-06T08:51:52.251Z",
+      "leftAt": "2026-11-22T14:20:39.159Z"
+    },
+    "5": {
+      "enteredAt": "2026-11-22T14:20:39.159Z"
     }
   },
-  "gates": {},
+  "gates": {
+    "4": {
+      "status": "approved",
+      "by": "checks: checks (gate green, small diff)",
+      "requestedAt": "2026-11-22T14:20:38.621Z",
+      "approvedAt": "2026-11-22T14:20:38.621Z",
+      "auto": true,
+      "fingerprint": "d627b365fa40d39b"
+    }
+  },
   "retries": {},
   "kinds": [],
-  "updatedAt": "2026-11-06T08:59:25.569Z",
+  "updatedAt": "2026-11-22T14:20:45.271Z",
   "gateRuns": {
     "4": {
       "ok": true,
-      "count": 229,
-      "at": "2026-11-06T08:59:19.420Z",
+      "count": 351,
+      "at": "2026-11-22T14:20:23.204Z",
+      "tree": "b708c84a6cb593af",
       "runs": 1,
       "runtime": "v24.19.0"
     }
   },
-  "baseline": 229,
+  "baseline": 351,
   "baselineRuntime": "v24.19.0",
   "proofBase": "c6b642df93e343271f99bf195e46ef68d394f9fb",
-  "lastRefusal": {
-    "stage": 4,
-    "at": "2026-11-06T08:59:25.567Z",
-    "reasons": [
-      "425 changed lines is over the task lane limit of 200. Split it into smaller PRs, one slice each"
-    ]
-  }
+  "sizeChecked": 0,
+  "lastPacketHead": "3dadd7c",
+  "ledgerIds": []
 }
