@@ -21,4 +21,4 @@ A small, growing set of documents that every agent reads before it writes or rev
 - Stage 4: the task list header links to these files, and the worker is told to read them before the first task.
 - Stage 4: the reviewer checks each batch against `code-review-checklist.md` and reports findings by checklist item.
 - Stage 5: the final review runs the whole checklist and lists the items it could not check in the PR's "Not verified" section.
-- Stage 6: new traps and repeat findings from this feature are added here before the cycle starts again.
+- After Verify: new traps and repeat findings from this feature are added here before the cycle starts again.

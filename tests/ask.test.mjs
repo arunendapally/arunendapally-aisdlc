@@ -30,7 +30,7 @@ test('sdlc ask prints the gate question: approve or send back, bound to what was
 test('a click on Approve records the approval, from either answer shape', () => {
   const { r, question } = waitingPlan()
   const out = r.hook('answers', asked([question], { [question.question]: 'Approve' }))
-  assert.match(out, /Test Human approved gate 1/)
+  assert.match(out, /Test Human approved Define/)
   assert.equal(r.state('demo').gates['1'].by, 'Test Human')
   assert.equal(r.state('demo').stage, 4)
 

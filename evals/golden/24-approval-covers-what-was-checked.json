@@ -1,6 +1,6 @@
 {
   "name": "approval-covers-what-was-checked",
-  "promise": "An approval covers what the request checked: new code after the request lapses it, and the change, not its author, sets the risk tier.",
+  "promise": "The change, not its author, sets the risk tier, and Verify passes on its checks only once the pre-review says how to undo the change.",
   "branch": "bug/demo",
   "steps": [
     {
@@ -110,35 +110,7 @@
         "demo"
       ],
       "ok": true,
-      "out": "waiting on"
-    },
-    {
-      "put": [
-        "src/total.ts",
-        "export const total = 2\n"
-      ]
-    },
-    {
-      "say": "sdlc approve demo 5",
-      "out": "has lapsed"
-    },
-    {
-      "state": [
-        "demo",
-        "gates.5.status",
-        "lapsed"
-      ]
-    },
-    {
-      "sdlc": [
-        "request",
-        "demo"
-      ],
-      "ok": true
-    },
-    {
-      "say": "sdlc approve demo 5",
-      "out": "approved gate 5"
+      "out": "passed on checks"
     }
   ]
 }

@@ -1,49 +1,51 @@
 // Shared state and policy for the ai-sdlc plugin. No dependencies: Node 18+ only.
 import fs from 'node:fs'
 import path from 'node:path'
+import crypto from 'node:crypto'
 import { execSync } from 'node:child_process'
 import { fileURLToPath } from 'node:url'
 
 // ADR-0003: one spec gate (the PRD plus acceptance.feature), Design only in the full lane, Build on
 // checks in every lane. Stage numbers keep their old meaning; there is no stage 2 any more.
 export const STAGES = {
-  1: { name: 'Plan', artefact: 'prd.md', owner: 'product lead',
+  1: { name: 'Define', artefact: 'prd.md', owner: 'product lead',
     headings: ['## Problem', '## Users and jobs', '## Questions asked', '## Assumptions', '## Requirements', '## Non-functional requirements', '## Never', '## Out of scope', '## Outcome metric', '## Open questions'] },
-  3: { name: 'Design', artefact: 'plan.md', owner: 'architect + product lead',
+  3: { name: 'Design', artefact: 'design.md', owner: 'architect + product lead',
     headings: ['## Decisions', '## Data model', '## Contracts', '## Threat model', '## Error handling', '## Data and tenancy', '## Test plan', '## Run it'] },
   4: { name: 'Build', artefact: 'tasks.md', owner: 'checks (gate green, small diff)',
     headings: ['## Tasks'] },
-  5: { name: 'Verify', artefact: 'pr.md', owner: 'CODEOWNER engineer',
+  5: { name: 'Verify', artefact: 'pr.md', owner: 'checks (gate green, review clean)',
     headings: ['## Summary', '## Test results', '## Pre-review', '## Not verified'] },
   6: { name: 'Release', artefact: 'release.md', owner: 'release owner',
     headings: ['## Rollout', '## Rollback (tested)', '## Probes'] },
 }
 
 // Which stages each lane runs. Bug and hotfix lanes keep one document for the whole run,
-// which is also the PR body. Build passes on checks in every lane.
+// which is also the PR body. ADR-0008: every lane ends at Verify, and Build and Verify pass on checks;
+// who approves and merges the PR is the org's rule, not the plugin's.
 const BUG_BUILD = ['## Repro', '## Expected and actual', '## Root cause', '## Fix']
 const HOTFIX_BUILD = ['## Incident', '## Fix', '## Rollback']
 const SMALL_VERIFY = ['## Test results', '## Pre-review', '## Not verified']
 export const LANES = {
-  full: { stages: [1, 3, 4, 5, 6], auto: [4] },
-  // The light lane has no plan.md, so its design is "## Approach" in tasks.md (requirements, not solutions).
-  light: { stages: [1, 4, 5, 6], auto: [4], headings: { 4: ['## Approach', '## Tasks'] } },
+  full: { stages: [1, 3, 4, 5], auto: [4, 5] },
+  // The light lane has no design.md, so its design is "## Approach" in tasks.md (requirements, not solutions).
+  light: { stages: [1, 4, 5], auto: [4, 5], headings: { 4: ['## Approach', '## Tasks'] } },
   bug: {
-    stages: [4, 5], auto: [4], artefact: 'bug.md', branch: 'bug',
+    stages: [4, 5], auto: [4, 5], artefact: 'bug.md', branch: 'bug',
     headings: { 4: BUG_BUILD, 5: [...BUG_BUILD, ...SMALL_VERIFY] },
-    owners: { 4: 'checks (repro red, gate green, small diff)', 5: 'CODEOWNER engineer' },
+    owners: { 4: 'checks (repro red, gate green, small diff)' },
   },
   hotfix: {
-    stages: [4, 5, 6], auto: [4], artefact: 'hotfix.md', branch: 'hotfix',
+    stages: [4, 5], auto: [4, 5], artefact: 'hotfix.md', branch: 'hotfix',
     headings: { 4: HOTFIX_BUILD, 5: [...HOTFIX_BUILD, ...SMALL_VERIFY], 6: [...HOTFIX_BUILD, ...SMALL_VERIFY, '## Probes', '## Follow-up'] },
-    owners: { 4: 'checks (gate green, small diff)', 5: 'on-call engineer (CODEOWNER)', 6: 'incident commander' },
+    owners: { 4: 'checks (gate green, small diff)' },
   },
 }
 
 LANES.task = {
-  stages: [4, 5], auto: [4], artefact: 'task.md', branch: 'task',
+  stages: [4, 5], auto: [4, 5], artefact: 'task.md', branch: 'task',
   headings: { 4: ['## Change', '## Why', '## Behaviour change'], 5: ['## Change', '## Why', '## Behaviour change', ...SMALL_VERIFY] },
-  owners: { 4: 'checks (gate green, small diff)', 5: 'CODEOWNER engineer' },
+  owners: { 4: 'checks (gate green, small diff)' },
 }
 
 // What kind of work it is adds sections (and owners) to whatever lane it runs in.
@@ -63,7 +65,7 @@ export const KINDS = {
     artefact: 'db-design.md',
     headings: { 1: ['## Data impact'], 3: ['## Data model', '## Migration plan (expand-contract)'], 4: ['## Rehearsal', '## Down migration'], 6: ['## Backout'] },
     legacy: { 1: ['## Data impact'], 3: ['## Migration plan (expand-contract)', '## Rehearsal'], 4: ['## Down migration'], 6: ['## Backout'] },
-    owners: { 3: 'DBA', 5: 'DBA', 6: 'DBA' },
+    owners: { 3: 'DBA' },
   },
 }
 
@@ -113,9 +115,9 @@ export const DEFAULT_CONFIG = {
   deployPatterns: ['vercel\\b.*(--prod|--target[= ]production|\\bpromote\\b|\\balias\\b)', 'terraform\\s+apply', 'netlify\\s+deploy\\b.*--prod', 'fly(ctl)?\\s+deploy\\b',
     'firebase\\s+deploy\\b', 'wrangler\\s+(deploy|publish)\\b', '(npm|pnpm|yarn)\\s+(run\\s+)?deploy\\b', 'kubectl\\s+(apply|delete|rollout)', 'helm\\s+(install|upgrade)', 'npm\\s+publish',
     'gh\\s+pr\\s+merge', 'gh\\s+release\\s+create', 'gh\\s+(ruleset|secret|repo\\s+edit)\\b', 'gh\\s+api\\b.*(-X|--method)\\s*(?!GET\\b)[A-Z]+', 'git\\s+config\\b.*\\balias\\.',
-    '\\bsdlc\\s+(approve|reject|lane|hotfix|intent|autonomy|trust|distrust|resume|unfreeze|close)\\b',
+    '\\bsdlc\\s+(settle|approve|reject|lane|hotfix|intent|autonomy|trust|distrust|resume|unfreeze|close|gate-command|proof-command)\\b',
     // The same verbs through the CLI's terminal path, and the hook fed a prompt by hand, are a person's alone.
-    '\\bsdlc\\.mjs["\']?\\s+(approve|reject|lane|hotfix|intent|autonomy|distrust|resume|unfreeze|close)\\b', 'hooks[\\\\/]user-prompt\\.mjs'],
+    '\\bsdlc\\.mjs["\']?\\s+(settle|approve|reject|lane|hotfix|intent|autonomy|distrust|resume|unfreeze|close|gate-command|proof-command)\\b', 'hooks[\\\\/]user-prompt\\.mjs'],
   // Production is touched only by read-only probes: a command matching these must also be a probe.
   prodPatterns: ['\\b(aws|gcloud|az)\\b.*\\bprod(uction)?\\b', 'kubectl\\b.*--context[= ]\\S*prod'],
   // House-style text bans apply to these files. A repo can widen it, for example to "**".
@@ -133,6 +135,8 @@ export const DEFAULT_CONFIG = {
   // in mcpAllow: pages are content anyone can fill, and a browser can send data anywhere.
   mcpAskPattern: '^(navigate|computer|click|type|form_input|fill.*|javascript.*|evaluate.*|file_upload|upload.*|browser_batch)$',
   mcpAllow: [],
+  // Shell commands a person lets agents run that the guard would otherwise hand back (regexes, per segment).
+  bashAllow: [],
   // Two different loops (ADR-0004). retryCap counts failed checks after a real change; denialCap counts
   // refusals by one guard in one session, after which the session hands back and may only read until a
   // human types. A repo can lower denialCap, never raise it.
@@ -176,7 +180,7 @@ export const DEFAULT_CONFIG = {
   // The test proof (ADR-0002): runs the traced test files against the base branch's code, where they
   // must fail. {files} becomes the quoted test files; {report}, if used, a JUnit XML path to write.
   proofCommand: '',
-  // Days after release by which the outcome metric is read, unless release.md names a date. Only the
+  // Days after release by which the outcome metric is read, unless the PRD names a "Read on:" date. Only the
   // lanes listed here open an outcome follow-up (agile change 2 turned it on for light); 0 turns a lane off.
   outcomeWindowDays: { full: 14, light: 7 },
 }
@@ -217,8 +221,34 @@ export function gitOk(args, cwd) {
   }
 }
 
+// The main worktree of the repo dir belongs to: every linked worktree shares its git common dir.
+const mainCache = new Map()
+export function mainWorktree(dir) {
+  if (!mainCache.has(dir)) {
+    const common = git('rev-parse --path-format=absolute --git-common-dir', dir)
+    mainCache.set(dir, common ? path.dirname(common) : null)
+  }
+  return mainCache.get(dir)
+}
+
+// Logs the hooks write (audit.jsonl, denials.json, retro-due.json) live in the git common dir, shared
+// by every worktree and never tracked, so no worktree is dirty from them (issue #62, item 6).
+export function runtimePath(dir, name) {
+  const common = git('rev-parse --path-format=absolute --git-common-dir', dir)
+  return common ? path.join(common, 'ai-sdlc', name) : path.join(dir, '.ai-sdlc', name)
+}
+
+// A worktree without its own config uses the main worktree's, so a new worktree needs no setup (issue #62, item 1).
+export function configFile(dir) {
+  const own = path.join(dir, '.ai-sdlc', 'config.json')
+  if (fs.existsSync(own)) return own
+  const main = mainWorktree(dir)
+  const shared = main && path.join(main, '.ai-sdlc', 'config.json')
+  return shared && fs.existsSync(shared) ? shared : own
+}
+
 export function loadConfig(dir) {
-  const file = path.join(dir, '.ai-sdlc', 'config.json')
+  const file = configFile(dir)
   const own = fs.existsSync(file) ? JSON.parse(fs.readFileSync(file, 'utf8')) : {}
   const cfg = { ...DEFAULT_CONFIG, ...own }
   for (const key of [...ADDITIVE, 'neverTrust']) cfg[key] = [...new Set([...DEFAULT_CONFIG[key], ...(own[key] ?? [])])]
@@ -249,6 +279,20 @@ export function writeState(dir, state) {
   fs.writeFileSync(file, JSON.stringify(state, null, 2) + '\n')
 }
 
+// Where a feature's work lives (unattended-runs R9): the checkout of this repo whose copy of the feature is
+// on the feature's own branch, else any checkout that has it, else dir. A person answering in the main
+// checkout records for the feature in its worktree, and never starts a second copy.
+export function featureDir(dir, feature) {
+  if (!feature || !/^[a-z0-9][a-z0-9-]*$/.test(feature)) return dir
+  const has = d => fs.existsSync(path.join(d, loadConfig(d).specsDir, feature, 'state.json'))
+  const trees = git('worktree list --porcelain', dir).split(/\r?\n\r?\n/).filter(Boolean)
+    .map(b => ({ where: b.match(/^worktree (.+)$/m)?.[1], branch: b.match(/^branch refs\/heads\/(.+)$/m)?.[1] }))
+    .filter(t => t.where && fs.existsSync(t.where) && has(t.where))
+  const own = trees.find(t => t.branch && readState(t.where, feature)?.branch === t.branch)
+  if (own) return path.resolve(own.where)
+  return has(dir) ? dir : trees[0] ? path.resolve(trees[0].where) : dir
+}
+
 export function listFeatures(dir) {
   const specs = path.join(dir, loadConfig(dir).specsDir)
   if (!fs.existsSync(specs)) return []
@@ -268,11 +312,12 @@ const HINTS = {
 // not count; write "None, because ..." when a section does not apply).
 export function missingHeadings(dir, state, stage = state.stage) {
   const { artefact, headings, docs } = stageSpec(state, stage)
+  const main = artefact === 'design.md' ? designDoc(dir, state) : artefact
   const problems = []
-  for (const [doc, due] of [[artefact, headings], ...Object.entries(docs ?? {})]) {
+  for (const [doc, due] of [[main, headings], ...Object.entries(docs ?? {})]) {
     const file = path.join(dir, loadConfig(dir).specsDir, state.feature, doc)
     if (!fs.existsSync(file)) {
-      problems.push(doc === artefact ? `${doc} does not exist` : `${doc} does not exist: start it from the template with "sdlc kind ${state.feature} data"`)
+      problems.push(doc === main ? `${doc} does not exist` : `${doc} does not exist: start it from the template with "sdlc kind ${state.feature} data"`)
       continue
     }
     const text = fs.readFileSync(file, 'utf8')
@@ -286,6 +331,17 @@ export function missingHeadings(dir, state, stage = state.stage) {
   return problems
 }
 
+// A stage's "## Definition of done" items still open: each must be "- [x] ..." or "- N/A: <reason>".
+// A document with no such section (written before it existed) has nothing open.
+export function openDoneItems(text, doc) {
+  const body = section(text, '## Definition of done')
+  return (body ?? '').split(/\r?\n/).map(l => l.trim().replace(/^\* /, '- ')).filter(l => l.startsWith('- ')).flatMap(l => {
+    if (/^- \[x\] +\S/i.test(l) || /^- N\/A: *\S/i.test(l)) return []
+    if (/^- N\/A\b/i.test(l)) return [`${doc} "## Definition of done" has "${l.slice(2).trim()}" with no reason: write "- N/A: <reason>"`]
+    return [`${doc} "## Definition of done" item "${l.replace(/^- (\[.\] *)?/, '').trim()}" is open: tick it "- [x]" once done, or write "- N/A: <reason>"`]
+  })
+}
+
 // The text of a "## " section without template comments; null when the heading is absent.
 export function section(text, heading) {
   const lines = text.replace(/<!--[\s\S]*?-->/g, '').split(/\r?\n/)
@@ -293,6 +349,33 @@ export function section(text, heading) {
   if (at === -1) return null
   const end = lines.findIndex((l, i) => i > at && /^#{1,2} /.test(l))
   return lines.slice(at + 1, end === -1 ? undefined : end).join('\n').trim()
+}
+
+// A capability's roadmap (plan-roadmap): each slice line under "## Slices" with its horizon (now when
+// unwritten, PRD A2), whether it is an enabler, and how it goes live.
+export function slicesOf(text) {
+  return [...(section(text, '## Slices') ?? '').matchAll(/^\s*[-*]\s*([a-z0-9][a-z0-9-]*):\s*(.*)$/gm)].map(([, slug, line]) => ({
+    slug,
+    line,
+    horizon: line.match(/Horizon:\s*(now|next|later)\b/i)?.[1].toLowerCase() ?? 'now',
+    enabler: /Kind:\s*enabler\b/i.test(line),
+    goesLive: line.match(/Goes live:\s*([^.\n]+)/i)?.[1].trim() ?? '',
+    dependsOn: (line.match(/Depends on:\s*([^.\n]+)/i)?.[1] ?? '').split(',').map(s => s.trim()).filter(s => s && !/^none$/i.test(s)),
+    shipped: /Status:\s*shipped\b/i.test(line),
+  }))
+}
+
+// Going live only after another slice is a sequence, a coupling smell, so it must say why (R4).
+// "only" limits it to one slice, so one slice's gap blocks only that slice's Define (pre-review F1).
+export function roadmapProblems(text, only) {
+  const slices = slicesOf(text).filter(s => !only || s.slug === only)
+  return [
+    ...slices.filter(s => /^after\b/i.test(s.goesLive) && !/,\s*because\s+\S/i.test(s.goesLive))
+      .map(s => `${s.slug} goes live after another slice but gives no reason: write "Goes live: after <slug>, because <reason>"`),
+    // A mistyped horizon would otherwise read as now without a word (pre-review F2).
+    ...slices.filter(s => /Horizon:/i.test(s.line) && !/Horizon:\s*(now|next|later)\b/i.test(s.line))
+      .map(s => `${s.slug} has a Horizon that is not now, next or later`),
+  ]
 }
 
 // The person's intent, typed as "change: ...; smallest: ...; drop if: ..." (one per line works too).
@@ -313,7 +396,7 @@ export function parseIntent(text) {
 
 // The PRD's "## Intent" section, written from what the person typed, replacing whatever was there.
 export function withIntent(prdText, intent) {
-  const block = `## Intent\n\n<!-- Typed by ${intent.by} on ${intent.at.slice(0, 10)}. Only a person changes it: sdlc intent <feature> change: ...; smallest: ...; drop if: ... -->\n\n${INTENT_PARTS.map(([k, label]) => `- ${label}: ${intent[k]}`).join('\n')}\n`
+  const block = `## Intent\n\n<!-- Typed by ${intent.by} on ${intent.at.slice(0, 10)}${intent.inheritedFrom ? ` for ${intent.inheritedFrom}, and carried over to this slice of the same capability` : ''}. Only a person changes it: sdlc intent <feature> change: ...; smallest: ...; drop if: ... -->\n\n${INTENT_PARTS.map(([k, label]) => `- ${label}: ${intent[k]}`).join('\n')}\n`
   const lines = prdText.replace(/\r\n/g, '\n').split('\n')
   const at = lines.findIndex(l => l.trim() === '## Intent')
   if (at !== -1) {
@@ -329,7 +412,7 @@ export function withIntent(prdText, intent) {
 // Lines changed on this branch against the protected branch it came from, uncommitted work
 // included, leaving out the paths that do not need a reviewer's line-by-line reading.
 export function changedFiles(dir, cfg = loadConfig(dir)) {
-  const base = cfg.protectedBranches.map(b => git(`merge-base ${b} HEAD`, dir)).find(Boolean)
+  const base = baseCommit(dir, cfg)
   if (!base) return []
   const tracked = git(`diff --numstat ${base}`, dir).split('\n').filter(Boolean).map(line => {
     const [added, removed, file] = line.split('\t')
@@ -344,9 +427,59 @@ export function changedFiles(dir, cfg = loadConfig(dir)) {
   return [...tracked, ...fresh]
 }
 
+// The commit this branch's change is measured from: the merge-base with the protected branch, taken
+// from origin/<branch> when it is newer than the local copy, so merged PRs do not count (issue #62, item 5).
+export function baseRef(dir, cfg = loadConfig(dir)) {
+  for (const b of cfg.protectedBranches) {
+    const refs = [`origin/${b}`, b].filter(r => gitOk(`rev-parse --verify --quiet ${r}`, dir))
+    if (!refs.length) continue
+    if (refs.length === 2 && gitOk(`merge-base --is-ancestor ${refs[0]} ${refs[1]}`, dir)) return refs[1]
+    return refs[0]
+  }
+  return null
+}
+export function baseCommit(dir, cfg = loadConfig(dir)) {
+  const ref = baseRef(dir, cfg)
+  return ref ? git(`merge-base ${ref} HEAD`, dir) : ''
+}
+
+// What the gate ran on, leaving out specs and the plugin's state: the same code gives the same id, so a
+// green run at Build still counts at Verify after only specs or state changed (issue #62, item 7).
+export function codeTree(dir, cfg = loadConfig(dir)) {
+  const own = f => !f.startsWith(`${cfg.specsDir}/`) && !f.startsWith('.ai-sdlc/')
+  const index = git('ls-files -s', dir).split('\n').filter(l => l && own(l.split('\t')[1] ?? '')).join('\n')
+  const dirty = git(`diff HEAD -- . ":!${cfg.specsDir}" ":!.ai-sdlc"`, dir)
+  const fresh = git('ls-files --others --exclude-standard', dir).split('\n').filter(f => f && own(f))
+    .map(f => `${f} ${fs.statSync(path.join(dir, f)).mtimeMs}`).join('\n')
+  return crypto.createHash('sha256').update([index, dirty, fresh].join('\n')).digest('hex').slice(0, 16)
+}
+
 export function changedLines(dir, cfg = loadConfig(dir)) {
   const harness = harnessFiles(dir, cfg)
-  return changedFiles(dir, cfg).filter(f => !matches(f.file, cfg.prLineExcludes) && !harness.has(f.file)).reduce((sum, f) => sum + f.lines, 0)
+  return changedFiles(dir, cfg).filter(f => !matches(f.file, cfg.prLineExcludes) && !harness.has(f.file) && !unmodifiedKit(dir, f.file)).reduce((sum, f) => sum + f.lines, 0)
+}
+
+// The files "sdlc init-repo" copies from templates/repo, as repo paths: the scaffold, not product code.
+const KIT = path.join(path.dirname(fileURLToPath(import.meta.url)), '..', 'templates', 'repo')
+let scaffoldCache
+export function scaffoldFiles() {
+  if (scaffoldCache) return scaffoldCache
+  const out = new Set()
+  const walk = rel => {
+    for (const e of fs.readdirSync(path.join(KIT, rel), { withFileTypes: true })) {
+      const from = path.join(rel, e.name)
+      if (e.isDirectory()) walk(from)
+      else out.add(from.split(path.sep).join('/'))
+    }
+  }
+  if (fs.existsSync(KIT)) walk('')
+  return (scaffoldCache = out)
+}
+
+// A kit file exactly as the plugin ships it is the plugin's code, not the change under review; edited, it counts.
+const kitText = file => fs.readFileSync(file, 'utf8').replace(/\r\n/g, '\n')
+function unmodifiedKit(dir, file) {
+  return scaffoldFiles().has(file) && fs.existsSync(path.join(dir, file)) && kitText(path.join(dir, file)) === kitText(path.join(KIT, file))
 }
 
 // The scripts the gate and proof commands run (directly, or through an npm script) are the harness the
@@ -405,6 +538,23 @@ export function overduePostmortems(dir, now = Date.now()) {
 
 export const TEMPLATES = path.join(path.dirname(fileURLToPath(import.meta.url)), '..', 'skills', 'org-ai-sdlc', 'templates')
 
+// The design is design.md; a feature whose design was already in plan.md keeps it (stage-names R4).
+export function designDoc(dir, state) {
+  const folder = path.join(dir, loadConfig(dir).specsDir, state.feature)
+  return !fs.existsSync(path.join(folder, 'design.md')) && fs.existsSync(path.join(folder, 'plan.md')) ? 'plan.md' : 'design.md'
+}
+
+// A feature in a capability shares the capability's architecture overview; one without keeps its own (capability-overview R2, A2).
+export const overviewFile = (dir, state) => path.join(dir, loadConfig(dir).specsDir, state.capability ?? state.feature, 'architecture-overview.md')
+// The overview's "## Decision log": | Date | Decision | Agreed by | Source | Changes |, read by cell position.
+export const decisionsOf = text => (section(text, '## Decision log') ?? '').split('\n').filter(l => /^\s*\|/.test(l) && !/^\s*\|[\s:|-]+$/.test(l)).slice(1)
+  .map(l => l.split('|').slice(1, -1).map(c => c.trim())).map(([date, decision, agreedBy, source, changes]) => ({ date, decision, agreedBy, source, changes }))
+// R4: a row with no one who agreed it, or no source, is not a record of an agreement.
+export const decisionProblems = text => decisionsOf(text).flatMap(d => {
+  const gaps = [!d.agreedBy && 'agreed by', !d.source && 'source'].filter(Boolean)
+  return gaps.length ? [`decision log row "${d.date} ${d.decision}" has no ${gaps.join(' and no ')}: name the person who agreed it ("unconfirmed" until they confirm) and quote or link the exchange`] : []
+})
+
 // Copy an artefact template into the feature folder; returns its repo-relative path.
 export function copyTemplate(dir, feature, name) {
   const to = path.join(dir, loadConfig(dir).specsDir, feature, name)
@@ -438,6 +588,28 @@ export function autonomy(dir) {
   } catch {
     return null
   }
+}
+
+// ADR-0007: on the feature's own branch Define and Design pass on their checks, since the work ends in a PR
+// a person reviews (ADR-0008 covers Verify). Returns why a person keeps the gate, or null.
+export const BRANCH_AUTO = [1, 3]
+export function branchAutoBlock(dir, state, cfg, risky = null) {
+  const stage = state.stage
+  if (!BRANCH_AUTO.includes(stage)) return 'not a stage the branch rule covers'
+  if (!state.branch || state.branch === 'HEAD' || cfg.protectedBranches.includes(state.branch)) return 'the feature has no branch of its own'
+  if (state.gates[stage]) return `${STAGES[stage].name} is ${state.gates[stage].status}, so its person decides`
+  const owners = cfg.gateOwners[stage] ?? []
+  if (owners.length) return `gateOwners names ${owners.join(', ')} for ${STAGES[stage].name}`
+  if (isFrozen(dir)) return 'the error budget is frozen'
+  const file = runtimePath(dir, 'audit.jsonl')
+  const events = (fs.existsSync(file) ? fs.readFileSync(file, 'utf8').split(/\r?\n/) : []).filter(Boolean)
+    .map(l => { try { return JSON.parse(l) } catch { return {} } })
+  if (events.some(e => e.event === 'reject' && e.feature === state.feature && e.stage === stage)) return `a person sent ${STAGES[stage].name} back`
+  if (stage === 3 && (state.kinds ?? []).includes('data')) return 'data work keeps its DBA at Design'
+  if (stage === 3 && risky) return `Security and privacy touches ${risky}`
+  // Last, so the message names the switch only when the switch is what would pass the gate.
+  if (git('rev-parse --abbrev-ref HEAD', dir) !== state.branch) return `switch to ${state.branch} and request again to pass on checks`
+  return null
 }
 
 export function isFrozen(dir) {
@@ -475,7 +647,8 @@ export function promotable(dir) {
 // The next stage this feature's lane runs, or undefined when the run is complete.
 export function nextStage(state) {
   const stages = (LANES[state.lane] ?? LANES.full).stages
-  return stages[stages.indexOf(state.stage) + 1]
+  // A stage the lane no longer runs (Release, before ADR-0008) is the last one, never a way back to the first.
+  return stages.includes(state.stage) ? stages[stages.indexOf(state.stage) + 1] : undefined
 }
 
 // Minimal glob: ** spans directories, * stays inside one segment.
@@ -510,7 +683,7 @@ export function readStdin() {
 }
 
 export function audit(dir, entry) {
-  const file = path.join(dir, '.ai-sdlc', 'audit.jsonl')
+  const file = runtimePath(dir, 'audit.jsonl')
   fs.mkdirSync(path.dirname(file), { recursive: true })
   fs.appendFileSync(file, JSON.stringify({ at: new Date().toISOString(), ...entry }) + '\n')
 }

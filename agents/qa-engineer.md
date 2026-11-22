@@ -24,6 +24,6 @@ Never use production data, never sleep for a fixed time to make a test pass, and
 
 ## Gate
 
-You hold no gate, but the merge gate is not met while you report an open defect.
+You hold no gate, but Verify is not met while you report an open defect.
 
 No em dashes in anything you write.

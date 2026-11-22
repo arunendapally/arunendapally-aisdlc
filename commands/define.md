@@ -1,0 +1,24 @@
+---
+description: Define. The product owner asks its questions first, then writes a short PRD and the Gherkin acceptance criteria; one gate, the product lead's.
+argument-hint: <feature-slug>
+---
+
+Define for `$ARGUMENTS`. Delegate to the `product-owner` agent, with the `qa-engineer` for the acceptance criteria.
+
+**Input:** the person's request and intent, the triage, and for brownfield or data work the current code.
+**Ready when:** the intent is answered.
+**Processing:** ask only the essential questions, record assumptions, write numbered requirements and one Gherkin scenario per requirement, pin facts to the code.
+**Output:** `prd.md`, `acceptance.feature` and, when needed, `facts.md`, approved together at the Define gate.
+
+0. **The person's intent first.** If `specs/$ARGUMENTS/state.json` has no `intent`, run `node "${CLAUDE_PLUGIN_ROOT}/scripts/sdlc.mjs" ask $ARGUMENTS`: it prints three questions (change, smallest, drop if). Fill each with two or three answers taken from what the person already said, never invented, and ask them with the question tool; they pick one or write their own. Their answers are recorded as the intent. The PRD cannot be written, and Define cannot be requested, until then; the request writes their words into `## Intent`, never reworded. Without the question tool they can type `sdlc intent $ARGUMENTS change: ...; smallest: ...; drop if: ...`.
+1. **Ask only what is essential; assume the rest.** The product owner asks only about a decision that cannot be undone, a request that conflicts with the existing docs, or a fork where a wrong guess would mean redoing most of the work, each with a recommended answer (none on intent, taste or risk), in one round with the question tool. Everything else it writes down instead of asking: in `## Assumptions` as `[unconfirmed]`, and in `## Open questions` with who can confirm it. If nothing is essential, it asks nothing and drafts. If the person says to go with the recommendations, each such answer is recorded as `(recommended, accepted)` and its assumption stays `[unconfirmed]`.
+2. **Draft** `specs/$ARGUMENTS/prd.md` from the template: the questions and answers, any constraints the person already chose (with who chose them), the assumptions (each `[confirmed]` or `[unconfirmed]`), numbered testable requirements (R1, R2, ...) that state needs, never solutions, each with what the product must already know (`Needs:`), the non-functional requirements (performance, security and privacy, accessibility, limits and quotas: each a requirement or "None, because ..."), what it must never do, scope, the outcome metric, and open questions.
+3. **Acceptance criteria.** The `qa-engineer` writes `specs/$ARGUMENTS/acceptance.feature`: each criterion a Gherkin scenario tagged with the requirement it proves (`@R1`), a unique id (`@AC-1`) and, as a hint, its test level (`@unit`, `@subsystem`, `@api`, `@e2e`). Run `node "${CLAUDE_PLUGIN_ROOT}/scripts/sdlc.mjs" gherkin $ARGUMENTS` until it shows no errors; its warnings are style advice.
+4. **Facts, for brownfield or data work.** The `architect` writes `specs/$ARGUMENTS/facts.md`: what the feature depends on in the current system, pinned to `file:line` and a commit.
+5. **The capability overview, for a feature in a capability.** `sdlc init <slug> --capability <capability>` starts `specs/<capability>/architecture-overview.md`; the `architect` draws its `## System context` (C4 Level 1, one repo included) once for the capability, and Define refuses it empty. What is agreed after the PRD is signed goes in its `## Decision log`, never into the PRD: a row an agent drafts reads `unconfirmed` in Agreed by until a named person confirms it, and every row needs a Source.
+
+**Goal:** every section filled or "None, because ..."; every unconfirmed assumption in Open questions; every requirement has a scenario.
+
+**Loop:** draft, self-check, fix. Count each failed check with `node "${CLAUDE_PLUGIN_ROOT}/scripts/sdlc.mjs" retry $ARGUMENTS prd`. On ESCALATE, stop and report what was tried.
+
+**Gate:** run `node "${CLAUDE_PLUGIN_ROOT}/scripts/sdlc.mjs" request $ARGUMENTS` and show the PRD in five lines, the unconfirmed assumptions and what was not verified. Then run `node "${CLAUDE_PLUGIN_ROOT}/scripts/sdlc.mjs" ask $ARGUMENTS` and put its question to the product lead with the question tool: Approve, or Send back with a reason. Their answer is recorded (typing `sdlc approve $ARGUMENTS 1` also works). Approved, the feature moves to Design (full lane) or Build (light lane) by itself. On the feature's own branch the request usually passes on its checks instead (ADR-0007); then there is no question to ask.

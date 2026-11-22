@@ -1,6 +1,6 @@
 {
   "name": "outcome-outlives-release",
-  "promise": "A released feature leaves an outcome follow-up with an owner and a date; a breach alerts a human and never declares a hotfix by itself.",
+  "promise": "A feature completed at Verify (ADR-0008) leaves an outcome follow-up from its PRD with an owner and a date; a breach alerts a human and never declares a hotfix by itself.",
   "steps": [
     {
       "sdlc": [
@@ -14,14 +14,14 @@
       "setState": [
         "demo",
         {
-          "stage": 6,
+          "stage": 5,
           "stages": {
-            "6": {
+            "5": {
               "enteredAt": "2026-10-22T00:00:00.000Z"
             }
           },
           "gates": {
-            "6": {
+            "5": {
               "status": "approved"
             }
           }
@@ -30,7 +30,7 @@
     },
     {
       "put": [
-        "specs/demo/release.md",
+        "specs/demo/prd.md",
         "## Outcome metric\n\nMetric: checkout conversion +2%\nOwner: Priya\n"
       ]
     },

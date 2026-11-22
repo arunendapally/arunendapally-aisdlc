@@ -1,11 +1,11 @@
-// The loop spine (ADR-0002): the test proof and its hash lock, the Release blocks, the outcome
+// The loop spine (ADR-0002): the test proof and its hash lock, the outcome
 // follow-up, the wider error-budget freeze and the triggered retro.
 import { test } from 'node:test'
 import assert from 'node:assert/strict'
 import fs from 'node:fs'
 import path from 'node:path'
 import { makeRepo } from './helpers.mjs'
-import { judgeProof, readJunit, proofProblems, releaseProblems, repeatedFindings } from '../scripts/loop.mjs'
+import { judgeProof, readJunit, proofProblems, repeatedFindings } from '../scripts/loop.mjs'
 
 const hoursAgo = h => new Date(Date.now() - h * 36e5).toISOString()
 const ACCEPT = acs => `Feature: F\n  As a user\n  I want x\n  So that y\n${acs.map(ac => `\n  @R1 @${ac} @unit\n  Scenario: S ${ac}\n    Given a\n    When b\n    Then c\n`).join('')}`
@@ -125,70 +125,11 @@ test('hotfix: the proof runs after the merge, against the code before the fix, a
   assert.doesNotMatch(r.sdlc('status').out, /POSTMORTEM OVERDUE/)
 })
 
-test('release: rollout readiness needs a tested rollback and probe results; the full lane also an outcome owner', () => {
+test('outcome: a full-lane feature closes at Verify (ADR-0008) and leaves a follow-up with an owner, a due date and its own flow number', () => {
   const r = makeRepo()
   r.sdlc('init', 'demo', '--full')
-  r.remote()
-  const live = r.land()
-  const state = r.state('demo')
-  const bare = releaseProblems(r.repo, state, '## Rollback (tested)\n\nhelm rollback\n\n## Probes\n\nTBD\n').problems.join('\n')
-  assert.match(bare, /no "Tested: <date>/)
-  assert.match(bare, /records no result/)
-  assert.match(bare, /needs "Metric:" and "Owner:"/)
-  const ready = `## Rollback (tested)\n\nhelm rollback. Tested: 2026-10-21, on staging.\n\n## Probes\n\n- p95 latency: pass\n\nLive: ${live}\n\n## Outcome metric\n\nMetric: checkout conversion +2%\nOwner: Product lead\n`
-  assert.deepEqual(releaseProblems(r.repo, state, ready).problems, [])
-  const none = ready.replace(/Metric: [^\n]*\nOwner: [^\n]*\n/, 'Metric: None, because it is a refactor behind a flag\n')
-  assert.deepEqual(releaseProblems(r.repo, state, none).problems, [], 'a feature may have no outcome to read')
-  // Agile change 2: the light lane has an outcome follow-up too, so it names an owner or says why not.
-  const light = ready.replace(/## Outcome metric[\s\S]*/, '')
-  assert.match(releaseProblems(r.repo, { ...state, lane: 'light' }, light).problems.join(), /needs "Metric:" and "Owner:"/)
-  assert.deepEqual(releaseProblems(r.repo, { ...state, lane: 'light' }, none).problems, [], 'the light lane may still have no outcome to read')
-  assert.deepEqual(releaseProblems(r.repo, { ...state, lane: 'hotfix' }, `## Probes\n\nLive: ${live}\n`).problems, [], 'the incident commander judges a hotfix, but not what is live')
-})
-
-test('release: stale knowledge or facts the change touched, unmarked superseded ADRs and unlinked postmortem actions warn', () => {
-  const r = makeRepo()
-  r.sdlc('init', 'demo', '--full')
-  r.remote()
-  const ready = `## Rollback (tested)\n\nTested: 2026-10-21, staging.\n\n## Probes\n\n- ok\n\nLive: ${r.git('rev-parse', 'HEAD')}\n\n## Outcome metric\n\nMetric: m\nOwner: o\n`
-  r.put('src/a.js', '1\n')
-  r.git('add', '.')
-  r.git('commit', '-m', 'a')
-  const sha = r.git('rev-parse', '--short', 'HEAD')
-  r.put('knowledge/a.md', `---\nname: a\ndescription: d\ntype: component\nsources: [src/a.js]\nverified: ${sha}\nconfidence: Moderate\n---\n# A\n`)
-  r.put('knowledge/other.md', `---\nname: other\ndescription: d\ntype: component\nsources: [README.md]\nverified: deadbeef\nconfidence: Moderate\n---\n# O\n`)
-  r.put('specs/demo/facts.md', `- F1: A is one. Source: src/a.js:1. Verified: ${sha}.\n- F2: U is one. Source: README.md:1. Verified: ${sha}.\n`)
-  r.git('add', '.')
-  r.git('commit', '-m', 'pages')
-  r.put('src/a.js', '2\n')
-  const state = r.state('demo')
-  assert.doesNotMatch(releaseProblems(r.repo, state, ready).problems.join('\n'), /knowledge|facts|ADR|incidents/, 'bookkeeping never blocks a release')
-  let problems = releaseProblems(r.repo, state, ready).warnings.join('\n')
-  assert.match(problems, /knowledge page knowledge\/a\.md is stale/)
-  assert.doesNotMatch(problems, /other\.md/, 'a stale page about code the change did not touch does not block it')
-  assert.match(problems, /facts\.md: F1 is stale/)
-  assert.doesNotMatch(problems, /F2/)
-
-  r.put('src/a.js', '1\n')
-  r.put('docs/adr/0001-queue.md', '# ADR-0001\n\nStatus: accepted\n')
-  r.put('specs/demo/plan.md', '## Decisions\n\nThis supersedes ADR-0001. It also supersedes ADR-0009.\n')
-  r.put('docs/incidents/2026-10-20-x.md', '## Actions\n\n| Action | Becomes | Owner | Due |\n|---|---|---|---|\n| Add a retry | a trap | Sam | 2026-11-01 |\n| Alert on 5xx | #42 | Sam | 2026-11-01 |\n')
-  problems = releaseProblems(r.repo, state, ready).warnings.join('\n')
-  assert.match(problems, /ADR-0001 is superseded by this change/)
-  assert.match(problems, /ADR-0009, which docs\/adr does not have/)
-  assert.match(problems, /"Add a retry" needs a link/)
-  assert.doesNotMatch(problems, /Alert on 5xx/)
-  r.put('docs/adr/0001-queue.md', '# ADR-0001\n\nStatus: superseded by ADR-0002\n')
-  r.put('specs/demo/plan.md', '## Decisions\n\nThis supersedes ADR-0001.\n')
-  r.put('docs/incidents/2026-10-20-x.md', '## Actions\n\n| Action | Becomes | Owner | Due |\n|---|---|---|---|\n| Add a retry | standards/traps.md | Sam | 2026-11-01 |\n')
-  assert.deepEqual(releaseProblems(r.repo, state, ready).warnings, [])
-})
-
-test('outcome: a full-lane feature closes at release and leaves a follow-up with an owner, a due date and its own flow number', () => {
-  const r = makeRepo()
-  r.sdlc('init', 'demo', '--full')
-  r.setState('demo', { stage: 6, stages: { 6: { enteredAt: hoursAgo(1) } }, gates: { 6: { status: 'approved' } } })
-  r.put('specs/demo/release.md', '## Outcome metric\n\nMetric: checkout conversion +2%\nOwner: Priya\n')
+  r.setState('demo', { stage: 5, stages: { 5: { enteredAt: hoursAgo(1) } }, gates: { 5: { status: 'approved' } } })
+  r.put('specs/demo/prd.md', '## Outcome metric\n\nMetric: checkout conversion +2%\nOwner: Priya\n')
   const closed = r.sdlc('advance', 'demo').out
   assert.match(closed, /complete\. Outcome follow-up: Priya reads "checkout conversion \+2%" by/)
   const due = r.state('demo').outcome.due
@@ -205,23 +146,23 @@ test('outcome: a full-lane feature closes at release and leaves a follow-up with
   assert.doesNotMatch(r.sdlc('status').out, /OUTCOME/)
 })
 
-test('outcome: release.md can name its own read date; the light lane opens one too (agile change 2)', () => {
+test('outcome: the PRD can name its own read date; the light lane opens one too (agile change 2)', () => {
   const r = makeRepo()
   r.sdlc('init', 'demo', '--full')
-  r.setState('demo', { stage: 6, stages: { 6: { enteredAt: hoursAgo(1) } }, gates: { 6: { status: 'approved' } } })
-  r.put('specs/demo/release.md', '## Outcome metric\n\nMetric: m\nOwner: o\nRead on: 2026-12-01\n')
+  r.setState('demo', { stage: 5, stages: { 5: { enteredAt: hoursAgo(1) } }, gates: { 5: { status: 'approved' } } })
+  r.put('specs/demo/prd.md', '## Outcome metric\n\nMetric: m\nOwner: o\nRead on: 2026-12-01\n')
   r.sdlc('advance', 'demo')
   assert.equal(r.state('demo').outcome.due.slice(0, 10), '2026-12-01')
   r.sdlc('init', 'small')
-  r.setState('small', { stage: 6, stages: { 6: { enteredAt: hoursAgo(1) } }, gates: { 6: { status: 'approved' } } })
-  r.put('specs/small/release.md', '## Outcome metric\n\nMetric: m\nOwner: o\n')
+  r.setState('small', { stage: 5, stages: { 5: { enteredAt: hoursAgo(1) } }, gates: { 5: { status: 'approved' } } })
+  r.put('specs/small/prd.md', '## Outcome metric\n\nMetric: m\nOwner: o\n')
   const closed = r.sdlc('advance', 'small')
   assert.equal(closed.status, 0, closed.out)
   assert.equal(r.state('small').outcome.status, 'open', 'the light lane opens an outcome follow-up by default')
   assert.ok(Math.abs(Date.parse(r.state('small').outcome.due) - Date.now() - 7 * 864e5) < 6e4, 'the light lane watch window is 7 days')
   r.sdlc('init', 'refactor')
-  r.setState('refactor', { stage: 6, stages: { 6: { enteredAt: hoursAgo(1) } }, gates: { 6: { status: 'approved' } } })
-  r.put('specs/refactor/release.md', '## Outcome metric\n\nMetric: None, because nothing a user sees changes\n')
+  r.setState('refactor', { stage: 5, stages: { 5: { enteredAt: hoursAgo(1) } }, gates: { 5: { status: 'approved' } } })
+  r.put('specs/refactor/prd.md', '## Outcome metric\n\nMetric: None, because nothing a user sees changes\n')
   r.sdlc('advance', 'refactor')
   assert.equal(r.state('refactor').outcome, undefined, '"None, because ..." opens no follow-up')
 
@@ -232,8 +173,8 @@ test('outcome: release.md can name its own read date; the light lane opens one t
 
   r.config({ outcomeWindowDays: { light: 0 } })
   r.sdlc('init', 'small2')
-  r.setState('small2', { stage: 6, stages: { 6: { enteredAt: hoursAgo(1) } }, gates: { 6: { status: 'approved' } } })
-  r.put('specs/small2/release.md', '## Outcome metric\n\nMetric: m\nOwner: o\n')
+  r.setState('small2', { stage: 5, stages: { 5: { enteredAt: hoursAgo(1) } }, gates: { 5: { status: 'approved' } } })
+  r.put('specs/small2/prd.md', '## Outcome metric\n\nMetric: m\nOwner: o\n')
   r.sdlc('advance', 'small2')
   assert.equal(r.state('small2').outcome, undefined, 'a repo can turn it off for light')
 })

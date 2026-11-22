@@ -76,7 +76,7 @@ export function lint(text, requirements = null) {
       if (placeholders.length) warn(c.line, `Scenario "${c.name}" uses <${placeholders[0]}> but is not a Scenario Outline.`)
       if (c.examples.length) warn(c.line, `Scenario "${c.name}" has Examples but is not a Scenario Outline.`)
     }
-    // @release: proved by a release probe; @manual: checked by hand, recorded in the PR body.
+    // @release: proved by a release probe; @manual: checked by hand by the person who merges.
     const due = c.tags.some(t => /^@release$/i.test(t)) ? 'release' : c.tags.some(t => /^@manual$/i.test(t)) ? 'manual' : null
     if ([...featureTags, ...c.ruleTags].some(t => /^@(release|manual)$/i.test(t))) err(c.line, `Scenario "${c.name}": put @release or @manual on the scenario itself, never on a Feature or Rule, so each untested criterion is chosen one by one.`)
     if (c.tags.filter(t => /^@(release|manual)$/i.test(t)).length > 1) err(c.line, `Scenario "${c.name}" has both @release and @manual: pick one.`)

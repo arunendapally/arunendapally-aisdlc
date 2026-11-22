@@ -1,6 +1,6 @@
 # System facts: <feature>
 
-<!-- Stage 1 Plan, brownfield and data work. Owner: architect agent. Gate: with prd.md; no separate approval.
+<!-- Define, brownfield and data work. Owner: architect agent. Gate: with prd.md; no separate approval.
      What is true about the current system that this feature depends on, each pinned to the code line that
      shows it. Read the code; never infer from a name, a doc or a schema. Write "None, because ..." under
      "## Facts" only when there is no current system (greenfield). prd.md cites facts by id (F1); it does not copy them.

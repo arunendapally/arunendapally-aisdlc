@@ -1,0 +1,93 @@
+{
+  "feature": "remove-release",
+  "lane": "task",
+  "stage": 5,
+  "branch": "task/remove-release",
+  "createdAt": "2026-11-08T04:22:44.050Z",
+  "stages": {
+    "4": {
+      "enteredAt": "2026-11-08T04:22:44.050Z",
+      "leftAt": "2026-11-08T04:37:54.159Z"
+    },
+    "5": {
+      "enteredAt": "2026-11-08T04:37:54.159Z",
+      "leftAt": "2026-11-08T04:45:22.815Z"
+    }
+  },
+  "gates": {
+    "4": {
+      "status": "approved",
+      "by": "checks: autonomy granted by Arun Endapally",
+      "requestedAt": "2026-11-08T04:37:53.244Z",
+      "approvedAt": "2026-11-08T04:37:53.244Z",
+      "auto": true,
+      "fingerprint": "fc070643e1bc1f1b"
+    },
+    "5": {
+      "status": "approved",
+      "by": "checks: autonomy granted by Arun Endapally",
+      "requestedAt": "2026-11-08T04:45:21.095Z",
+      "approvedAt": "2026-11-08T04:45:21.095Z",
+      "auto": true,
+      "fingerprint": "fc070643e1bc1f1b"
+    }
+  },
+  "retries": {},
+  "kinds": [],
+  "updatedAt": "2026-11-08T04:45:22.815Z",
+  "gateRuns": {
+    "4": {
+      "ok": true,
+      "count": 301,
+      "at": "2026-11-08T04:30:38.711Z",
+      "runs": 1,
+      "runtime": "v24.19.0"
+    },
+    "5": {
+      "ok": true,
+      "count": 301,
+      "at": "2026-11-08T04:45:17.366Z",
+      "runs": 1,
+      "runtime": "v24.19.0"
+    }
+  },
+  "baseline": 301,
+  "baselineRuntime": "v24.19.0",
+  "proofBase": "0954f0667ba68574db6b77f95b815ea7a89d1e47",
+  "lastPacketHead": "29caab3",
+  "ledgerIds": [
+    "F1",
+    "F2"
+  ],
+  "sizeChecked": 145,
+  "riskTier": "medium",
+  "reviewedSha": "29caab3155775c3f2ade5613aee21a27c7f7d00d",
+  "reviewedFiles": [
+    "CHANGELOG.md",
+    "scripts/loop.mjs",
+    "scripts/sdlc.mjs",
+    "specs/remove-release/review-packet.md",
+    "specs/remove-release/review.md",
+    "specs/remove-release/state.json",
+    "specs/remove-release/task.md",
+    "tests/failures.test.mjs",
+    "tests/harden.test.mjs",
+    "tests/loop.test.mjs",
+    "tests/release-criteria.test.mjs",
+    "specs/close-stage-six/review-packet.md",
+    "specs/plan-roadmap/review-packet.md",
+    "specs/stage-names/review-packet.md",
+    "specs/stop-at-pr/review-packet.md",
+    "specs/test-lock/review-packet.md"
+  ],
+  "reviewedHashes": {
+    "CHANGELOG.md": "ddb0f89d894c5569",
+    "scripts/loop.mjs": "2cc2bf72e5cf15df",
+    "scripts/sdlc.mjs": "edf9c16ec202c4d9",
+    "tests/failures.test.mjs": "ca560366739a54f2",
+    "tests/harden.test.mjs": "6894dd5572b1d543",
+    "tests/loop.test.mjs": "45454cfda70d6f6f",
+    "tests/release-criteria.test.mjs": "cd3bb86dbbf83084"
+  },
+  "closedAt": "2026-11-08T04:45:22.815Z"
+}

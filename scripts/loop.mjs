@@ -11,16 +11,13 @@ import os from 'node:os'
 import path from 'node:path'
 import crypto from 'node:crypto'
 import { spawnSync } from 'node:child_process'
-import { fileURLToPath } from 'node:url'
-import { STAGES, stageSpec, git, gitOk, loadConfig, section, changedFiles, listFeatures, nextStage, writeState, matches, destructiveMigrations } from './lib.mjs'
+import { STAGES, git, loadConfig, baseCommit, runtimePath, section, changedFiles, listFeatures, nextStage, writeState, matches, destructiveMigrations, scaffoldFiles, designDoc } from './lib.mjs'
 import { matrix } from './testmatrix.mjs'
-import { check as knowledgeCheck, pages as knowledgePages } from './knowledge.mjs'
-import { parseFacts, factProblems } from './facts.mjs'
 import { parseLedger } from './review.mjs'
 
 export const sha256 = text => crypto.createHash('sha256').update(text).digest('hex').slice(0, 16)
 
-const mergeBase = (dir, cfg) => cfg.protectedBranches.map(b => git(`merge-base ${b} HEAD`, dir)).find(Boolean)
+const mergeBase = (dir, cfg) => baseCommit(dir, cfg)
 
 // The test files that trace this feature's criteria, from the test matrix.
 // Levels the proof leaves to their own run (proofSkipLevels, finding V6): a browser suite needs tools the
@@ -67,23 +64,6 @@ export function judgeProof(acs, run) {
   const pkg = run.output?.match(/Cannot find (?:module|package) '((?:@[\w.-]+\/)?[\w][\w.-]*)'/)?.[1]
   if (run.status !== 0 && pkg) return acs.map(ac => ({ ac, red: false, why: `the base run failed on a missing package (${pkg}), not on the code under test` }))
   return acs.map(ac => (run.status !== 0 ? { ac, red: true } : { ac, red: false, why: 'the run passed against the base code' }))
-}
-
-// The files "sdlc init-repo" copies from templates/repo, as repo paths: the scaffold, not product code.
-let scaffoldCache
-export function scaffoldFiles() {
-  if (scaffoldCache) return scaffoldCache
-  const root = path.join(path.dirname(fileURLToPath(import.meta.url)), '..', 'templates', 'repo')
-  const out = new Set()
-  const walk = rel => {
-    for (const e of fs.readdirSync(path.join(root, rel), { withFileTypes: true })) {
-      const from = path.join(rel, e.name)
-      if (e.isDirectory()) walk(from)
-      else out.add(from.split(path.sep).join('/'))
-    }
-  }
-  if (fs.existsSync(root)) walk('')
-  return (scaffoldCache = out)
 }
 
 // The criteria this branch adds: those the base commit's acceptance.feature does not already have.
@@ -174,11 +154,25 @@ export function runProof(dir, state, opts = {}, cfg = loadConfig(dir)) {
   }
 }
 
-// What the Verify gate requires of the proof. Without a proofCommand it only warns, and the PR must
-// say the proof did not run.
+// The proved test files an agent may not change (test-lock): those of the last passing proof (state.lock,
+// which a failed or narrower proof never clears), none once a person approved a new spec version after
+// it (a Define gate passed on checks does not count: review F3), less a criterion's files whose conflict
+// a person settled as "change the test".
+export function lockedFiles(state) {
+  const p = state.lock
+  if (!p?.files || state.closedAt) return []
+  const g = state.gates?.[1]
+  if (g?.status === 'approved' && !g.auto && !String(g.by ?? '').startsWith('checks:') && g.approvedAt > p.at) return []
+  const freed = Object.values(state.conflicts ?? {}).filter(c => c.decision === 'change' && c.settledAt > p.at).flatMap(c => c.files)
+  return Object.keys(p.files).filter(f => !freed.includes(f))
+}
+
+// What the Verify gate requires of the proof. Without a proofCommand it refuses, unless a person waived
+// the proof for this repo with a reason ("proofWaived"); then it warns, and the PR must say the proof did not run.
 export function proofProblems(dir, state, artefactText, cfg = loadConfig(dir)) {
   if (!['full', 'light'].includes(state.lane)) return { problems: [], warning: null }
   if (state.spike) return { problems: ['this slice is a spike: spike code merges only once a non-spike slice replaces it (sdlc spike <feature> --off)'], warning: null }
+  if (!cfg.proofCommand && !(typeof cfg.proofWaived === 'string' && cfg.proofWaived.trim())) return { problems: ['no proof check is set, so nothing shows the tests fail without the change. A person sets it in their terminal (sdlc proof-command "<command>", for example node --test {files}), or waives it for this repo with a reason: "proofWaived": "<why>" in the repo config'], warning: null }
   if (!cfg.proofCommand) {
     const notVerified = section(artefactText, '## Not verified') ?? ''
     return {
@@ -203,133 +197,6 @@ const outcomeValue = (text, label) => {
   return value && !/<[^>]*>/.test(value) ? value : null
 }
 
-// The date a rollback was tested: "Tested: 2026-11-02, how" ("**Tested:**" and "Tested on" too), and
-// not later than today, so a planned date does not count.
-const testedOn = text => {
-  const date = text.match(/\bTested(?::\*\*|:| on)[ \t]*(\d{4}-\d{2}-\d{2})(?!\d)/i)?.[1]
-  return date && date <= new Date().toISOString().slice(0, 10) ? date : null
-}
-
-// A probe's result: the last cell of a table row, or the words after the last ": " of a line, and the
-// first result word there. "5xx rate: ok, was red yesterday" passed; "checkout: FAIL, expected pass" failed.
-const isHeaderRow = (line, next) => /^\s*\|/.test(line) && /^\s*\|[\s:|-]+\|\s*$/.test(next ?? '')
-export function probeResult(line) {
-  if (/^\s*\|[\s:|-]+\|\s*$/.test(line)) return null
-  const cells = /^\s*\|/.test(line) ? line.split('|').map(c => c.trim()).filter(Boolean) : null
-  const where = cells ? cells[cells.length - 1] ?? '' : line.includes(': ') ? line.slice(line.lastIndexOf(': ') + 2) : line
-  if (/\bnot ok\b/i.test(where)) return 'fail'
-  const word = where.match(/\b(pass(ed)?|ok|green|fail(ed)?|red)\b/i)?.[1]
-  return word ? (/^(fail(ed)?|red)$/i.test(word) ? 'fail' : 'pass') : null
-}
-
-// Release: is it safe to ship (problems block), and is what we know still true (warnings)?
-export function releaseProblems(dir, state, artefactText, cfg = loadConfig(dir)) {
-  const problems = []
-  const changed = state.reviewedFiles ?? changedFiles(dir, cfg).map(f => f.file)
-
-  // Rollout readiness: a rollback that was actually tested, and probe results. A lane with an outcome
-  // window also names who reads the outcome, or says why there is none. A hotfix is already in
-  // production, so its incident commander judges these.
-  if (['full', 'light'].includes(state.lane)) {
-    const rollback = section(artefactText, '## Rollback (tested)') ?? ''
-    // The date the rollback ran, on a "Tested:" line, never a planned one (later change 2).
-    if (!testedOn(rollback)) problems.push('the rollback has no "Tested: <date>, <how>" line: test the rollback before release')
-    const probes = section(artefactText, '## Probes') ?? ''
-    if (!/\b(pass(ed)?|ok|green|fail(ed)?|red)\b/i.test(probes)) problems.push('"## Probes" records no result (pass or fail for each probe)')
-    for (const line of probes.split('\n').filter((l, i, all) => !isHeaderRow(l, all[i + 1]))) {
-      if (probeResult(line) === 'fail') problems.push(`a probe failed: ${line.replace(/\s+/g, ' ').trim().slice(0, 120)}. Fix it or roll back; a release with a failed probe is not done`)
-    }
-    const outcome = section(artefactText, '## Outcome metric') ?? ''
-    const none = /Metric:[ \t]*None, because[ \t]+\S/i.test(outcome)
-    if (state.lane in cfg.outcomeWindowDays && !none && (!outcomeValue(outcome, 'Metric') || !outcomeValue(outcome, 'Owner'))) problems.push('"## Outcome metric" needs "Metric:" and "Owner:" lines (or "Metric: None, because ..."), so the outcome follow-up has an owner')
-  }
-  // A @release criterion is proved here, in every lane that releases: a probe line names it with a
-  // passing result (finding V4). One criterion per line, so the result is that criterion's.
-  const probeLines = (section(artefactText, '## Probes') ?? '').split('\n')
-  for (const r of matrix(dir, state.feature).rows.filter(r => r.due === 'release')) {
-    const line = probeLines.find(l => new RegExp(`\\b${r.ac}\\b`).test(l))
-    if (!line || probeResult(line) !== 'pass') problems.push(`${r.ac} is checked at release: name it on a probe line of its own with its result ("- ${r.ac} ${r.name}: pass")`)
-  }
-  problems.push(...liveProblems(dir, state, artefactText, cfg))
-  return { problems, warnings: rememberWarnings(dir, state, changed, cfg) }
-}
-
-// What was released and what is live (ADR-0004, failure F3), in every lane that releases. The reviewed
-// commit must be on the remote's protected branch, so a branch deploy is never the release and never
-// the only copy; and the running system's build must contain it, and still contain the last release.
-export const releaseSha = (dir, state) => state.reviewedSha ?? git('rev-parse HEAD', dir)
-export const liveShaIn = text => (section(text, '## Probes') ?? section(text, '## Live') ?? '').match(/Live:\s*([0-9a-f]{7,40}|unknown)\b/i)?.[1]
-// The commit on origin/<branch> that holds the reviewed change: the commit itself after a merge, or the
-// squash commit whose patch is the same. Null when the change never reached the remote's branch.
-export function landedOn(dir, sha, branch) {
-  const ref = `origin/${branch}`
-  if (!gitOk(`rev-parse --verify --quiet ${ref}`, dir)) return null
-  if (gitOk(`merge-base --is-ancestor ${sha} ${ref}`, dir)) return sha
-  const base = git(`merge-base ${sha} ${ref}`, dir)
-  if (!base) return null
-  const id = git(`diff ${base} ${sha} | git patch-id --stable`, dir).split(' ')[0]
-  if (!id) return null
-  const match = git(`log -p --no-merges ${base}..${ref} | git patch-id --stable`, dir).split('\n').map(l => l.split(' ')).find(([p]) => p === id)
-  return match?.[1] ?? null
-}
-
-export function liveProblems(dir, state, artefactText, cfg = loadConfig(dir)) {
-  const problems = []
-  const reviewed = releaseSha(dir, state)
-  if (!git('remote get-url origin', dir)) return ['the repo has no "origin" remote: a release must be on the remote, or the branch is the only copy']
-  git('fetch --quiet origin', dir)
-  const landed = cfg.protectedBranches.map(b => landedOn(dir, reviewed, b)).find(Boolean)
-  if (!landed) problems.push(`the reviewed commit ${reviewed.slice(0, 7)} is not on origin/${cfg.protectedBranches.join(' or origin/')}: merge and push it first. A deploy from a branch is a preview, never a release`)
-  const sha = landed ?? reviewed
-  const live = liveShaIn(artefactText)
-  if (!live) return [...problems, '"## Probes" has no "Live: <sha>" line: read the build the running system reports (a version endpoint, a meta tag, the platform\'s inspect command) and record it']
-  if (/unknown/i.test(live)) return [...problems, '"Live: unknown": find out what is running before calling it released']
-  // cat-file -t, not "${live}^{commit}": cmd.exe on Windows eats the caret.
-  if (git(`cat-file -t ${live}`, dir) !== 'commit') return [...problems, `Live: ${live} is not a commit this repo knows: fetch, or read the build id again`]
-  if (!gitOk(`merge-base --is-ancestor ${sha} ${live}`, dir)) problems.push(`the live build ${live.slice(0, 7)} does not contain the release commit ${sha.slice(0, 7)}: what is running is not this release`)
-  const previous = listFeatures(dir).filter(s => s.feature !== state.feature && s.releasedSha).sort((a, b) => Date.parse(b.closedAt) - Date.parse(a.closedAt))[0]
-  if (previous && !gitOk(`merge-base --is-ancestor ${previous.releasedSha} ${live}`, dir)) problems.push(`the live build ${live.slice(0, 7)} no longer contains ${previous.feature} (${previous.releasedSha.slice(0, 7)}), released before: this deploy rolled it back`)
-  return problems
-}
-
-// What the change may have made untrue. These warn at Release, and an agent re-verifies them.
-export function rememberWarnings(dir, state, changed, cfg = loadConfig(dir)) {
-  const problems = []
-
-  // Remember: no knowledge page or fact this change touched may be stale.
-  const { stale } = knowledgeCheck(dir)
-  const touched = new Set(knowledgePages(dir).filter(p => p.sources.some(s => changed.some(c => c === s || c.startsWith(s.replace(/\/?$/, '/'))))).map(p => p.file))
-  for (const s of stale.filter(s => touched.has(s.file))) problems.push(`knowledge page ${s.file} is stale (${s.why}): re-verify it against the code`)
-  const facts = path.join(dir, cfg.specsDir, state.feature, 'facts.md')
-  if (fs.existsSync(facts)) {
-    const mine = parseFacts(fs.readFileSync(facts, 'utf8')).facts.filter(f => changed.includes(f.file))
-    for (const p of factProblems(dir, mine).filter(p => /is stale/.test(p))) problems.push(`facts.md: ${p}`)
-  }
-
-  // ADRs the change supersedes must say so.
-  const texts = [path.join(dir, cfg.specsDir, state.feature, 'plan.md'), ...changed.filter(f => /^docs\/adr\/.+\.md$/.test(f)).map(f => path.join(dir, f))]
-    .filter(f => fs.existsSync(f)).map(f => fs.readFileSync(f, 'utf8'))
-  const superseded = [...new Set(texts.flatMap(t => [...t.matchAll(/\bsupersedes?\s+ADR-(\d{1,4})\b/gi)].map(m => m[1].padStart(4, '0'))))]
-  for (const id of superseded) {
-    const folder = path.join(dir, 'docs', 'adr')
-    const file = fs.existsSync(folder) ? fs.readdirSync(folder).find(f => f.startsWith(id)) : null
-    if (!file) problems.push(`the change supersedes ADR-${id}, which docs/adr does not have`)
-    else if (!/^Status:\s*superseded/im.test(fs.readFileSync(path.join(folder, file), 'utf8'))) problems.push(`ADR-${id} is superseded by this change: set its "Status: superseded by ..."`)
-  }
-
-  // Postmortems: every action links to the trap, test, check or PRD it became, with an owner and a date.
-  const link = /\]\(|https?:\/\/|#\d+|[\w.-]+\/[\w./-]+/
-  for (const f of changed.filter(f => /^docs\/incidents\/.+\.md$/.test(f) && fs.existsSync(path.join(dir, f)))) {
-    const rows = (section(fs.readFileSync(path.join(dir, f), 'utf8'), '## Actions') ?? '').split('\n')
-      .filter(l => /^\|/.test(l) && !/^\|\s*Action\s*\|/i.test(l) && !/^\|[\s|:-]+\|$/.test(l))
-    for (const row of rows) {
-      const [action, becomes, owner, due] = row.split('|').slice(1, -1).map(c => c.trim())
-      if (!link.test(becomes ?? '') || !owner || !/\d{4}-\d{2}-\d{2}/.test(due ?? '')) problems.push(`${f}: action "${(action ?? '').slice(0, 40)}" needs a link to the trap, test, check or PRD it became, an owner and a due date`)
-    }
-  }
-  return problems
-}
-
 // The outcome follow-up a released feature leaves behind: the metric, its owner and when to read it.
 // Only lanes with an outcome window open one, and "Metric: None, because ..." opens none.
 export function outcomeFollowUp(state, artefactText, cfg) {
@@ -348,7 +215,7 @@ export function overdueOutcomes(dir, now = Date.now()) {
 }
 
 // Retro triggers: why a retro is due before its schedule.
-const triggerFile = dir => path.join(dir, '.ai-sdlc', 'retro-due.json')
+const triggerFile = dir => runtimePath(dir, 'retro-due.json')
 export function readTriggers(dir) {
   return fs.existsSync(triggerFile(dir)) ? JSON.parse(fs.readFileSync(triggerFile(dir), 'utf8')) : []
 }
@@ -386,16 +253,9 @@ export function advanceFeature(dir, state) {
   if (next === undefined) {
     state.closedAt = now
     if (state.lane === 'hotfix') state.postmortemDue = new Date(Date.now() + cfg.postmortemDays * 864e5).toISOString()
-    // What shipped and what was live when it did, so the next release can check it is still there.
-    if (state.stage === 6) {
-      const artefact = path.join(dir, cfg.specsDir, state.feature, stageSpec(state, 6).artefact)
-      state.releasedSha = cfg.protectedBranches.map(b => landedOn(dir, releaseSha(dir, state), b)).find(Boolean) ?? releaseSha(dir, state)
-      const live = fs.existsSync(artefact) ? liveShaIn(fs.readFileSync(artefact, 'utf8')) : null
-      if (live && !/unknown/i.test(live)) state.liveSha = live
-    }
-    // The feature closes at release; its outcome is a follow-up with an owner and a date.
-    const release = path.join(dir, cfg.specsDir, state.feature, 'release.md')
-    const outcome = fs.existsSync(release) ? outcomeFollowUp(state, fs.readFileSync(release, 'utf8'), cfg) : null
+    // The feature closes at its PR (ADR-0008); its outcome, from the PRD, is a follow-up with an owner and a date.
+    const prd = path.join(dir, cfg.specsDir, state.feature, 'prd.md')
+    const outcome = fs.existsSync(prd) ? outcomeFollowUp(state, fs.readFileSync(prd, 'utf8'), cfg) : null
     if (outcome) state.outcome = outcome
     writeState(dir, state)
     const proofNote = cfg.proofCommand ? `, and the test proof: sdlc proof ${state.feature} --files <repro tests>` : ''
@@ -406,7 +266,7 @@ export function advanceFeature(dir, state) {
   state.stage = next
   state.stages[state.stage] = { enteredAt: now }
   writeState(dir, state)
-  return `${state.feature} is now at stage ${state.stage} (${STAGES[state.stage].name}).`
+  return `${state.feature} is now at ${STAGES[state.stage].name}.`
 }
 
 // The risk tier of a change (ADR-0005), set by what it touches, never by who wrote it. The pre-review's
@@ -419,7 +279,7 @@ export function riskTier(dir, all, preText = '', cfg = loadConfig(dir)) {
   // The plugin's own state and settings are not part of the change: agents cannot write them at all.
   const files = all.filter(f => !f.startsWith('.ai-sdlc/'))
   const high = files.filter(f => matches(f, [...cfg.highRiskPaths, ...cfg.askPaths, ...ALWAYS_A_PERSON]))
-  if (high.length) why.push(`${high.slice(0, 3).join(', ')} ${high.length > 1 ? 'are' : 'is'} on a path that always needs a person`)
+  if (high.length) why.push(`${high.slice(0, 3).join(', ')} ${high.length > 1 ? 'are' : 'is'} on a high-risk path, so the org's review rules decide who looks`)
   const destructive = destructiveMigrations(dir, cfg)
   if (destructive.length) why.push(`${destructive.join(', ')} alters or drops data`)
   const code = files.filter(f => !matches(f, DOCS_ONLY))
@@ -444,7 +304,7 @@ export function gateFingerprint(dir, state, stage, cfg = loadConfig(dir)) {
   // Nothing when the feature has no db-design.md, so other features hash exactly as before.
   const db = (...hs) => (state.dataDoc ? hs.map(h => `${h}\n${section(read('db-design.md'), h) ?? ''}`).join('\n') : '')
   if (stage === 1) return sha256(read('prd.md') + read('acceptance.feature') + intent + db('## Data impact'))
-  if (stage === 3) return sha256(read('plan.md') + db('## Data model', '## Migration plan (expand-contract)'))
+  if (stage === 3) return sha256(read(designDoc(dir, state)) + db('## Data model', '## Migration plan (expand-contract)'))
   const files = changedFiles(dir, cfg).map(f => f.file).filter(f => !f.startsWith(`${cfg.specsDir}/`) && !f.startsWith('.ai-sdlc/')).sort()
   const hashes = contentHashes(dir, files)
   return sha256(files.map(f => `${f}:${hashes[f] ?? 'deleted'}`).join('\n'))

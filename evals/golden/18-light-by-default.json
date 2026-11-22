@@ -40,7 +40,7 @@
     },
     {
       "say": "sdlc approve demo 1",
-      "out": "now at stage 4 \\(Build\\)"
+      "out": "now at Build"
     },
     {
       "fill": [
@@ -67,7 +67,7 @@
         "demo"
       ],
       "ok": true,
-      "out": "passed on checks.*now at stage 5"
+      "out": "passed on checks.*now at Verify"
     },
     {
       "state": [

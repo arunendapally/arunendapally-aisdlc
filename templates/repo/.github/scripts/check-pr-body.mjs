@@ -33,7 +33,7 @@ export function problems(body = '') {
   }
   const pre = section(body, '## Pre-review') ?? ''
   if (pre && !/Risk:[ \t]*(low|medium|high)\b/i.test(pre)) out.push('pre-review gives no "Risk: low|medium|high"')
-  if (pre && !/Open findings:[ \t]*0\b/i.test(pre)) out.push('pre-review has open findings')
+  if (pre && !/Open findings:[ \t]*0\b/i.test(pre) && !/Open findings:[^\n]*\bnits?\b/i.test(pre)) out.push('pre-review has open findings')
   if (pre && !/Revert:[ \t]*\S/i.test(pre)) out.push('pre-review does not say how to undo this ("Revert: ...")')
   return out
 }

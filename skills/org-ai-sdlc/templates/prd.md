@@ -1,11 +1,11 @@
 # PRD: <feature>
 
-<!-- Stage 1 Plan. Owner: product-owner agent. Gate: the product lead, asked with "sdlc ask <feature>"; under autonomy it passes on its checks.
+<!-- Define. Owner: product-owner agent. Gate: the product lead, asked with "sdlc ask <feature>"; under autonomy it passes on its checks.
      One approval covers this PRD and acceptance.feature; the approver judges it in two minutes.
      Requirements, not solutions: what people and the business need, and why, in words a user would
      recognise. A requirement stays true whatever we build; if it would change under a different design,
      it is design. No code, files, modules, APIs, tables, fields, frameworks, hosting or deploy mechanics:
-     those go in the design (plan.md, openapi.yaml, or "## Approach" in tasks.md in the light lane). A
+     those go in the design (design.md, openapi.yaml, or "## Approach" in tasks.md in the light lane). A
      solution a person has already chosen goes in "## Constraints", with who chose it.
      A required section with only a comment in it is empty, and the gate refuses it. Keep every "## " heading
      exactly as written; never start a line with "# " or "## " inside a section.
@@ -106,8 +106,8 @@ item seen before (support dashboard 2026-Q3, read by Sam, support lead). Today t
 
 ## Outcome metric
 
-<!-- One metric of value to users or the business, read after the lane's window (see release.md); release.md
-     copies Metric and Owner. Uptime and error rates are release probes, not outcomes. Example:
+<!-- One metric of value to users or the business, read after the lane's window (outcomeWindowDays in
+     config, or a "Read on: <date>" line here). Uptime and error rates are release probes, not outcomes. Example:
 Metric: share of saved items bought within 14 days of saving
 Baseline: none today (no saved list); the first read sets it
 Target: 8%
@@ -126,3 +126,12 @@ Objective: grow repeat purchases (2026-Q4 KR2)
 <!-- Optional "## Dependencies": another team, service or vendor that must act first (who, what, by when).
      Each kind adds its section (Current system, API changes, Performance budget): say what changes for the people
      and systems that depend on it, and cite facts; the technical detail goes in the design. -->
+
+## Definition of done
+
+<!-- Tick each item ("- [x]") once done, or write "- N/A: <reason>". The gate refuses an open item or a bare N/A. -->
+- [ ] Open questions answered or owned
+- [ ] Every requirement has a scenario in acceptance.feature
+- [ ] UX design done, if the change has a screen
+- [ ] API or data needs named, if the change has any
+- [ ] Assumptions confirmed or owned

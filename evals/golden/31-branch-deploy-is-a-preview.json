@@ -1,0 +1,22 @@
+{
+  "name": "branch-deploy-is-a-preview",
+  "promise": "An agent's preview deploy from a branch not on the remote asks first: a branch deploy is a preview, never a release.",
+  "catches": [
+    "F3"
+  ],
+  "steps": [
+    {
+      "remote": true
+    },
+    {
+      "tool": [
+        "Bash",
+        {
+          "command": "vercel deploy"
+        }
+      ],
+      "expect": "ask",
+      "reason": "a branch deploy is a preview, never a release"
+    }
+  ]
+}

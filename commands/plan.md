@@ -1,18 +1,19 @@
 ---
-description: Stage 1 Plan. The product owner asks its questions first, then writes a short PRD and the Gherkin acceptance criteria; one gate, the product lead's.
-argument-hint: <feature-slug>
+description: Plan. Cut a big requirement into a roadmap of slices placed now, next or later, enablers first, each able to go live on its own; run once per capability, before Define.
+argument-hint: <capability-slug>
 ---
 
-Stage 1 for `$ARGUMENTS`. Delegate to the `product-owner` agent, with the `qa-engineer` for the acceptance criteria.
+Plan for the capability `$ARGUMENTS`. You are the `cto`, with the `product-owner` for what each slice delivers and the `architect` for enablers and how each goes live.
 
-0. **The person's intent first.** If `specs/$ARGUMENTS/state.json` has no `intent`, run `node "${CLAUDE_PLUGIN_ROOT}/scripts/sdlc.mjs" ask $ARGUMENTS`: it prints three questions (change, smallest, drop if). Fill each with two or three answers taken from what the person already said, never invented, and ask them with the question tool; they pick one or write their own. Their answers are recorded as the intent. The PRD cannot be written, and Plan cannot be requested, until then; the request writes their words into `## Intent`, never reworded. Without the question tool they can type `sdlc intent $ARGUMENTS change: ...; smallest: ...; drop if: ...`.
-1. **Ask only what is essential; assume the rest.** The product owner asks only about a decision that cannot be undone, a request that conflicts with the existing docs, or a fork where a wrong guess would mean redoing most of the work, each with a recommended answer (none on intent, taste or risk), in one round with the question tool. Everything else it writes down instead of asking: in `## Assumptions` as `[unconfirmed]`, and in `## Open questions` with who can confirm it. If nothing is essential, it asks nothing and drafts. If the person says to go with the recommendations, each such answer is recorded as `(recommended, accepted)` and its assumption stays `[unconfirmed]`.
-2. **Draft** `specs/$ARGUMENTS/prd.md` from the template: the questions and answers, any constraints the person already chose (with who chose them), the assumptions (each `[confirmed]` or `[unconfirmed]`), numbered testable requirements (R1, R2, ...) that state needs, never solutions, each with what the product must already know (`Needs:`), the non-functional requirements (performance, security and privacy, accessibility, limits and quotas: each a requirement or "None, because ..."), what it must never do, scope, the outcome metric, and open questions.
-3. **Acceptance criteria.** The `qa-engineer` writes `specs/$ARGUMENTS/acceptance.feature`: each criterion a Gherkin scenario tagged with the requirement it proves (`@R1`), a unique id (`@AC-1`) and, as a hint, its test level (`@unit`, `@subsystem`, `@api`, `@e2e`). Run `node "${CLAUDE_PLUGIN_ROOT}/scripts/sdlc.mjs" gherkin $ARGUMENTS` until it shows no errors; its warnings are style advice.
-4. **Facts, for brownfield or data work.** The `architect` writes `specs/$ARGUMENTS/facts.md`: what the feature depends on in the current system, pinned to `file:line` and a commit.
+**Input:** an idea or outcome from a person, and `specs/$ARGUMENTS/slices.md` when the capability already has one.
+**Processing:** cut the work into slices that run one by one with no dependency between them, enablers first (an API contract first, so the UI and the service build in parallel), place each now, next or later, and say how each goes live on its own.
+**Output:** `specs/$ARGUMENTS/slices.md` from the `slices.md` template: the outcome and one line per slice. It is the capability's roadmap; there is no other document.
 
-**Goal:** every section filled or "None, because ..."; every unconfirmed assumption in Open questions; every requirement has a scenario.
+1. **Outcome.** One sentence with a number and its source, from what the person said.
+2. **Slices.** One line each, in the template's shape: what it delivers, `Horizon`, `Kind`, `Goes live`, `Depends on`, `Status`. A slice is vertical (a user sees a change) unless it is an enabler other slices build on.
+3. **Going live.** Prefer `compatible`, then `flag <NAME>`, and only when neither works `after <slug>, because <reason>`. A sequence shows tight coupling: say why, or cut the slices differently.
+4. **Horizons.** `now` is being built, `next` is ready to start, `later` is re-planned before it starts.
+5. **Check.** Run `node "${CLAUDE_PLUGIN_ROOT}/scripts/sdlc.mjs" status`: it lists the slices under now, next and later, marks enablers, and names any slice that goes live after another with no reason. A slice's Define request is refused until that is fixed.
+6. **Start the now slices.** One feature per slice: `node "${CLAUDE_PLUGIN_ROOT}/scripts/sdlc.mjs" init <slug> --capability $ARGUMENTS`, then `/ai-sdlc:define <slug>`. Or run `/ai-sdlc:run $ARGUMENTS`, which works the slices in dependency order to their PRs.
 
-**Loop:** draft, self-check, fix. Count each failed check with `node "${CLAUDE_PLUGIN_ROOT}/scripts/sdlc.mjs" retry $ARGUMENTS prd`. On ESCALATE, stop and report what was tried.
-
-**Gate:** run `node "${CLAUDE_PLUGIN_ROOT}/scripts/sdlc.mjs" request $ARGUMENTS` and show the PRD in five lines, the unconfirmed assumptions and what was not verified. Then run `node "${CLAUDE_PLUGIN_ROOT}/scripts/sdlc.mjs" ask $ARGUMENTS` and put its question to the product lead with the question tool: Approve, or Send back with a reason. Their answer is recorded (typing `sdlc approve $ARGUMENTS 1` also works). Approved, the feature moves to Design (full lane) or Build (light lane) by itself.
+**Gate:** none. The roadmap is a record; each slice's Define gate is where a person decides.

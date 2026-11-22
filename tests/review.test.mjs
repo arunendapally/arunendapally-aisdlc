@@ -6,6 +6,8 @@ import fs from 'node:fs'
 import { makeRepo, switchableGate, READY_PRD, READY_FEATURE } from './helpers.mjs'
 import { riskTier } from '../scripts/loop.mjs'
 import { parseLedger, ledgerProblems } from '../scripts/review.mjs'
+import path from 'node:path'
+import { runtimePath } from '../scripts/lib.mjs'
 
 const hoursAgo = h => new Date(Date.now() - h * 36e5).toISOString()
 const BUG = ['## Repro', '## Expected and actual', '## Root cause', '## Fix', '## Test results', '## Not verified']
@@ -25,23 +27,33 @@ function verifyRepo() {
   return r
 }
 
+// Verify passes on checks (ADR-0008), so the approvals these cover are Plan's and Design's.
+const planRepo = () => {
+  const r = makeRepo()
+  r.sdlc('init', 'demo')
+  r.say('sdlc intent demo change: shoppers can save; smallest: a button; drop if: nobody saves')
+  r.put('specs/demo/prd.md', READY_PRD)
+  r.put('specs/demo/acceptance.feature', READY_FEATURE)
+  return r
+}
+
 test('an approval covers what the request checked: a later change lapses it', () => {
-  const r = verifyRepo()
+  const r = planRepo()
   assert.match(r.sdlc('request', 'demo').out, /waiting on/)
-  r.put('src/total.ts', 'export const total = 2\n')
-  const lapsed = r.say('sdlc approve demo 5')
+  r.put('specs/demo/acceptance.feature', READY_FEATURE.replace('it is saved', 'it is saved once'))
+  const lapsed = r.say('sdlc approve demo 1')
   assert.match(lapsed, /what it checked has changed since the request, so it has lapsed/)
-  assert.equal(r.state('demo').gates['5'].status, 'lapsed')
+  assert.equal(r.state('demo').gates['1'].status, 'lapsed')
   assert.match(r.sdlc('request', 'demo').out, /waiting on/)
-  assert.match(r.say('sdlc approve demo 5'), /approved gate 5/, 'requested again, the approval stands')
+  assert.match(r.say('sdlc approve demo 1'), /approved Define/, 'requested again, the approval stands')
 })
 
 test('a commit with the same change does not lapse an approval; a spec edit lapses the spec gate', () => {
-  const r = verifyRepo()
+  const r = planRepo()
   r.sdlc('request', 'demo')
-  r.git('add', 'src/total.ts')
+  r.git('add', 'specs/demo/prd.md', 'specs/demo/acceptance.feature')
   r.git('commit', '-q', '-m', 'commit what was reviewed')
-  assert.match(r.say('sdlc approve demo 5'), /approved gate 5/)
+  assert.match(r.say('sdlc approve demo 1'), /approved Define/)
 
   const s = makeRepo()
   s.sdlc('init', 'demo')
@@ -62,25 +74,26 @@ test('a spec changed after Plan was approved sends the feature back to Plan', ()
   r.put('specs/demo/prd.md', READY_PRD)
   r.put('specs/demo/acceptance.feature', READY_FEATURE)
   r.sdlc('request', 'demo')
-  assert.match(r.say('sdlc approve demo 1'), /approved gate 1/)
+  assert.match(r.say('sdlc approve demo 1'), /approved Define/)
   assert.equal(r.state('demo').stage, 4)
   assert.doesNotMatch(r.sdlc('request', 'demo').out, /has changed since gate/, 'an unchanged spec stays where it is')
 
   r.put('specs/demo/prd.md', READY_PRD.replace('Save an item', 'Save and share an item'))
-  const out = r.sdlc('request', 'demo').out
-  assert.match(out, /The spec \(prd\.md or acceptance\.feature\) has changed since gate 1 was approved/)
-  assert.match(out, /back to stage 1 \(Plan\)/)
+  assert.match(r.sdlc('request', 'demo').out, /change request or amend the existing PRD\?/, 'at Build the person chooses')
+  const out = r.sdlc('amend', 'demo').out
+  assert.match(out, /The spec \(prd\.md or acceptance\.feature\) has changed since Define was approved/)
+  assert.match(out, /back to Define/)
   const s = r.state('demo')
   assert.equal(s.stage, 1)
   assert.equal(s.gates['1'], undefined, 'the old approval no longer covers the spec')
   assert.equal(s.gates['4'], undefined)
-  assert.match(fs.readFileSync(`${r.repo}/.ai-sdlc/audit.jsonl`, 'utf8'), /"event":"spec-drift"/)
+  assert.match(fs.readFileSync(runtimePath(r.repo, 'audit.jsonl'), 'utf8'), /"event":"spec-drift"/)
 
   // The new spec says what changed since v1; a person approves it as v2, and the feature carries on.
   assert.match(r.sdlc('request', 'demo').out, /approved as v1: add "## Changes since v1"/)
   r.put('specs/demo/prd.md', READY_PRD.replace('Save an item', 'Save and share an item') + '\n## Changes since v1\n\nSharing added.\n')
   assert.match(r.sdlc('request', 'demo').out, /waiting on/)
-  assert.match(r.say('sdlc approve demo 1'), /approved gate 1/)
+  assert.match(r.say('sdlc approve demo 1'), /approved Define/)
   assert.equal(r.state('demo').stage, 4)
 })
 
@@ -91,11 +104,11 @@ test('a plan changed after Design was approved sends the feature back to Design,
   const PLAN = ['## Data model', '## Contracts', '## Threat model', '## Error handling', '## Data and tenancy', '## Test plan', '## Run it']
   r.fill('specs/demo/plan.md', PLAN, '\n## Decisions\n\nNone, because no ADR.\n')
   assert.match(r.sdlc('request', 'demo').out, /waiting on/)
-  assert.match(r.say('sdlc approve demo 3'), /approved gate 3/)
+  assert.match(r.say('sdlc approve demo 3'), /approved Design/)
   assert.equal(r.state('demo').stage, 4)
 
   r.fill('specs/demo/plan.md', PLAN, '\n## Decisions\n\nNone, because no ADR. Also cache the totals.\n')
-  assert.match(r.sdlc('request', 'demo').out, /The plan \(plan\.md\) has changed since gate 3 was approved, so demo goes back to stage 3 \(Design\)/)
+  assert.match(r.sdlc('request', 'demo').out, /The design \(plan\.md\) has changed since Design was approved, so demo goes back to Design/)
   const s = r.state('demo')
   assert.equal(s.stage, 3)
   assert.equal(s.gates['3'], undefined)
@@ -154,7 +167,7 @@ test('the change sets its risk tier, and the pre-review may raise it but never l
   const v = verifyRepo()
   v.put('src/auth/token.ts', 'export const t = 1\n')
   const out = v.sdlc('request', 'demo').out
-  assert.match(out, /the pre-review says "Risk: medium", but the change is high: src\/auth\/token\.ts is on a path that always needs a person/)
+  assert.match(out, /the pre-review says "Risk: medium", but the change is high: src\/auth\/token\.ts is on a high-risk path, so the org's review rules decide who looks/)
   assert.equal(v.state('demo').riskTier, 'high')
   v.fill('specs/demo/bug.md', BUG, PRE('high'))
   assert.match(v.sdlc('request', 'demo').out, /Risk tier: high/)
@@ -206,21 +219,7 @@ test('review converges: after three refused rounds the gate stops until a person
   r.say('sdlc reject demo 5 rethink: fix the retry at its source')
   assert.equal(r.state('demo').reviewRounds, 0)
   r.fill('specs/demo/bug.md', BUG, PRE('medium'))
-  assert.match(r.sdlc('request', 'demo').out, /waiting on/)
-})
-
-test('code committed after Verify never reached a reviewer, so Release refuses it', () => {
-  const r = makeRepo()
-  r.remote()
-  r.sdlc('init', 'demo', '--full')
-  r.put('src/saved.ts', 'export const saved = true\n')
-  r.git('add', '-A')
-  r.git('commit', '-q', '-m', 'reviewed')
-  r.setState('demo', { stage: 6, stages: { 6: { enteredAt: hoursAgo(1) } }, reviewedSha: r.git('rev-parse', 'HEAD'), reviewedHashes: { 'src/saved.ts': 'unused' } })
-  r.put('src/extra.ts', 'export const extra = 1\n')
-  r.git('add', '-A')
-  r.git('commit', '-q', '-m', 'after review')
-  assert.match(r.sdlc('request', 'demo').out, /src\/extra\.ts changed after Verify reviewed .*never reached a reviewer/)
+  assert.match(r.sdlc('request', 'demo').out, /passed on checks/)
 })
 
 test('sdlc close: only a person retires work, with a reason, and never while a lesson is owed', () => {
@@ -228,12 +227,12 @@ test('sdlc close: only a person retires work, with a reason, and never while a l
   r.sdlc('init', 'spike-idea')
   assert.equal(r.bash('echo sdlc close spike-idea dropped'), 'deny', 'agents cannot close work')
   assert.match(r.say('sdlc close spike-idea'), /needs a reason/)
-  assert.match(r.say('sdlc close spike-idea superseded by saved-items'), /closed spike-idea at stage 1: \\"superseded by saved-items/)
+  assert.match(r.say('sdlc close spike-idea superseded by saved-items'), /closed spike-idea at Define: \\"superseded by saved-items/)
   const s = r.state('spike-idea')
   assert.ok(s.closedAt)
   assert.equal(s.closedBy, 'Test Human')
   assert.equal(s.outcome, undefined, 'nothing was released, so no outcome follow-up')
-  assert.match(r.sdlc('status').out, /spike-idea: closed at stage 1 by Test Human: superseded by saved-items/)
+  assert.match(r.sdlc('status').out, /spike-idea: closed at Define by Test Human: superseded by saved-items/)
   assert.doesNotMatch(r.hook('session-start', {}), /spike-idea: stage/)
 
   r.sdlc('init', 'checkout', '--full')
@@ -241,11 +240,12 @@ test('sdlc close: only a person retires work, with a reason, and never while a l
   assert.match(r.say('sdlc close double-charge cannot reproduce'), /owes a lesson/, 'closing never buries an escape')
 })
 
-test('the merge request shows the risk tier, how much was reviewed and what was not verified', () => {
+test('the Verify request shows the risk tier and records what was reviewed', () => {
   const r = verifyRepo()
   const out = r.sdlc('request', 'demo').out
-  assert.match(out, /waiting on/)
-  assert.match(out, /Risk tier: medium\. Files reviewed: \d+\.\nNot verified: Filled\./)
+  assert.match(out, /passed on checks/)
+  assert.match(out, /Risk tier: medium\./)
+  assert.ok(r.state('demo').reviewedFiles.includes('src/total.ts'))
 })
 
 test('the review packet counts .NET and Java tests as tests, with the patterns the test matrix uses', () => {
@@ -257,7 +257,7 @@ test('the review packet counts .NET and Java tests as tests, with the patterns t
   r.put('src/main/java/Pricing.java', 'class Pricing {}\n')
   r.put('src/test/java/PricingTest.java', 'class PricingTest { Pricing p; }\n')
   const out = r.sdlc('review', 'demo').out
-  assert.match(out, /5 files changed: 2 code, 3 test\./)
+  assert.match(out, /5 files changed: 2 code, 3 test, against main \([0-9a-f]{7}\)\./)
   for (const f of ['CalculatorEngineTests.cs', 'CalculatorApiTests.cs', 'PricingTest.java']) {
     assert.doesNotMatch(out, new RegExp(`${f}\` \\|[^\\n]*no changed test mentions it`), `${f} is a test, not untested code`)
   }

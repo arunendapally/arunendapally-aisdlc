@@ -6,9 +6,13 @@ import path from 'node:path'
 import { makeRepo } from './helpers.mjs'
 import { runTask, regressions, loadTasks } from '../evals/run.mjs'
 import { score, runAgentEvals, loadAgentTasks } from '../evals/agents.mjs'
+import { runtimePath } from '../scripts/lib.mjs'
 
 const hoursAgo = h => new Date(Date.now() - h * 36e5).toISOString()
-const audit = (r, entries) => r.put('.ai-sdlc/audit.jsonl', entries.map(e => JSON.stringify({ at: new Date().toISOString(), ...e })).join('\n') + '\n')
+const audit = (r, entries) => {
+  fs.mkdirSync(path.dirname(runtimePath(r.repo, 'audit.jsonl')), { recursive: true })
+  fs.writeFileSync(runtimePath(r.repo, 'audit.jsonl'), entries.map(e => JSON.stringify({ at: new Date().toISOString(), ...e })).join('\n') + '\n')
+}
 const retro = (r, ...args) => JSON.parse(r.sdlc('retro', '--json', ...args).out)
 const kinds = res => res.proposals.map(p => p.kind)
 
@@ -40,7 +44,7 @@ test('retro: each kind of evidence becomes a ranked proposal that names the plug
   const res = retro(r)
 
   const theme = res.proposals.find(p => p.kind === 'rejection-theme')
-  assert.match(theme.title, /Gate 5 keeps rejecting work for "pagination"/)
+  assert.match(theme.title, /Verify keeps rejecting work for "pagination"/)
   assert.equal(theme.evidence.length, 2)
   assert.equal(theme.change.target, 'templates/repo/standards/code-review-checklist.md')
 
@@ -49,7 +53,7 @@ test('retro: each kind of evidence becomes a ranked proposal that names the plug
   assert.equal(esc.change.target, 'commands/build.md')
 
   const wait = res.proposals.find(p => p.kind === 'gate-wait')
-  assert.match(wait.title, /Gate full:5 waits a median/)
+  assert.match(wait.title, /Verify \(full lane\) waits a median/)
 
   assert.match(res.proposals.find(p => p.kind === 'guard-friction').title, /fired 6 times/)
   const escape = res.proposals.find(p => p.kind === 'escape')

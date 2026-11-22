@@ -1,6 +1,6 @@
 # ai-sdlc: the AI software development cycle for teams
 
-A Claude Code plugin. A CTO agent and 13 expert agents take work from idea to production in lanes from hotfix to full feature, and humans own every gate. A feature waits on you three times (the spec, the merge, the release); a bug once. Agents write tests first and prove each one fails without the change. Everything beyond the safety core is optional until the risk calls for it.
+A Claude Code plugin. A CTO agent and 13 expert agents take work from idea to production in lanes from hotfix to full feature. A person answers the intent, then reviews the PR: Define and Design pass on their checks on the feature's own branch unless the repo names a person for them (ADR-0007), and merge, deploy and release are the org's own process (ADR-0008). A bug or task waits only for its PR review. Agents write tests first and prove each one fails without the change. Everything beyond the safety core is optional until the risk calls for it.
 
 ## Try it
 
@@ -18,7 +18,7 @@ Start a new Claude Code session in your product repo and type:
 /ai-sdlc:start add a saved-for-later list to the basket
 ```
 
-Set `gateCommand` in `.ai-sdlc/config.json` (for example `"npm run gate"`), answer the agents' questions, and approve each gate by typing `sdlc approve <feature> <stage>` in the prompt.
+The first start sets the repo's test and proof checks from what the repo holds (change them in `.ai-sdlc/config.json`). Answer the three intent questions, then review the PR. `/ai-sdlc:run <feature or capability>` takes work from the intent to the PR in one request.
 
 - **Step by step:** [docs/getting-started.md](docs/getting-started.md)
 - **How it works:** [docs/org-ai-sdlc-process.md](docs/org-ai-sdlc-process.md)
@@ -222,7 +222,7 @@ The cycle is the same one we've always had. My job now is to design the system t
 | [`docs/first-principles.md`](docs/first-principles.md) | A companion post: the first principles behind the cycle |
 | [`docs/org-ai-sdlc-process.md`](docs/org-ai-sdlc-process.md) | The same cycle for an organisation: every kind of work routed to the lightest safe lane, a small mandatory core with optional steps, a test-and-fix loop, and a knowledge base agents learn from |
 | [`agents/`](agents/) | The CTO and 13 expert subagents: product owner, UI/UX, architect, design reviewer, tech lead, builder, pre-reviewer, QA, performance, DBA, SRE, safe AI SDLC, agentic AI |
-| [`commands/`](commands/) | `/ai-sdlc:start` to triage and set up any work, the stages (`plan`, `design`, `build`, `verify`, `release`), `pre-review`, the small lanes (`bug`, `hotfix`, `task`), `learn`, `incident`, `retro`, `status` |
+| [`commands/`](commands/) | `/ai-sdlc:start` to triage and set up any work, `/ai-sdlc:run` to take it from the intent to the PR, the stages (`plan`, `define`, `design`, `build`, `verify`), `pre-review`, the small lanes (`bug`, `hotfix`, `task`), `learn`, `incident`, `retro`, `status` |
 | [`hooks/`](hooks/) and [`scripts/`](scripts/) | Guardrail hooks and the `sdlc.mjs` CLI: human-only approvals, lanes, the test proof, PR size, review deadlines, the knowledge base, the kill switch |
 | [`skills/org-ai-sdlc/`](skills/org-ai-sdlc/) | The working summary agents follow, plus a template for every artefact: PRD, Gherkin acceptance criteria, facts, plan, ADR, OpenAPI with a Swagger viewer, review ledger, release, and test scaffolds for unit, subsystem, Postman and Playwright |
 | [`templates/repo/`](templates/repo/) | The kit a product repo gets on first start: constitution, agent rules, config, engineering and testing standards, the review checklist and traps log, knowledge folder, GitHub workflows, ruleset, CODEOWNERS, C4 workspace |

@@ -1,13 +1,8 @@
 ---
-description: Stage 6 Release. A staged rollout, a tested rollback and production probes; the release owner decides when it ships.
+description: Out of scope. The plugin stops at a raised PR (ADR-0008); deploy and release are the org's own process.
 argument-hint: <feature-slug>
 ---
 
-Stage 6 for `$ARGUMENTS`.
+There is no Release stage for `$ARGUMENTS`. Every lane ends at Verify, which passes on its checks and completes the feature once the PR is raised (docs/adr/0008-the-plugin-stops-at-a-raised-pr.md).
 
-1. The `sre` writes `specs/$ARGUMENTS/release.md` from the template: the rollout (flag, canary or staged), a rollback with its `Tested: <date>, <how>` line, the probes, and `## Outcome metric` with `Metric:` and `Owner:` (or `Metric: None, because ...`).
-2. Humans run the merge, `terraform apply` and the production deploy. The hooks refuse those commands for agents.
-3. The `sre` runs the read-only production probes and records pass or fail for each, including this feature's own acceptance check, then reads the build the running system reports and writes `Live: <sha>`. A deploy's success message is not proof, and a deploy from a branch is a preview, never a release.
-4. `sdlc request` warns about knowledge pages and facts the change made stale, ADRs it supersedes that are not marked, and postmortem actions without a link. Fix what it lists: re-verify the pages, mark the ADRs, link the actions. Add a trap to `standards/traps.md` only when the feature taught one.
-
-**Gate:** `node "${CLAUDE_PLUGIN_ROOT}/scripts/sdlc.mjs" request $ARGUMENTS` (it refuses unless the reviewed change is on `origin/main` and `Live:` contains it and the previous release, and without a tested rollback and probe results), then run `node "${CLAUDE_PLUGIN_ROOT}/scripts/sdlc.mjs" ask $ARGUMENTS` and put its question to the release owner with the question tool. Their approval closes the feature; in the full lane that opens the outcome follow-up.
+Tell the person, in one line, that merge, deploy and release follow their org's own process, and that any `@release` criteria are listed under `## Check after deploy` in `specs/$ARGUMENTS/review-packet.md` for them to check on the deployed build. Do not merge, deploy or request a gate.

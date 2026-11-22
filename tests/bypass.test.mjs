@@ -5,6 +5,7 @@ import assert from 'node:assert/strict'
 import fs from 'node:fs'
 import path from 'node:path'
 import { makeRepo } from './helpers.mjs'
+import { runtimePath } from '../scripts/lib.mjs'
 
 const parse = out => (out ? JSON.parse(out).hookSpecificOutput : undefined)
 
@@ -12,7 +13,7 @@ function setup() {
   const api = makeRepo()
   const pre = (tool_name, tool_input, permission_mode) =>
     parse(api.hook('pre-tool', { tool_name, tool_input, ...(permission_mode ? { permission_mode } : {}) }))
-  const audit = () => fs.readFileSync(path.join(api.repo, '.ai-sdlc', 'audit.jsonl'), 'utf8').trim().split('\n').map(l => JSON.parse(l))
+  const audit = () => fs.readFileSync(runtimePath(api.repo, 'audit.jsonl'), 'utf8').trim().split('\n').map(l => JSON.parse(l))
   return { api, pre, audit }
 }
 

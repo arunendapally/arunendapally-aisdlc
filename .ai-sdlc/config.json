@@ -9,10 +9,24 @@
     "5": [],
     "6": []
   },
-  "bannedText": ["\u2014"],
-  "bannedTextPaths": ["**"],
-  "protectedBranches": ["main", "master"],
-  "highRiskPaths": ["**/auth/**", "**/payments/**", "**/migrations/**", "infra/**", "terraform/**"],
+  "bannedText": [
+    "—"
+  ],
+  "bannedTextPaths": [
+    "**"
+  ],
+  "protectedBranches": [
+    "main",
+    "master"
+  ],
+  "highRiskPaths": [
+    "**/auth/**",
+    "**/payments/**",
+    "**/migrations/**",
+    "infra/**",
+    "terraform/**"
+  ],
   "mcpAllow": [],
-  "retryCap": 3
+  "retryCap": 3,
+  "proofCommand": "node --test {files}"
 }

@@ -8,6 +8,7 @@ import { execFileSync, spawnSync } from 'node:child_process'
 import { fileURLToPath } from 'node:url'
 import { STAGES } from '../scripts/lib.mjs'
 import { READY_PRD, READY_FEATURE, makeRepo } from './helpers.mjs'
+import { runtimePath } from '../scripts/lib.mjs'
 
 const plugin = path.join(path.dirname(fileURLToPath(import.meta.url)), '..')
 const hook = name => path.join(plugin, 'scripts', 'hooks', `${name}.mjs`)
@@ -37,6 +38,9 @@ beforeEach(() => {
   g('add', '.')
   g('commit', '-m', 'init')
   g('checkout', '-b', 'feature/demo')
+  // ADR-0007: a named Define and Design owner keeps the person's path these tests pin.
+  fs.mkdirSync(path.join(repo, '.ai-sdlc'), { recursive: true })
+  fs.writeFileSync(path.join(repo, '.ai-sdlc', 'config.json'), JSON.stringify({ gateOwners: { 1: ['Test Human'], 3: ['Test Human'] } }))
 })
 
 test('bash guard blocks the dangerous commands and allows normal work', () => {
@@ -98,7 +102,7 @@ test('the gate chain: one human approval of the spec, then the feature moves on 
   assert.equal(state().gates['1'].status, 'waiting')
 
   assert.match(say('sdlc approve demo 4'), /not 4/)
-  assert.match(say('sdlc approve demo 1'), /Test Human approved gate 1 .*now at stage 4 \(Build\)/)
+  assert.match(say('sdlc approve demo 1'), /Test Human approved Define .*now at Build/)
   assert.equal(state().gates['1'].by, 'Test Human')
   assert.equal(state().stage, 4, 'the light lane has no Design stage')
   assert.equal(write('src/app.ts'), 'allow')
@@ -154,7 +158,7 @@ test('only a human lightens the lane; moving to full during Build goes back to D
   s.stages[4] = { enteredAt: s.createdAt }
   fs.writeFileSync(path.join(repo, 'specs', 'demo', 'state.json'), JSON.stringify(s))
   assert.match(say('sdlc lane demo light'), /can no longer move/)
-  assert.match(say('sdlc lane demo full'), /back to stage 3 \(Design\)/)
+  assert.match(say('sdlc lane demo full'), /back to Design/)
   assert.equal(state().lane, 'full')
   assert.equal(state().stage, 3)
 })
@@ -165,7 +169,7 @@ test('agents cannot record human decisions through a shell', () => {
 })
 
 test('gate owners: only a listed owner can approve', () => {
-  fs.mkdirSync(path.join(repo, '.ai-sdlc'))
+  fs.mkdirSync(path.join(repo, '.ai-sdlc'), { recursive: true })
   fs.writeFileSync(path.join(repo, '.ai-sdlc', 'config.json'), JSON.stringify({ gateOwners: { 1: ['Alice'] } }))
   sdlc('init', 'demo')
   fill('prd.md', STAGES[1].headings)
@@ -174,7 +178,7 @@ test('gate owners: only a listed owner can approve', () => {
 })
 
 test('a repo config can add to the guards but never remove them', () => {
-  fs.mkdirSync(path.join(repo, '.ai-sdlc'))
+  fs.mkdirSync(path.join(repo, '.ai-sdlc'), { recursive: true })
   fs.writeFileSync(path.join(repo, '.ai-sdlc', 'config.json'), JSON.stringify({ denyPaths: [], deployPatterns: [], protectedBranches: [], mcpDenyPattern: 'nothing', mcpAskPattern: 'nothing' }))
   assert.equal(bash('terraform apply'), 'deny')
   assert.equal(bash('git push origin main'), 'deny')
@@ -214,7 +218,8 @@ test('a browser action from an MCP tool asks a person, unless the repo allows th
 test('paused or held, a session reads only local files: no web calls that could carry data out', () => {
   const web = (tool_name, extra = {}) => decision(run('pre-tool', { tool_name, tool_input: { url: 'https://x.example/?q=data', query: 'data' }, ...extra }))
   fs.mkdirSync(path.join(repo, '.ai-sdlc'), { recursive: true })
-  fs.writeFileSync(path.join(repo, '.ai-sdlc', 'denials.json'), JSON.stringify({ held1: { 'guardrail-command': 2 } }))
+  fs.mkdirSync(path.dirname(runtimePath(repo, 'denials.json')), { recursive: true })
+  fs.writeFileSync(runtimePath(repo, 'denials.json'), JSON.stringify({ held1: { 'guardrail-command': 2 } }))
   assert.equal(web('WebFetch', { session_id: 'held1' }), 'deny')
   assert.equal(web('WebSearch', { session_id: 'held1' }), 'deny')
   assert.equal(decision(run('pre-tool', { tool_name: 'Read', tool_input: { file_path: path.join(repo, 'README.md') }, session_id: 'held1' })), 'allow')
@@ -319,7 +324,7 @@ test('splitting a command closes holes instead of opening them', () => {
 })
 
 test('the build gate records a baseline and refuses a request below it', () => {
-  fs.mkdirSync(path.join(repo, '.ai-sdlc'))
+  fs.mkdirSync(path.join(repo, '.ai-sdlc'), { recursive: true })
   const cfg = count => fs.writeFileSync(path.join(repo, '.ai-sdlc', 'config.json'), JSON.stringify({ gateCommand: `node -e "console.log('${count} passing')"` }))
   sdlc('init', 'demo')
   const s = state()
@@ -336,7 +341,7 @@ test('the build gate records a baseline and refuses a request below it', () => {
   assert.notEqual(sdlc('request', 'demo').status, 0)
   cfg(12)
   assert.equal(sdlc('gate', 'demo').status, 0)
-  assert.match(sdlc('request', 'demo').stdout.toString(), /passed on checks.*now at stage 5/, 'Build passes on checks and moves on')
+  assert.match(sdlc('request', 'demo').stdout.toString(), /passed on checks.*now at Verify/, 'Build passes on checks and moves on')
   assert.equal(state().stage, 5)
 })
 
@@ -362,7 +367,7 @@ test('session start reports features and the pause flag', () => {
   sdlc('init', 'demo')
   say('sdlc pause')
   const out = run('session-start', {})
-  assert.match(out, /demo: stage 1 Plan/)
+  assert.match(out, /demo: Define/)
   assert.match(out, /PAUSED/)
 })
 

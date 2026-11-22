@@ -63,7 +63,7 @@ test('a data feature started before db-design.md keeps its sections where they w
   assert.deepEqual(stageSpec(state, 1).docs, {})
   assert.ok(stageSpec(state, 1).headings.includes('## Data impact'), 'Data impact stays in prd.md')
   assert.ok(stageSpec(state, 3).headings.includes('## Rehearsal'), 'Rehearsal stays in plan.md')
-  assert.ok(stageSpec(state, 6).headings.includes('## Backout'), 'Backout stays in release.md')
+  assert.ok(stageSpec(state, 6).headings.includes('## Backout'), 'Backout stays a stage-6 section of db-design.md')
   r.sdlc('kind', 'demo', 'data')
   assert.equal(r.state('demo').dataDoc, undefined, 'adding a kind it already has does not move its sections')
 })

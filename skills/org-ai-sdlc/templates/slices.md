@@ -1,6 +1,6 @@
 # Slices: <capability>
 
-<!-- A record, not a stage. Owner: the CTO, in /ai-sdlc:start, as specs/<capability>/slices.md. Gate: none.
+<!-- Plan, the stage before Define, run per capability. Owner: the CTO, in /ai-sdlc:plan, as specs/<capability>/slices.md. Gate: none.
      Each slice is a feature with its own PRD and lane: "sdlc init <slug> --capability <capability>".
      "sdlc status" prints the first line of Outcome and one line per slice, so keep both to the shapes below. -->
 
@@ -12,12 +12,14 @@ Returning shoppers buy items they saved: 8% of saved items bought within 14 days
 
 ## Slices
 
-<!-- One line per slice, in shipping order, riskiest assumption first:
-     "- <slug>: <what a user can do once it ships>. Depends on: <slugs, or none>. Status: planned | started | shipped | dropped"
+<!-- The capability's roadmap, written by /ai-sdlc:plan. One line per slice, enablers first, riskiest assumption first:
+     "- <slug>: <what it delivers>. Horizon: now | next | later. Kind: slice | enabler. Goes live: compatible | flag <NAME> | after <slug>, because <reason>. Depends on: <slugs or none>. Status: planned | started | shipped | dropped"
      Example:
-- save-list: a signed-in shopper saves an item and sees it in their list. Depends on: none. Status: planned
-- sold-out-mark: a saved item that sells out shows as sold out. Depends on: save-list. Status: planned
-- save-share: a shopper shares their saved list by link. Depends on: save-list. Status: planned
-     Each slice: vertical (a user sees a change; "the database layer" is not a slice), at most 7 scenarios,
-     under the lane's PR line limit (see tasks.md Budget), shippable alone.
-     The slug is the feature slug (lowercase, digits, hyphens). No full stop inside "Depends on" or "Status". -->
+- save-api: the saved-items API contract, so the list and the service build in parallel. Horizon: now. Kind: enabler. Goes live: compatible. Depends on: none. Status: planned
+- save-list: a signed-in shopper saves an item and sees it in their list. Horizon: now. Kind: slice. Goes live: flag SAVED_ITEMS. Depends on: save-api. Status: planned
+- save-share: a shopper shares their saved list by link. Horizon: later. Kind: slice. Goes live: after save-list, because the link opens the list. Depends on: save-list. Status: planned
+     A slice is vertical (a user sees a change), unless it is an enabler other slices build on, such as an API
+     contract. Each: at most 7 scenarios, under the lane's PR line limit (see tasks.md Budget).
+     Goes live on its own: prefer compatible, then a flag; "after" is a sequence, a coupling smell, and needs its
+     reason or the slice's Define request is refused. No Horizon reads as now.
+     The slug is the feature slug (lowercase, digits, hyphens). No full stop inside a field. -->

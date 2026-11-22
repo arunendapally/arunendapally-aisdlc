@@ -5,7 +5,7 @@
      "-<slug>.md". Due within postmortemDays (2 by default) of the hotfix shipping.
      Or: None, because <reason>, where a section does not apply. Tie every claim to its source (a log or
      alert link, a commit, a file:line, a time); end anything reconstructed from memory with [unconfirmed].
-     Link hotfix.md and release.md; do not repeat them. Write about systems and times, not people: "the
+     Link hotfix.md and the rollout record; do not repeat them. Write about systems and times, not people: "the
      deploy ran without the migration", not "Sam forgot". Times HH:MM UTC.
      Only "## Actions" is read by a script: keep its header and column order exactly. -->
 
@@ -20,7 +20,7 @@ Severity: SEV2. Fix: specs/checkout-timeouts/hotfix.md (PR #88). -->
 ## Timeline
 
 <!-- One row per fact, with where it came from. Mark start, detected, mitigated, resolved. Example:
-| 09:10 | Release payments-sdk-v5 at 100% | specs/payments-sdk-v5/release.md, Live a1b2c3d |
+| 09:10 | Release payments-sdk-v5 at 100% | deploy log, Live a1b2c3d |
 | 09:12 | Start: first 500 on POST /checkout for a card payment | log query <link> |
 | 09:21 | Detected: alert checkout-5xx paged on-call | pager incident #4411 |
 | 09:30 | Mitigated: helm rollback checkout 41; 500s stop 09:33 | deploy log <link> |
@@ -34,13 +34,13 @@ Severity: SEV2. Fix: specs/checkout-timeouts/hotfix.md (PR #88). -->
 <!-- What told us, how long after the start (from the Timeline), and what should have told us sooner. A
      customer report or a person noticing is itself a finding and becomes an action. Example:
 Alert checkout-5xx, 9 min after start. The rollout went from 5% to 100% in 10 min, inside the 30 min step
-release.md "## Rollout" set [unconfirmed: no record of who moved it]. -->
+the rollout plan set [unconfirmed: no record of who moved it]. -->
 
 ## Mitigation
 
-<!-- What stopped the harm, and when (Timeline row). Was release.md's tested rollback used, and did it work
+<!-- What stopped the harm, and when (Timeline row). Was the tested rollback used, and did it work
      as its "Tested:" line said? Then where we got lucky. Example:
-helm rollback at 09:30; 500s stopped 09:33. Rollback from release.md used: yes; worked as tested: yes (3 min).
+helm rollback at 09:30; 500s stopped 09:33. Planned rollback used: yes; worked as tested: yes (3 min).
 Where we got lucky: no charges taken; the gateway voided the timed-out authorisations [unconfirmed]. -->
 
 ## Root cause
@@ -51,7 +51,7 @@ Where we got lucky: no charges taken; the gateway voided the timed-out authorisa
 Trigger: payments-sdk-v5 reached 100% at 09:10 (Timeline).
 Defect: src/payments/client.ts:88 relied on the SDK's default timeout, which v5 cut from 10 s to 1 s (a1b2c3d).
 Tests: tests/payments/client.test.ts stubs the gateway at 50 ms, so no test waited over 1 s.
-Probes: release.md paid with a sandbox card, which answers in 200 ms.
+Probes: the release probe paid with a sandbox card, which answers in 200 ms.
 Earlier incidents with this cause: none in docs/incidents. -->
 
 ## Actions

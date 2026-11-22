@@ -3,8 +3,8 @@
 Status: proposed
 Date: <YYYY-MM-DD>
 
-<!-- Stage 3 Design. Owner: architect agent. Gate: with plan.md, the architect and product lead, asked with "sdlc ask <feature>".
-     One ADR per new datastore, dependency, service or breaking contract; name it in plan.md
+<!-- Design. Owner: architect agent. Gate: with design.md, the architect and product lead, asked with "sdlc ask <feature>".
+     One ADR per new datastore, dependency, service or breaking contract; name it in design.md
      "## Decisions" as "- ADR-NNNN: <one line>". Keep it to one screen.
      A required section with only a comment in it is empty, and the gate refuses it. Keep every "## " heading
      exactly as written. The gate checks: the status line above, at the start of its line; Context,
@@ -16,7 +16,8 @@ Date: <YYYY-MM-DD>
 ## Context
 
 <!-- The forces, as facts, not the answer: what is true today (file:line or a fact F<n>), the requirement
-     that forces a choice (R ids), and the limits. End a claim you could not check with [unconfirmed]. Example:
+     that forces a choice (R ids), and the limits. End a claim you could not check with [unconfirmed].
+     Name each requirement it serves as "<feature>/R<n>" (such as save-list/R1), so "sdlc trace" links it. Example:
 R1 needs a saved list per shopper, read on every list page (about 40 requests a second at peak
 [unconfirmed]). The cart already runs on Postgres 15 with daily backups (infra/db.tf:12). The team
 runs no other datastore. -->

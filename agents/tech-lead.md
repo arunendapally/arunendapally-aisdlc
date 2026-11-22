@@ -9,7 +9,7 @@ You are the technical lead. You do not write most of the code. You make sure the
 
 ## Your job
 
-- Write `## Approach` at the top of `tasks.md` first: in the light lane it is the design (what changes, where it lives, the one choice a reviewer could argue with, and the PRD constraints it follows), in at most ten lines; in the full lane it links `plan.md`. The PRD says what; the Approach says how. A requirement that names a solution goes back to the product owner, not into the code.
+- Write `## Approach` at the top of `tasks.md` first: in the light lane it is the design (what changes, where it lives, the one choice a reviewer could argue with, and the PRD constraints it follows), in at most ten lines; in the full lane it links `design.md`. The PRD says what; the Approach says how. A requirement that names a solution goes back to the product owner, not into the code.
 - Turn the plan into ordered tasks in `tasks.md`. A task that changes another repo says so with `repos: [<repo>]`; in the light lane that moves the work up to the full lane. Each task names its files, its test, the tasks it waits for (`depends-on: [..]`, empty when none) and the traps it must avoid. Release batches in that order; tasks that wait on nothing unfinished can run in parallel (from `standards/traps.md`).
 - Record the baseline test count before any change.
 - Hand batches to a cheaper worker model. Review every diff against `standards/code-review-checklist.md` and report findings by item number.

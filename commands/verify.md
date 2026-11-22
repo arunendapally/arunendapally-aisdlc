@@ -1,15 +1,20 @@
 ---
-description: Stage 5 Verify. The full gate, the test proof, the review packet and pre-review, and an honest PR body; ends at the merge gate.
+description: Verify. The full gate, the test proof, the review packet and pre-review, and an honest PR body; ends at a raised PR.
 argument-hint: <feature-slug>
 ---
 
-Stage 5 for `$ARGUMENTS`. You are the `tech-lead`.
+Verify for `$ARGUMENTS`. You are the `tech-lead`.
+
+**Input:** the built change, its tests and the spec.
+**Ready when:** the Build definition of done in `tasks.md` is complete.
+**Processing:** the full gate, the test proof, the review packet and pre-review, every finding settled.
+**Output:** `pr.md` and a raised PR, passed on checks; who approves and merges it is the org's rule.
 
 1. Run the full gate: `node "${CLAUDE_PLUGIN_ROOT}/scripts/sdlc.mjs" gate $ARGUMENTS`. It fails below the baseline.
-2. Prove the tests: `node "${CLAUDE_PLUGIN_ROOT}/scripts/sdlc.mjs" proof $ARGUMENTS`. Every new criterion's tests must pass here and fail on the base code; changing a test afterwards means proving again. With no `proofCommand`, say under `## Not verified` that the proof did not run.
+2. Prove the tests: `node "${CLAUDE_PLUGIN_ROOT}/scripts/sdlc.mjs" proof $ARGUMENTS`. Every new criterion's tests must pass here and fail on the base code; changing a test afterwards means proving again. With no `proofCommand`, Verify is refused unless a person waived the proof for the repo (`proofWaived`); waived, say under `## Not verified` that the proof did not run.
 3. Keep the PR small: `sdlc request` refuses over the lane's line limit (specs, docs and lock files not counted). Split a large feature into one PR per slice.
 4. Write `specs/$ARGUMENTS/pr.md` from the template, then run `/ai-sdlc:pre-review $ARGUMENTS` so `## Pre-review` names the risk, has no open findings and points the human at where to look.
 5. Only when the pre-review says `Risk: high`: the `qa-engineer` writes `## QA verdict` (exploratory pass, accessibility checks on changed screens), and the `safe-ai-sdlc-expert` lists scan findings a human must accept.
-6. Use `pr.md` as the PR body. Push the feature branch and open a PR labelled `stage:verify` and `author:agent`.
+6. After the pre-review, `node "${CLAUDE_PLUGIN_ROOT}/scripts/sdlc.mjs" ship $ARGUMENTS` runs the gate and the request below, commits `specs/$ARGUMENTS/`, pushes the branch and opens the PR from `pr.md` with its lane label. If the repo keeps a `CHANGELOG.md`, write the entry as `changelog.d/<slug>.md`, never in `CHANGELOG.md` itself, so parallel PRs do not conflict; `sdlc changelog` folds the fragments in at release. After merges, `sdlc cleanup` removes merged worktrees.
 
-**Gate:** `node "${CLAUDE_PLUGIN_ROOT}/scripts/sdlc.mjs" request $ARGUMENTS` (it rebuilds a stale review packet itself), then run `node "${CLAUDE_PLUGIN_ROOT}/scripts/sdlc.mjs" ask $ARGUMENTS` and put its question to the CODEOWNER with the question tool, after pointing them at "Look here first". Agents never merge. Under autonomy (`sdlc status` shows it) the request passes on its checks instead: run `node "${CLAUDE_PLUGIN_ROOT}/scripts/sdlc.mjs" merge $ARGUMENTS`, then `/ai-sdlc:release $ARGUMENTS`.
+**Gate:** `node "${CLAUDE_PLUGIN_ROOT}/scripts/sdlc.mjs" request $ARGUMENTS` (it rebuilds a stale review packet itself). It passes on its checks and completes the feature (ADR-0008). Agents never merge: the PR is the hand-off, and who reviews, merges, deploys and releases it is the org's own process. Point the reviewer at "Look here first". Name every untested `@release` criterion under `## Check after deploy` in `pr.md` (the review packet lists them); the request refuses one left out.
