@@ -17,7 +17,10 @@ export function laneOf(body) {
 }
 
 function section(body, heading) {
-  const lines = body.replace(/<!--[\s\S]*?-->/g, '').split(/\r?\n/)
+  // Strip comments as GitHub hides them, an unclosed one to the end, until no comment is left.
+  let text = body
+  for (let prev; prev !== text; ) prev = text, text = text.replace(/<!--[\s\S]*?(?:-->|$)/g, '')
+  const lines = text.split(/\r?\n/)
   const at = lines.findIndex(l => l.trim() === heading)
   if (at === -1) return null
   const end = lines.findIndex((l, i) => i > at && /^#{1,2} /.test(l))

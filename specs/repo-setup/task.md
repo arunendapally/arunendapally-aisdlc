@@ -6,6 +6,7 @@ Add the AI SDLC repo kit that "sdlc init-repo" generated, so this repo runs its 
 
 .ai-sdlc/config.json and .ai-sdlc/.gitignore are already on main (#54 and later), so this PR adds no repo config. .ai-sdlc/autonomy.json was dropped: the v0.8.0 kit no longer ships it and no script reads it (grep of scripts, hooks, skills, commands, docs).
 .github/workflows/ai-sdlc-gate.yml, review-sla.yml, publish-docs.yml, .github/scripts/*.mjs, .github/rulesets/main.json, .github/CODEOWNERS: the kit's CI checks, ruleset and owners. Two kit parts do not fit this repo and were changed (review.md F1, F2): test-levels.yml is left out (it runs test:unit, test:subsystem, start:test and test:e2e scripts this repo does not have), and ai-sdlc-gate.yml drops build-and-test (npm ci fails with no package-lock.json; evals.yml already runs the full suite), so the ruleset requires tests-and-golden-evals in its place. gate-approvals and its script check-gates.mjs are left out (F3, Arun's call on 23 Nov): it needs a reviewer other than the PR author, which a one-person repo cannot give.
+templates/repo/.github/scripts/check-pr-body.mjs and this repo's copy: comments are stripped as GitHub hides them, an unclosed one to the end, until none is left, so hidden text never counts as a filled section (CodeQL alert on PR #73, review.md F9). Test: tests/pr-body-comments.test.mjs. Changelog fragment: changelog.d/repo-setup.md.
 CONSTITUTION.md, standards/, knowledge/README.md, docs/adr/0000-template.md, docs/architecture/workspace.dsl, docs/feedback.md, .claude/rules/ai-sdlc.md: the kit's rules, standards and templates, plus the feedback record. Kit files were refreshed to the v0.8.0 templates (templates/repo), so each is an exact copy and does not count toward the PR size (scaffoldFiles, scripts/lib.mjs:465).
 
 ## Why
@@ -14,7 +15,7 @@ The 2026-11-05 dogfood run ran init-repo on this repo and left the kit untracked
 
 ## Behaviour change
 
-None, because no plugin code under scripts/, hooks/, skills/ or commands/ changes; the kit adds CI checks on this repo's own PRs only.
+One, in the repo kit: the pr-body check no longer counts text hidden in an HTML comment as section content (F9). Otherwise the kit adds CI checks on this repo's own PRs only.
 
 ## Test results
 
