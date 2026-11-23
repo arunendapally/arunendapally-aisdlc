@@ -10,8 +10,7 @@
       "leftAt": "2026-11-22T14:20:39.159Z"
     },
     "5": {
-      "enteredAt": "2026-11-22T14:20:39.159Z",
-      "leftAt": "2026-11-23T05:23:11.570Z"
+      "enteredAt": "2026-11-22T14:20:39.159Z"
     }
   },
   "gates": {
@@ -22,19 +21,11 @@
       "approvedAt": "2026-11-22T14:20:38.621Z",
       "auto": true,
       "fingerprint": "d627b365fa40d39b"
-    },
-    "5": {
-      "status": "approved",
-      "by": "checks: checks (gate green, review clean)",
-      "requestedAt": "2026-11-23T05:23:10.804Z",
-      "approvedAt": "2026-11-23T05:23:10.804Z",
-      "auto": true,
-      "fingerprint": "421174ef452e1b61"
     }
   },
   "retries": {},
   "kinds": [],
-  "updatedAt": "2026-11-23T05:23:11.570Z",
+  "updatedAt": "2026-11-23T05:51:22.371Z",
   "gateRuns": {
     "4": {
       "ok": true,
@@ -43,21 +34,13 @@
       "tree": "b708c84a6cb593af",
       "runs": 1,
       "runtime": "v24.19.0"
-    },
-    "5": {
-      "ok": true,
-      "count": 351,
-      "at": "2026-11-23T05:23:06.776Z",
-      "tree": "9f52fd3c62e8fecf",
-      "runs": 1,
-      "runtime": "v24.19.0"
     }
   },
-  "baseline": 351,
+  "baseline": 354,
   "baselineRuntime": "v24.19.0",
   "proofBase": "c6b642df93e343271f99bf195e46ef68d394f9fb",
   "sizeChecked": 0,
-  "lastPacketHead": "bf05dd0",
+  "lastPacketHead": "8be71a9",
   "ledgerIds": [
     "F1",
     "F2",
@@ -66,7 +49,8 @@
     "F5",
     "F6",
     "F7",
-    "F8"
+    "F8",
+    "F9"
   ],
   "riskTier": "high",
   "reviewedSha": "bf05dd0dfaa690e6eafc7d99e0b0445caf61a383",
@@ -118,5 +102,11 @@
     "standards/testing-standards.md": "be59ef19c8821485",
     "standards/traps.md": "92427ecdc6c55fe0"
   },
-  "closedAt": "2026-11-23T05:23:11.570Z"
+  "lastRefusal": {
+    "stage": 5,
+    "at": "2026-11-23T05:51:22.371Z",
+    "reasons": [
+      "the full gate has not passed at this stage. Run: sdlc gate repo-setup"
+    ]
+  }
 }
