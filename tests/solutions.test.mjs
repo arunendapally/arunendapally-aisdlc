@@ -105,5 +105,5 @@ test('the PRD template says requirements, not solutions, and gives the solution 
   // The templates' own examples must pass their own check.
   const featureTemplate = fs.readFileSync(new URL('../skills/org-ai-sdlc/templates/acceptance.feature', import.meta.url), 'utf8')
   // Its counter-examples ("Not: ...") are meant to warn, so they are left out.
-  assert.deepEqual(solutionWarnings(prdTemplate.replace(/<!--|-->/g, '').replace(/^\s*Not:.*$/gm, ''), featureTemplate), [])
+  assert.deepEqual(solutionWarnings(prdTemplate.replace(/<!--([\s\S]*?)--!?>/g, '$1').replace(/^\s*Not:.*$/gm, ''), featureTemplate), [])
 })

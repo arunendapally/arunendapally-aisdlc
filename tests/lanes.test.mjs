@@ -4,7 +4,7 @@ import assert from 'node:assert/strict'
 import fs from 'node:fs'
 import path from 'node:path'
 import { makeRepo, switchableGate, plugin, READY_PRD, READY_FEATURE } from './helpers.mjs'
-import { STAGES, stageSpec, trustedGates } from '../scripts/lib.mjs'
+import { STAGES, stageSpec, trustedGates, escapeRegExp } from '../scripts/lib.mjs'
 
 const ci = name => import(path.join(plugin, 'templates', 'repo', '.github', 'scripts', name).replace(/^([A-Z]):/, 'file:///$1:').split(path.sep).join('/'))
 const BUG_BUILD = ['## Repro', '## Expected and actual', '## Root cause', '## Fix']
@@ -92,7 +92,7 @@ test('a change to the schema must be marked as data work; an additive one stays 
   assert.deepEqual(r.state('demo').kinds, ['data'])
   // The light lane has no Design stage, so Build asks for the data model and migration plan too.
   const asked = r.sdlc('request', 'demo').out
-  for (const h of ['Data impact', 'Data model', 'Migration plan (expand-contract)', 'Rehearsal', 'Down migration']) assert.match(asked, new RegExp(`db-design\\.md section "## ${h.replace(/[()]/g, '\\$&')}" is empty`))
+  for (const h of ['Data impact', 'Data model', 'Migration plan (expand-contract)', 'Rehearsal', 'Down migration']) assert.match(asked, new RegExp(`db-design\\.md section "## ${escapeRegExp(h)}" is empty`))
   assert.doesNotMatch(asked, /Backout/, 'Backout is due at Release')
   r.fill('specs/demo/db-design.md', ['## Data impact', '## Data model', '## Migration plan (expand-contract)', '## Rehearsal', '## Down migration'])
   assert.match(r.sdlc('request', 'demo').out, /passed on checks/, 'an additive migration is light-lane work')

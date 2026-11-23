@@ -1,6 +1,6 @@
 // Unit-level test data: factories with sensible defaults, unique values per run, and overrides.
 // A test states only what matters to it: makeOrder({ status: 'shipped' }).
-const run = Math.random().toString(36).slice(2, 8)
+const run = crypto.randomUUID().slice(0, 8)
 let seq = 0
 const unique = (prefix: string) => `${prefix}-${run}-${++seq}`
 

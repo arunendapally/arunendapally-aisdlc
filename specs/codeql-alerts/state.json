@@ -1,0 +1,124 @@
+{
+  "feature": "codeql-alerts",
+  "lane": "bug",
+  "stage": 5,
+  "branch": "bug/codeql-alerts",
+  "createdAt": "2026-11-23T05:58:05.379Z",
+  "stages": {
+    "4": {
+      "enteredAt": "2026-11-23T05:58:05.379Z",
+      "leftAt": "2026-11-23T06:21:08.673Z"
+    },
+    "5": {
+      "enteredAt": "2026-11-23T06:21:08.673Z",
+      "leftAt": "2026-11-23T06:36:47.159Z"
+    }
+  },
+  "gates": {
+    "4": {
+      "status": "approved",
+      "by": "checks: checks (repro red, gate green, small diff)",
+      "requestedAt": "2026-11-23T06:21:08.411Z",
+      "approvedAt": "2026-11-23T06:21:08.411Z",
+      "auto": true,
+      "fingerprint": "e6825e179d083685"
+    },
+    "5": {
+      "status": "approved",
+      "by": "checks: checks (gate green, review clean)",
+      "requestedAt": "2026-11-23T06:36:46.492Z",
+      "approvedAt": "2026-11-23T06:36:46.492Z",
+      "auto": true,
+      "fingerprint": "5c5cc0b97d265ccb"
+    }
+  },
+  "retries": {},
+  "kinds": [],
+  "updatedAt": "2026-11-23T06:36:47.160Z",
+  "gateRuns": {
+    "4": {
+      "ok": true,
+      "count": 357,
+      "at": "2026-11-23T06:20:22.372Z",
+      "tree": "6a471ee156fc93e2",
+      "runs": 1,
+      "runtime": "v24.19.0"
+    },
+    "5": {
+      "ok": true,
+      "count": 360,
+      "at": "2026-11-23T06:36:43.600Z",
+      "tree": "bce27265c8d73397",
+      "runs": 1,
+      "runtime": "v24.19.0"
+    }
+  },
+  "baseline": 360,
+  "baselineRuntime": "v24.19.0",
+  "proofBase": "bf0365a292716b8077023d204ca5cc216fda4f2c",
+  "reproRedAt": "2026-11-23T06:10:03.089Z",
+  "sizeChecked": 48,
+  "proof": {
+    "ok": true,
+    "problems": [],
+    "base": "bf0365a",
+    "files": {
+      "tests/codeql-alerts.test.mjs": "4e6769e5ee98b4ff"
+    },
+    "acs": [
+      "the repro"
+    ],
+    "perTest": false,
+    "at": "2026-11-23T06:20:57.744Z"
+  },
+  "lock": {
+    "files": {
+      "tests/codeql-alerts.test.mjs": "4e6769e5ee98b4ff"
+    },
+    "at": "2026-11-23T06:20:57.744Z"
+  },
+  "lastPacketHead": "eb1400b",
+  "ledgerIds": [
+    "F1",
+    "F2",
+    "F3",
+    "F4"
+  ],
+  "riskTier": "medium",
+  "reviewedSha": "eb1400bd2b207990e54c94165e2c7a1aea3a5060",
+  "reviewedFiles": [
+    "changelog.d/codeql-alerts.md",
+    "scripts/facts.mjs",
+    "scripts/gherkin.mjs",
+    "scripts/lib.mjs",
+    "scripts/sdlc.mjs",
+    "scripts/testmatrix.mjs",
+    "skills/org-ai-sdlc/templates/testing/factories.ts",
+    "specs/codeql-alerts/bug.md",
+    "specs/codeql-alerts/review-packet.md",
+    "specs/codeql-alerts/review.md",
+    "specs/codeql-alerts/state.json",
+    "tests/codeql-alerts-edges.test.mjs",
+    "tests/codeql-alerts.test.mjs",
+    "tests/db-design.test.mjs",
+    "tests/definition-of-done.test.mjs",
+    "tests/lanes.test.mjs",
+    "tests/solutions.test.mjs"
+  ],
+  "reviewedHashes": {
+    "changelog.d/codeql-alerts.md": "22e093c9ab75d5bf",
+    "scripts/facts.mjs": "c415dff99b33d62d",
+    "scripts/gherkin.mjs": "d225b99bbcade242",
+    "scripts/lib.mjs": "cb3d7ac75237b0f5",
+    "scripts/sdlc.mjs": "a9d7b04b2d72bc68",
+    "scripts/testmatrix.mjs": "49dacebe32303295",
+    "skills/org-ai-sdlc/templates/testing/factories.ts": "9c80f4bfaa3c2739",
+    "tests/codeql-alerts-edges.test.mjs": "c58aa291a2ecc7c2",
+    "tests/codeql-alerts.test.mjs": "4e6769e5ee98b4ff",
+    "tests/db-design.test.mjs": "56451a3b9c772978",
+    "tests/definition-of-done.test.mjs": "26bcd32003c36418",
+    "tests/lanes.test.mjs": "c20031a0116e7876",
+    "tests/solutions.test.mjs": "e0113fd43434459b"
+  },
+  "closedAt": "2026-11-23T06:36:47.159Z"
+}
