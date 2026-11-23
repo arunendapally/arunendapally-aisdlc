@@ -5,7 +5,7 @@
 // The PRD's assumptions are the other side: what we believe but have not pinned to code or a person.
 import fs from 'node:fs'
 import path from 'node:path'
-import { git, loadConfig, section, matches } from './lib.mjs'
+import { git, loadConfig, section, matches, stripComments } from './lib.mjs'
 
 // Sources that describe the system without being it.
 const NOT_IMPLEMENTATION = ['docs/**', '**/*.md', '**/*.sql', '**/schema.prisma', '**/*.schema.json', '**/*.graphql', '**/*.yaml', '**/*.yml', '**/*.json', '**/migrations/**']
@@ -53,7 +53,7 @@ export function factsGateProblems(dir, state) {
   const folder = path.join(dir, loadConfig(dir).specsDir, state.feature)
   const file = path.join(folder, 'facts.md')
   if (!fs.existsSync(file)) return ['facts.md does not exist: pin what is true about the current system to the code (or write "None, because ..." under "## Facts" for greenfield)']
-  const text = fs.readFileSync(file, 'utf8').replace(/<!--[\s\S]*?-->/g, '')
+  const text = stripComments(fs.readFileSync(file, 'utf8'))
   const { facts, malformed } = parseFacts(text)
   const problems = [...malformed.map(m => `facts.md ${m}`), ...factProblems(dir, facts).map(p => `facts.md: ${p}`)]
   // A malformed fact explains a missing one; do not report the same cause three ways.
@@ -73,7 +73,7 @@ export function factsGateProblems(dir, state) {
     const p = path.join(folder, name)
     if (!fs.existsSync(p)) continue
     if (malformed.length) continue
-    for (const id of citedFacts(fs.readFileSync(p, 'utf8').replace(/<!--[\s\S]*?-->/g, ''))) if (!defined.has(id)) problems.push(`${name} cites ${id}, which facts.md does not define`)
+    for (const id of citedFacts(stripComments(fs.readFileSync(p, 'utf8')))) if (!defined.has(id)) problems.push(`${name} cites ${id}, which facts.md does not define`)
   }
   return problems
 }

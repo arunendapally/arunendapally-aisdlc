@@ -2,7 +2,7 @@
 // test fails the Verify gate; the scenario's level is a hint, since levels are guessed from paths.
 import fs from 'node:fs'
 import path from 'node:path'
-import { git, loadConfig, matches } from './lib.mjs'
+import { git, loadConfig, matches, escapeRegExp } from './lib.mjs'
 import { lint } from './gherkin.mjs'
 
 // Where each level's tests live by default. A repo can add its own globs in config "testLevels".
@@ -20,7 +20,7 @@ export const DEFAULT_LEVELS = {
 // A test traces a feature's criterion only when it names the criterion and the file names the feature
 // (in a describe block, a title or a comment), because every feature numbers from AC-1 (finding F1).
 export function traces(text, file, feature, ac) {
-  return new RegExp(`\\b${ac}\\b`, 'i').test(text) && (file.includes(feature) || new RegExp(`\\b${feature.replace(/[-]/g, '[-_ ]')}\\b`, 'i').test(text))
+  return new RegExp(`\\b${escapeRegExp(ac)}\\b`, 'i').test(text) && (file.includes(feature) || new RegExp(`\\b${escapeRegExp(feature).replace(/-/g, '[-_ ]')}\\b`, 'i').test(text))
 }
 
 export function levels(dir) {

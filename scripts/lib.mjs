@@ -2,7 +2,7 @@
 import fs from 'node:fs'
 import path from 'node:path'
 import crypto from 'node:crypto'
-import { execSync } from 'node:child_process'
+import { execSync, execFileSync } from 'node:child_process'
 import { fileURLToPath } from 'node:url'
 
 // ADR-0003: one spec gate (the PRD plus acceptance.feature), Design only in the full lane, Build on
@@ -203,9 +203,13 @@ export function root(cwd = process.cwd()) {
   }
 }
 
+// Git runs with no shell: args split on spaces, a "double-quoted" part kept whole, so nothing in an
+// argument (a path, a ref, a ledger location) is ever read as a shell metacharacter.
+const gitArgv = args => (args.match(/"[^"]*"|\S+/g) ?? []).map(a => a.replace(/^"([^"]*)"$/, '$1'))
+
 export function git(args, cwd) {
   try {
-    return execSync(`git ${args}`, { cwd, stdio: ['ignore', 'pipe', 'ignore'] }).toString().trim()
+    return execFileSync('git', gitArgv(args), { cwd, stdio: ['ignore', 'pipe', 'ignore'] }).toString().trim()
   } catch {
     return ''
   }
@@ -214,7 +218,7 @@ export function git(args, cwd) {
 // Whether a git command succeeds, for checks such as "merge-base --is-ancestor" that answer by exit code.
 export function gitOk(args, cwd) {
   try {
-    execSync(`git ${args}`, { cwd, stdio: 'ignore' })
+    execFileSync('git', gitArgv(args), { cwd, stdio: 'ignore' })
     return true
   } catch {
     return false
@@ -342,9 +346,39 @@ export function openDoneItems(text, doc) {
   })
 }
 
+// Text as GitHub shows it: every closed comment goes ("<!-->" and "--!>" as in HTML), and an unclosed
+// one hides the rest only when it starts a line; mid-line it is plain text. It repeats until nothing
+// changes, so a comment rebuilt from the pieces of another goes too.
+export function stripComments(text) {
+  const once = t => {
+    let out = ''
+    let i = 0
+    for (let open; (open = t.indexOf('<!--', i)) !== -1; ) {
+      const rest = t.slice(open + 4)
+      const close = /^-?>/.exec(rest) ?? /--!?>/.exec(rest)
+      if (close) {
+        out += t.slice(i, open)
+        i = open + 4 + close.index + close[0].length
+      } else if (/(^|\n)[ \t]*$/.test(t.slice(0, open))) {
+        return out + t.slice(i, open).replace(/[ \t]*$/, '')
+      } else {
+        out += t.slice(i, open + 4)
+        i = open + 4
+      }
+    }
+    return out + t.slice(i)
+  }
+  let out = text
+  for (let prev; prev !== out; ) prev = out, out = once(out)
+  return out
+}
+
+// A string matched literally inside a RegExp.
+export const escapeRegExp = s => String(s).replace(/[.*+?^${}()|[\]\\]/g, '\\$&')
+
 // The text of a "## " section without template comments; null when the heading is absent.
 export function section(text, heading) {
-  const lines = text.replace(/<!--[\s\S]*?-->/g, '').split(/\r?\n/)
+  const lines = stripComments(text).split(/\r?\n/)
   const at = lines.findIndex(l => l.trim() === heading)
   if (at === -1) return null
   const end = lines.findIndex((l, i) => i > at && /^#{1,2} /.test(l))
@@ -519,7 +553,7 @@ export function lessonPaid(dir, slug) {
   const file = path.join(dir, 'standards', 'traps.md')
   if (!fs.existsSync(file)) return false
   return fs.readFileSync(file, 'utf8').split(/^### /m).slice(1).some(block =>
-    new RegExp(`\\*\\*Source:\\*\\*[^\\n]*\\b${slug}\\b`).test(block) && ENFORCED_GUARD.test(block.match(/\*\*Guard now:\*\*\s*(.*)/)?.[1] ?? ''))
+    new RegExp(`\\*\\*Source:\\*\\*[^\\n]*\\b${escapeRegExp(slug)}\\b`).test(block) && ENFORCED_GUARD.test(block.match(/\*\*Guard now:\*\*\s*(.*)/)?.[1] ?? ''))
 }
 export function lessonsOwed(dir) {
   return listFeatures(dir).filter(s => s.lessonOwed && !lessonPaid(dir, s.feature))

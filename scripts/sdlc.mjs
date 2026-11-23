@@ -7,7 +7,7 @@ import os from 'node:os'
 import { fileURLToPath } from 'node:url'
 import { spawnSync } from 'node:child_process'
 import { STAGES, root, git, loadConfig, readState, writeState, listFeatures, missingHeadings, isFrozen, destructiveMigrations,
-  stageSpec, section, matches, changedFiles, changedLines, createFeature, copyTemplate, TEMPLATES, overdueGates, overduePostmortems,
+  stageSpec, section, stripComments, matches, changedFiles, changedLines, createFeature, copyTemplate, TEMPLATES, overdueGates, overduePostmortems,
   KINDS, trustedGates, promotable, readTrust, writeTrust, lessonPaid, lessonProblem, lessonsOwed, audit, withIntent, INTENT_PARTS, autonomy, designDoc, BRANCH_AUTO, branchAutoBlock, overviewFile, decisionProblems, openDoneItems, slicesOf, roadmapProblems, LANES, baseCommit, baseRef, configFile, codeTree, mainWorktree, relPath } from './lib.mjs'
 import { check, conformance, OKF_VERSION, relevant, writeIndex } from './knowledge.mjs'
 import { collect, analyze, report, approvalSignals, approvalLines } from './retro.mjs'
@@ -365,7 +365,7 @@ const commands = {
     const cfg = loadConfig(dir)
     const file = path.join(dir, cfg.specsDir, feature, stageSpec(state, 5).artefact)
     if (!fs.existsSync(file)) fail(`No ${relPath(dir, file)} to use as the PR body.`)
-    const text = fs.readFileSync(file, 'utf8').replace(/<!--[\s\S]*?-->/g, '')
+    const text = stripComments(fs.readFileSync(file, 'utf8'))
     const body = text.slice(Math.max(0, text.indexOf('## '))).replace(/\n{3,}/g, '\n\n').trim() + '\n'
     const title = (section(text, '## Summary') ?? '').trim().split('\n')[0]?.trim() || feature
     const bodyFile = path.join(os.tmpdir(), `sdlc-pr-${feature}.md`)
@@ -666,7 +666,7 @@ const commands = {
         const prFile = path.join(folder, spec.artefact)
         const prText = fs.existsSync(prFile) ? fs.readFileSync(prFile, 'utf8') : ''
         // ADR-0008: only the deployed build can show a @release criterion, so the PR names it for a person.
-        const after = (section(prText, '## Check after deploy') ?? '').replace(/<!--[\s\S]*?-->/g, '')
+        const after = (section(prText, '## Check after deploy') ?? '')
         missing.push(...matrix(dir, feature).rows.filter(r => r.due === 'release' && !r.traced && !new RegExp(`\\b${r.ac}\\b`).test(after))
           .map(r => `test matrix: ${r.ac} is tagged @release with no test: name it under "## Check after deploy" in ${spec.artefact}, for a person to check on the deployed build`))
       }
@@ -1257,7 +1257,7 @@ Ask the owner: run "sdlc ask ${feature}" and put its question to them with the q
     const folder = path.join(dir, loadConfig(dir).specsDir, feature)
     const prdFile = path.join(folder, 'prd.md')
     const current = fs.existsSync(prdFile) ? fs.readFileSync(prdFile, 'utf8') : ''
-    const bare = t => t.replace(/<!--[\s\S]*?-->/g, '').replace(/^# PRD: .*$/m, '').replace(/\s+/g, ' ').trim()
+    const bare = t => stripComments(t).replace(/^# PRD: .*$/m, '').replace(/\s+/g, ' ').trim()
     if (current && bare(current) !== bare(fs.readFileSync(path.join(TEMPLATES, 'prd.md'), 'utf8'))) fail(`${loadConfig(dir).specsDir}/${feature}/prd.md already has content: import-speckit fills only a PRD nobody has written. Move it aside first.`)
     const spec = parseSpecKit(fs.readFileSync(path.resolve(dir, from), 'utf8'))
     if (!spec.requirements.length) fail(`${from} has no functional requirements (- **FR-001**: ...): is it a Spec Kit spec.md?`)

@@ -5,7 +5,7 @@ import assert from 'node:assert/strict'
 import fs from 'node:fs'
 import path from 'node:path'
 import { makeRepo, plugin, READY_PRD, READY_FEATURE } from './helpers.mjs'
-import { section, openDoneItems } from '../scripts/lib.mjs'
+import { section, openDoneItems, stripComments } from '../scripts/lib.mjs'
 
 const GRANT = 'sdlc autonomy on a demo with no users and no data'
 const INTENT = '## Intent\n\n- Change: a\n- Smallest: b\n- Drop if: c\n\n'
@@ -24,7 +24,7 @@ function requestDefine(prd) {
 for (const template of ['prd.md', 'design.md', 'tasks.md', 'pr.md']) {
   test(`definition-of-done AC-1: the ${template} template ends with a checklist`, () => {
     const text = fs.readFileSync(path.join(plugin, 'skills', 'org-ai-sdlc', 'templates', template), 'utf8')
-    const headings = text.replace(/<!--[\s\S]*?-->/g, '').split(/\r?\n/).filter(l => /^## /.test(l))
+    const headings = stripComments(text).split(/\r?\n/).filter(l => /^## /.test(l))
     assert.equal(headings.at(-1), DOD)
     const items = section(text, DOD).split(/\r?\n/).filter(l => l.startsWith('- [ ] '))
     assert.ok(items.length >= 3 && items.length <= 6, `${template} has ${items.length} items`)

@@ -2,6 +2,7 @@
 // test. Only the tags are errors, and they block the Plan gate: every scenario carries its criterion
 // (@AC-n) and the requirement(s) it proves (@Rn, which must exist in the PRD), and every requirement has
 // a scenario. Everything else, the test level included, is style advice (ADR-0003).
+import { stripComments } from './lib.mjs'
 export const LEVELS = ['@unit', '@subsystem', '@api', '@e2e']
 const STEP = /^(Given|When|Then|And|But|\*)\s+(.*)$/
 const SCENARIO = /^(Scenario|Example|Scenario Outline|Scenario Template):\s*(.*)$/
@@ -17,7 +18,7 @@ const PLACEHOLDER = /<([A-Za-z_][\w-]*(?: [\w-]+)*)>/g
 // Requirement IDs (R1, R2, ...) from the PRD's "## Requirements" section, as bullets, numbered lines
 // or table rows (finding F2: a table PRD used to switch coverage off).
 export function requirementsFrom(prdText) {
-  const m = prdText.replace(/<!--[\s\S]*?-->/g, '').match(/^## Requirements\s*$([\s\S]*?)(?=^#{1,2} |(?![\s\S]))/m)
+  const m = stripComments(prdText).match(/^## Requirements\s*$([\s\S]*?)(?=^#{1,2} |(?![\s\S]))/m)
   if (!m) return []
   return [...new Set([...m[1].matchAll(/^\s*(?:[-*]|\d+\.|\|)?\s*\**(R\d+)\b/gm)].map(x => x[1]))]
 }

@@ -1,0 +1,65 @@
+{
+  "feature": "codeql-alerts",
+  "lane": "bug",
+  "stage": 5,
+  "branch": "bug/codeql-alerts",
+  "createdAt": "2026-11-23T05:58:05.379Z",
+  "stages": {
+    "4": {
+      "enteredAt": "2026-11-23T05:58:05.379Z",
+      "leftAt": "2026-11-23T06:21:08.673Z"
+    },
+    "5": {
+      "enteredAt": "2026-11-23T06:21:08.673Z"
+    }
+  },
+  "gates": {
+    "4": {
+      "status": "approved",
+      "by": "checks: checks (repro red, gate green, small diff)",
+      "requestedAt": "2026-11-23T06:21:08.411Z",
+      "approvedAt": "2026-11-23T06:21:08.411Z",
+      "auto": true,
+      "fingerprint": "e6825e179d083685"
+    }
+  },
+  "retries": {},
+  "kinds": [],
+  "updatedAt": "2026-11-23T06:21:14.388Z",
+  "gateRuns": {
+    "4": {
+      "ok": true,
+      "count": 357,
+      "at": "2026-11-23T06:20:22.372Z",
+      "tree": "6a471ee156fc93e2",
+      "runs": 1,
+      "runtime": "v24.19.0"
+    }
+  },
+  "baseline": 357,
+  "baselineRuntime": "v24.19.0",
+  "proofBase": "bf0365a292716b8077023d204ca5cc216fda4f2c",
+  "reproRedAt": "2026-11-23T06:10:03.089Z",
+  "sizeChecked": 48,
+  "proof": {
+    "ok": true,
+    "problems": [],
+    "base": "bf0365a",
+    "files": {
+      "tests/codeql-alerts.test.mjs": "4e6769e5ee98b4ff"
+    },
+    "acs": [
+      "the repro"
+    ],
+    "perTest": false,
+    "at": "2026-11-23T06:20:57.744Z"
+  },
+  "lock": {
+    "files": {
+      "tests/codeql-alerts.test.mjs": "4e6769e5ee98b4ff"
+    },
+    "at": "2026-11-23T06:20:57.744Z"
+  },
+  "lastPacketHead": "bf0365a",
+  "ledgerIds": []
+}

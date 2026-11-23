@@ -6,7 +6,7 @@ import { test } from 'node:test'
 import assert from 'node:assert/strict'
 import fs from 'node:fs'
 import { makeRepo } from './helpers.mjs'
-import { stageSpec } from '../scripts/lib.mjs'
+import { stageSpec, escapeRegExp } from '../scripts/lib.mjs'
 import { gateFingerprint } from '../scripts/loop.mjs'
 
 const ER = '```mermaid\nerDiagram\n  %% changed: POINTS\n  POINTS {\n    uuid customer_id FK\n    int balance "added"\n  }\n```\n'
@@ -15,7 +15,7 @@ test('data work starts db-design.md; each stage asks for the sections due by the
   const r = makeRepo()
   r.sdlc('init', 'demo', '--full', '--kind', 'data')
   const doc = fs.readFileSync(`${r.repo}/specs/demo/db-design.md`, 'utf8')
-  for (const h of ['## Data impact', '## Data model', '## Migration plan (expand-contract)', '## Rehearsal', '## Down migration', '## Backout']) assert.match(doc, new RegExp(`^${h.replace(/[()]/g, '\\$&')}$`, 'm'))
+  for (const h of ['## Data impact', '## Data model', '## Migration plan (expand-contract)', '## Rehearsal', '## Down migration', '## Backout']) assert.match(doc, new RegExp(`^${escapeRegExp(h)}$`, 'm'))
   const due = stage => stageSpec(r.state('demo'), stage).docs['db-design.md']
   assert.deepEqual(due(1), ['## Data impact'])
   assert.deepEqual(due(3), ['## Data impact', '## Data model', '## Migration plan (expand-contract)'])
