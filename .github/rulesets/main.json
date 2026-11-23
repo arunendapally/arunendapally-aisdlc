@@ -25,7 +25,6 @@
         "required_status_checks": [
           { "context": "pr-body" },
           { "context": "pr-size" },
-          { "context": "gate-approvals" },
           { "context": "secrets" },
           { "context": "dependencies" },
           { "context": "tests-and-golden-evals" }

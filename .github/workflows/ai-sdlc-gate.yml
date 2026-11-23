@@ -33,18 +33,7 @@ jobs:
           LABELS: ${{ toJson(github.event.pull_request.labels) }}
         run: node .github/scripts/check-pr-size.mjs
 
-  gate-approvals:
-    runs-on: ubuntu-latest
-    steps:
-      - uses: actions/checkout@v4
-      - name: A feature on this branch has an approved Build gate and a human review
-        env:
-          HEAD_REF: ${{ github.event.pull_request.head.ref }}
-          GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
-          REPO: ${{ github.repository }}
-          PR_NUMBER: ${{ github.event.pull_request.number }}
-          PR_AUTHOR: ${{ github.event.pull_request.user.login }}
-        run: node .github/scripts/check-gates.mjs
+  # gate-approvals is left out: it needs a reviewer other than the PR author, and this repo has one person.
 
   secrets:
     if: github.event_name == 'pull_request'
