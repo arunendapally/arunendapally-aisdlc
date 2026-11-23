@@ -1,0 +1,58 @@
+# The authority: the same checks hold for humans and agents. Claude Code hooks only fail sooner.
+# Make these required by applying .github/rulesets/main.json:
+#   gh api repos/{owner}/{repo}/rulesets --method POST --input .github/rulesets/main.json
+name: ai-sdlc
+on:
+  pull_request:
+    types: [opened, synchronize, reopened, edited]
+  pull_request_review:
+    types: [submitted, dismissed]
+permissions:
+  contents: read
+  pull-requests: read
+jobs:
+  pr-body:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - name: PR body has every section its lane needs, and a clean pre-review
+        env:
+          BODY: ${{ github.event.pull_request.body }}
+        run: node .github/scripts/check-pr-body.mjs
+
+  pr-size:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - name: Small PRs review faster
+        env:
+          GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+          REPO: ${{ github.repository }}
+          PR_NUMBER: ${{ github.event.pull_request.number }}
+          BODY: ${{ github.event.pull_request.body }}
+          LABELS: ${{ toJson(github.event.pull_request.labels) }}
+        run: node .github/scripts/check-pr-size.mjs
+
+  # gate-approvals is left out: it needs a reviewer other than the PR author, and this repo has one person.
+
+  secrets:
+    if: github.event_name == 'pull_request'
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+      - uses: gitleaks/gitleaks-action@v2
+        env:
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+
+  dependencies:
+    if: github.event_name == 'pull_request'
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/dependency-review-action@v4
+        with:
+          fail-on-severity: critical
+
+  # This repo's full gate is tests-and-golden-evals in evals.yml.

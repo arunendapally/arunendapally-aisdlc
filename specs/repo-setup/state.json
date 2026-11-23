@@ -1,0 +1,112 @@
+{
+  "feature": "repo-setup",
+  "lane": "task",
+  "stage": 5,
+  "branch": "task/repo-setup",
+  "createdAt": "2026-11-06T08:51:52.251Z",
+  "stages": {
+    "4": {
+      "enteredAt": "2026-11-06T08:51:52.251Z",
+      "leftAt": "2026-11-22T14:20:39.159Z"
+    },
+    "5": {
+      "enteredAt": "2026-11-22T14:20:39.159Z"
+    }
+  },
+  "gates": {
+    "4": {
+      "status": "approved",
+      "by": "checks: checks (gate green, small diff)",
+      "requestedAt": "2026-11-22T14:20:38.621Z",
+      "approvedAt": "2026-11-22T14:20:38.621Z",
+      "auto": true,
+      "fingerprint": "d627b365fa40d39b"
+    }
+  },
+  "retries": {},
+  "kinds": [],
+  "updatedAt": "2026-11-23T05:51:22.371Z",
+  "gateRuns": {
+    "4": {
+      "ok": true,
+      "count": 351,
+      "at": "2026-11-22T14:20:23.204Z",
+      "tree": "b708c84a6cb593af",
+      "runs": 1,
+      "runtime": "v24.19.0"
+    }
+  },
+  "baseline": 354,
+  "baselineRuntime": "v24.19.0",
+  "proofBase": "c6b642df93e343271f99bf195e46ef68d394f9fb",
+  "sizeChecked": 0,
+  "lastPacketHead": "8be71a9",
+  "ledgerIds": [
+    "F1",
+    "F2",
+    "F3",
+    "F4",
+    "F5",
+    "F6",
+    "F7",
+    "F8",
+    "F9"
+  ],
+  "riskTier": "high",
+  "reviewedSha": "bf05dd0dfaa690e6eafc7d99e0b0445caf61a383",
+  "reviewedFiles": [
+    ".claude/rules/ai-sdlc.md",
+    ".github/CODEOWNERS",
+    ".github/rulesets/main.json",
+    ".github/scripts/check-gates.mjs",
+    ".github/scripts/check-pr-body.mjs",
+    ".github/scripts/check-pr-size.mjs",
+    ".github/scripts/check-review-sla.mjs",
+    ".github/workflows/ai-sdlc-gate.yml",
+    ".github/workflows/publish-docs.yml",
+    ".github/workflows/review-sla.yml",
+    "CONSTITUTION.md",
+    "docs/adr/0000-template.md",
+    "docs/architecture/workspace.dsl",
+    "docs/feedback.md",
+    "knowledge/README.md",
+    "specs/repo-setup/review-packet.md",
+    "specs/repo-setup/review.md",
+    "specs/repo-setup/state.json",
+    "specs/repo-setup/task.md",
+    "standards/README.md",
+    "standards/code-review-checklist.md",
+    "standards/engineering-standards.md",
+    "standards/testing-standards.md",
+    "standards/traps.md"
+  ],
+  "reviewedHashes": {
+    ".claude/rules/ai-sdlc.md": "f51853c71f56137f",
+    ".github/CODEOWNERS": "a65491a94f58fd82",
+    ".github/rulesets/main.json": "323c4d941639b74a",
+    ".github/scripts/check-gates.mjs": "37e662b78c9297b6",
+    ".github/scripts/check-pr-body.mjs": "0b12f3d502a70231",
+    ".github/scripts/check-pr-size.mjs": "6042a4f0be6ee57f",
+    ".github/scripts/check-review-sla.mjs": "142a601fa9b8ea51",
+    ".github/workflows/ai-sdlc-gate.yml": "b3716eb1bff36a05",
+    ".github/workflows/publish-docs.yml": "17d611e63fca53e6",
+    ".github/workflows/review-sla.yml": "5b7554975cb25bd7",
+    "CONSTITUTION.md": "b8b3529d87166016",
+    "docs/adr/0000-template.md": "84673e437bc75971",
+    "docs/architecture/workspace.dsl": "81d5f3eb024577cd",
+    "docs/feedback.md": "70602f6a5a80aaed",
+    "knowledge/README.md": "71a82041cacc852f",
+    "standards/README.md": "1a6795651941e307",
+    "standards/code-review-checklist.md": "d9026a4534bccfb2",
+    "standards/engineering-standards.md": "3684a71fc631d156",
+    "standards/testing-standards.md": "be59ef19c8821485",
+    "standards/traps.md": "92427ecdc6c55fe0"
+  },
+  "lastRefusal": {
+    "stage": 5,
+    "at": "2026-11-23T05:51:22.371Z",
+    "reasons": [
+      "the full gate has not passed at this stage. Run: sdlc gate repo-setup"
+    ]
+  }
+}
