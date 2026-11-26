@@ -37,7 +37,7 @@
   },
   "retries": {},
   "kinds": [],
-  "updatedAt": "2026-11-26T11:32:15.824Z",
+  "updatedAt": "2026-11-26T11:32:35.771Z",
   "intent": {
     "change": "One C4 HTML page",
     "smallest": "Skill + template + handoff",
@@ -61,5 +61,33 @@
   "baseline": 367,
   "baselineRuntime": "v24.19.0",
   "proofBase": "3d0c3a5952672729adbca2fddeb80fb04e458a3e",
-  "sizeChecked": 64
+  "sizeChecked": 64,
+  "proof": {
+    "ok": true,
+    "problems": [],
+    "base": "3d0c3a5",
+    "files": {
+      "tests/c4-model-page.test.mjs": "a3b1c7fdd0f4f702"
+    },
+    "acs": [
+      "AC-1",
+      "AC-2",
+      "AC-3",
+      "AC-4",
+      "AC-5",
+      "AC-6",
+      "AC-8"
+    ],
+    "due": [
+      "AC-7 (by hand)"
+    ],
+    "perTest": false,
+    "at": "2026-11-26T11:32:35.306Z"
+  },
+  "lock": {
+    "files": {
+      "tests/c4-model-page.test.mjs": "a3b1c7fdd0f4f702"
+    },
+    "at": "2026-11-26T11:32:35.306Z"
+  }
 }
