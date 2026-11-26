@@ -4,6 +4,12 @@ Issue: https://github.com/arunendapally/arunendapally-aisdlc/issues/71
 
 ## Intent
 
+<!-- Typed by Arun Endapally on 2026-11-26. Only a person changes it: sdlc intent <feature> change: ...; smallest: ...; drop if: ... -->
+
+- Change: One C4 HTML page
+- Smallest: Skill + template + handoff
+- Drop if: dont know, you decide
+
 ## Problem
 
 A feature's architecture is spread over its design, its capability overview and its contracts, as Mermaid blocks and tables a reviewer has to assemble in their head (issue #71). Nothing in the plugin draws them as one page, so the person approving Design and the teams that build it read three or four files to see who calls whom and what changes. Arun builds such a page by hand today (issue #71).

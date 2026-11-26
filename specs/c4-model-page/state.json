@@ -1,23 +1,39 @@
 {
   "feature": "c4-model-page",
   "lane": "light",
-  "stage": 1,
+  "stage": 4,
   "branch": "feature/c4-model-page",
   "createdAt": "2026-11-26T11:06:50.644Z",
   "stages": {
     "1": {
-      "enteredAt": "2026-11-26T11:06:50.644Z"
+      "enteredAt": "2026-11-26T11:06:50.644Z",
+      "leftAt": "2026-11-26T11:12:31.737Z"
+    },
+    "4": {
+      "enteredAt": "2026-11-26T11:12:31.737Z"
     }
   },
-  "gates": {},
+  "gates": {
+    "1": {
+      "status": "approved",
+      "by": "checks: feature branch",
+      "requestedAt": "2026-11-26T11:12:31.511Z",
+      "approvedAt": "2026-11-26T11:12:31.511Z",
+      "auto": true,
+      "fingerprint": "63a276123532ba3c"
+    }
+  },
   "retries": {},
   "kinds": [],
-  "updatedAt": "2026-11-26T11:10:37.648Z",
+  "updatedAt": "2026-11-26T11:12:31.737Z",
   "intent": {
     "change": "One C4 HTML page",
     "smallest": "Skill + template + handoff",
     "dropIf": "dont know, you decide",
     "by": "Arun Endapally",
     "at": "2026-11-26T11:10:37.646Z"
+  },
+  "revisions": {
+    "1": 1
   }
 }
