@@ -1,0 +1,16 @@
+{
+  "feature": "c4-model-page",
+  "lane": "light",
+  "stage": 1,
+  "branch": "feature/c4-model-page",
+  "createdAt": "2026-11-26T11:06:50.644Z",
+  "stages": {
+    "1": {
+      "enteredAt": "2026-11-26T11:06:50.644Z"
+    }
+  },
+  "gates": {},
+  "retries": {},
+  "kinds": [],
+  "updatedAt": "2026-11-26T11:06:50.646Z"
+}
