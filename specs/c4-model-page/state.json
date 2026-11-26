@@ -1,7 +1,7 @@
 {
   "feature": "c4-model-page",
   "lane": "light",
-  "stage": 4,
+  "stage": 5,
   "branch": "feature/c4-model-page",
   "createdAt": "2026-11-26T11:06:50.644Z",
   "stages": {
@@ -10,7 +10,11 @@
       "leftAt": "2026-11-26T11:12:31.737Z"
     },
     "4": {
-      "enteredAt": "2026-11-26T11:12:31.737Z"
+      "enteredAt": "2026-11-26T11:12:31.737Z",
+      "leftAt": "2026-11-26T11:32:15.824Z"
+    },
+    "5": {
+      "enteredAt": "2026-11-26T11:32:15.824Z"
     }
   },
   "gates": {
@@ -21,11 +25,19 @@
       "approvedAt": "2026-11-26T11:12:31.511Z",
       "auto": true,
       "fingerprint": "63a276123532ba3c"
+    },
+    "4": {
+      "status": "approved",
+      "by": "checks: checks (gate green, small diff)",
+      "requestedAt": "2026-11-26T11:32:14.823Z",
+      "approvedAt": "2026-11-26T11:32:14.823Z",
+      "auto": true,
+      "fingerprint": "55295b5da3d530cc"
     }
   },
   "retries": {},
   "kinds": [],
-  "updatedAt": "2026-11-26T11:21:54.087Z",
+  "updatedAt": "2026-11-26T11:32:15.824Z",
   "intent": {
     "change": "One C4 HTML page",
     "smallest": "Skill + template + handoff",
@@ -39,14 +51,15 @@
   "gateRuns": {
     "4": {
       "ok": true,
-      "count": 360,
-      "at": "2026-11-26T11:21:52.983Z",
-      "tree": "fdf9ed5f395ccd7b",
+      "count": 367,
+      "at": "2026-11-26T11:32:00.272Z",
+      "tree": "bceb5f4a387f73d6",
       "runs": 1,
       "runtime": "v24.19.0"
     }
   },
-  "baseline": 360,
+  "baseline": 367,
   "baselineRuntime": "v24.19.0",
-  "proofBase": "3d0c3a5952672729adbca2fddeb80fb04e458a3e"
+  "proofBase": "3d0c3a5952672729adbca2fddeb80fb04e458a3e",
+  "sizeChecked": 64
 }
