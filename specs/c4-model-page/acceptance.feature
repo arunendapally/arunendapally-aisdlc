@@ -1,49 +1,65 @@
-# Define. Owner: qa-engineer agent. Gate: with prd.md, one approval. Check: sdlc gherkin <feature>.
-# REPLACE THE EXAMPLE BELOW. It covers R1 and R2 of the PRD template's example; a real feature covers every R<n>.
-#
-# The gate refuses:
-#   no "Feature:" line
-#   a scenario without exactly one @AC-<n> of its own, or reusing another scenario's @AC-<n>
-#   a scenario without an @R<n>, or with an @R<n> that is not in prd.md "## Requirements"
-#   an R<n> in prd.md with no scenario
-# Good, shown in the example:
-#   one behaviour: Given the state, one When, Then what an observer can check
-#   real values ("Blue mug", 200 items, "Your saved list is full"), never "valid data" or "it works"
-#   what the user achieves, never what they click, type or which selector
-#   each edge its own scenario or Examples row: empty, at the limit, one over, not allowed
-#   one level tag, the lowest that proves it:
-#     @unit no I/O | @subsystem real database or queue | @api through the API | @e2e a journey in the UI
-#   an @e2e scenario with no test may add @release (a release probe names it with its result) or @manual
-#   (the person who merges checks it; the review packet lists it); a committed test is better than either
-# The scenario name says the rule; do not repeat the requirement text. More than 7 scenarios: split the feature.
+# Define. Owner: qa-engineer agent. Gate: with prd.md, one approval. Check: sdlc gherkin c4-model-page.
 
-Feature: Save items for later
-  As a returning shopper
-  I want to keep items I am not ready to buy
-  So that I can find them again without searching
+Feature: C4 model page for a feature
+  As the person approving a feature's design
+  I want its context, containers, calls, run order and changes on one page
+  So that I can decide without assembling four files
 
-  Background:
-    Given a signed-in shopper with an empty saved list
+  @R1 @AC-1 @unit
+  Scenario: A finished page has five views, each with its own link
+    Given the page built for the feature "saved-items"
+    When it is checked
+    Then it has the tabs "#1", "#2", "#calls", "#run" and "#changes"
+    And it has 3 diagrams: context, containers and run order
 
-  @R1 @AC-1 @api
-  Scenario: Saving an in-stock item adds it to the saved list
-    Given "Blue mug" is in stock
-    When the shopper saves "Blue mug"
-    Then the saved list holds exactly 1 item, "Blue mug"
+  @R2 @AC-2 @unit
+  Scenario: A fact the documents do not hold shows as Open with an owner
+    Given the skill's instructions for building the page
+    When a fact is not in the feature's documents
+    Then the instructions say to mark it "Open" and name who decides it
 
-  @R1 @AC-2 @unit
-  Scenario Outline: Saving an item keeps one entry, however often it is saved
-    Given the shopper has saved "Blue mug" <already saved> times before
-    When the shopper saves "Blue mug"
-    Then the saved list holds "Blue mug" exactly <entries after> time
+  @R3 @AC-3 @unit
+  Scenario Outline: The page reads the plugin's documents unless a team names its own
+    Given the skill's instructions for building the page
+    When the team names "<team input>"
+    Then the page is built from "<source>"
 
     Examples:
-      | already saved | entries after |
-      | 0             | 1             |
-      | 1             | 1             |
+      | team input                   | source                                     |
+      | nothing                      | specs/saved-items/design.md                |
+      | nothing                      | specs/saved-items/architecture-overview.md |
+      | technical-design.md          | technical-design.md                        |
+      | Teams/cart/openapi.yaml      | Teams/cart/openapi.yaml                    |
 
-  @R2 @AC-3 @e2e
-  Scenario: A saved item that sells out shows as sold out
-    Given the saved list holds "Blue mug"
-    When "Blue mug" sells out
-    Then within 5 minutes the shopper's saved list page shows "Blue mug" as "Sold out"
+  @R4 @AC-4 @unit
+  Scenario: A call with no matching arrow is reported
+    Given a page whose calls view lists "web -> cart-api"
+    And its containers diagram has no arrow from "web" to "cart-api"
+    When it is checked
+    Then the check fails naming "web -> cart-api"
+
+  @R4 @AC-5 @unit
+  Scenario: A system coloured unchanged but listed as changed is reported
+    Given a page whose changes view lists "cart-api" as "Changed"
+    And its containers diagram colours "cart-api" as unchanged
+    When it is checked
+    Then the check fails naming "cart-api"
+
+  @R5 @AC-6 @unit
+  Scenario: Every diagram can be panned, zoomed, fitted and shown full screen
+    Given the page template
+    Then each diagram frame has the controls "-", "+", "Fit", "100%" and "Full screen"
+    And the keys "+", "-", "0" and the arrow keys move the diagram
+
+  @R6 @AC-7 @e2e @manual
+  Scenario: The page reads well in both themes and on a phone
+    Given the page built for this feature
+    When it is opened at 375px width in the light theme and then the dark theme
+    Then every diagram draws with no Mermaid error
+    And the page has no sideways scroll
+
+  @R7 @AC-8 @unit
+  Scenario: Design offers the page when it finishes
+    Given the Design command
+    When the design is done
+    Then it hands off to the c4-model-page skill
