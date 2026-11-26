@@ -19,6 +19,7 @@ Design for `$ARGUMENTS` (the light lane skips it; its design is `## Approach` in
    - a screen: the `ux-designer` designs it from the product's real components, with its accessibility checks;
    - a high-risk path: the `safe-ai-sdlc-expert` writes the threat model.
 3. **Review.** The `design-reviewer` and at least one other discipline question each ADR; the architect answers in the ADR's `## Review`, revising it where a question lands. At most three rounds, then escalate.
+4. **C4 page.** Once the review is done, hand off to the `c4-model-page` skill: it builds `specs/$ARGUMENTS/architecture/c4/$ARGUMENTS-c4.html` from these documents, so the person at the gate reads one page. It is optional output and never a gate check.
 
 **Goal:** every requirement maps to a plan element, every ADR it names exists with its review, every breaking contract is declared.
 

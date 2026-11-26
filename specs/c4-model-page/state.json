@@ -25,7 +25,7 @@
   },
   "retries": {},
   "kinds": [],
-  "updatedAt": "2026-11-26T11:12:31.737Z",
+  "updatedAt": "2026-11-26T11:21:54.087Z",
   "intent": {
     "change": "One C4 HTML page",
     "smallest": "Skill + template + handoff",
@@ -35,5 +35,18 @@
   },
   "revisions": {
     "1": 1
-  }
+  },
+  "gateRuns": {
+    "4": {
+      "ok": true,
+      "count": 360,
+      "at": "2026-11-26T11:21:52.983Z",
+      "tree": "fdf9ed5f395ccd7b",
+      "runs": 1,
+      "runtime": "v24.19.0"
+    }
+  },
+  "baseline": 360,
+  "baselineRuntime": "v24.19.0",
+  "proofBase": "3d0c3a5952672729adbca2fddeb80fb04e458a3e"
 }
