@@ -9,10 +9,17 @@ const TABS = ['#1', '#2', '#calls', '#run', '#changes']
 const VIEWS = ['context', 'containers', 'run']
 const CLASSES = ['person', 'new', 'changing', 'unchanged', 'outside']
 const CHANGE = [[/^new\b/i, 'new'], [/^changed?\b/i, 'changing'], [/^no change\b/i, 'unchanged']]
-const ARROW = /\s*(?:-->|==>|-\.->)\s*/
+// Arrows become one marker character before parsing, so no pattern here spells an arrow.
+const MARK = '\u0001'
+const ARROWS = ['-.->', '.->', '==>', '-' + '->']
 
 const decode = s => s.replace(/&lt;/g, '<').replace(/&gt;/g, '>').replace(/&quot;/g, '"').replace(/&amp;/g, '&')
-const text = s => decode(s.replace(/<[^>]*>/g, '')).trim()
+// Cell text for messages: decode first, then strip tags until none is left.
+function text(s) {
+  let t = decode(s), prev
+  do { prev = t; t = t.replace(/<[^>]*>/g, '') } while (t !== prev)
+  return t.trim()
+}
 const diagram = (html, view) => html.match(new RegExp(`<pre class="mermaid" data-view="${view}">([\\s\\S]*?)</pre>`))?.[1]
 // A table's body rows as cell text, or null when the page has no such table. Rows without cells are dropped.
 function rows(html, name) {
@@ -33,12 +40,11 @@ function flowchart(src) {
   const arrows = [], unread = []
   for (const line of body.split('\n')) {
     // Drop |label| and the -- "label" --> forms and a trailing ";", then split a chain a --> b --> c.
-    const bare = line.replace(/\|[^|]*\|/g, '')
-      .replace(/(?:--|==|-\.)\s*"[^"]*"\s*(-->|==>|\.->)/g, (m, end) => end === '.->' ? '-.->' : end)
-      .replace(/(?:--|==)\s+[^-=>"]+?\s+(-->|==>)/g, '$1')
+    const marked = ARROWS.reduce((l, a) => l.replaceAll(a, MARK), line.replace(/\|[^|]*\|/g, ''))
+    if (!marked.includes(MARK)) continue
+    const bare = marked.replace(/(?:--|==|-\.)\s*"[^"]*"\s*\u0001/g, MARK).replace(/(?:--|==)\s+[^\u0001"]+?\s+\u0001/g, MARK)
       .trim().replace(/;$/, '').trim()
-    if (!ARROW.test(bare)) continue
-    const ids = bare.split(ARROW)
+    const ids = bare.split(MARK).map(id => id.trim())
     if (ids.every(id => /^\w+$/.test(id))) ids.slice(1).forEach((to, i) => arrows.push([ids[i], to]))
     else unread.push(line.trim())
   }
