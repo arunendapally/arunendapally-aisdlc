@@ -6,15 +6,23 @@ Spec: specs/c4-model-page/prd.md (R1 to R7). Not in this PR: an offline page wit
 
 ## Test results
 
-Suite: 367 passed, 0 failed (baseline 360), sdlc gate c4-model-page on this branch
+Suite: 372 passed, 0 failed (baseline 360), sdlc gate c4-model-page on this branch
 Evals: 29/29 golden tasks pass, npm run eval
-Proof: sdlc proof c4-model-page green on the branch, red on the base 3d0c3a5, 1 test file
+Proof: sdlc proof c4-model-page green on the branch, red on the base 3d0c3a5, 2 test files
 Criteria: 7 of 8 traced at their level; AC-7 by hand (specs/c4-model-page/test-matrix.md)
-New tests: tests/c4-model-page.test.mjs (AC-1 to AC-6, AC-8)
+New tests: tests/c4-model-page.test.mjs (AC-1 to AC-6, AC-8), tests/c4-model-page-edges.test.mjs (AC-3 to AC-5 edges from the pre-review)
 Removed, skipped or quarantined: none
-AC-7 by hand: the template's example page served on localhost in the built-in browser (Chromium): all five tabs by hash, the three diagrams drawn with no console errors, dark and light themes, 375px wide with no sideways scroll, + and 0 change the zoom.
+AC-7 by hand: the template's example page served on localhost in the built-in browser (Chromium): all five tabs by hash, the three diagrams drawn with no console errors, dark and light themes, 375px wide with no sideways scroll, + and Fit change the zoom; re-run after the pre-review fixes on Mermaid 11.17.2, a diagram drawn while its tab was hidden refits when shown.
 
 ## Pre-review
+
+Risk: medium, because it adds code (a checker script and the page script) with no auth, data, contract or infrastructure path
+Open findings: 0 (nits left open: F10)
+Look here first: skills/c4-model-page/check.mjs:36 (the arrow parser: does it read every arrow form an agent will write, or report the line? F1), skills/c4-model-page/reference/page-template.md:304 (refit on resize only while the reader has not moved the diagram: is that the behaviour you want? F5), skills/c4-model-page/SKILL.md:20 (the default sources versus the issue's paths: the open question in #71)
+Lenses run: correctness against the spec, simplicity (checklist G), test quality
+Revert: git revert of the merge; nothing else depends on the skill and no data changes
+Checked mechanically: 11 findings in specs/c4-model-page/review.md, F1 to F8 and F11 fixed with tests where the file was not locked, F9 wontfix with reason; the new tests fail on the base; no em dashes in the diff; the checker passes the template page
+Could not check: touch pinch and full screen on a phone; Firefox and Safari
 
 ## Not verified
 
@@ -25,6 +33,6 @@ The issue asks for "all 4 diagrams"; its own tab spec has three (Context, Contai
 
 ## Definition of done
 
-- [ ] Pre-review has no open findings
+- [x] Pre-review has no open findings
 - [x] Not verified is honest
 - [x] Work committed on the feature branch

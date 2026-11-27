@@ -37,7 +37,7 @@
   },
   "retries": {},
   "kinds": [],
-  "updatedAt": "2026-11-26T11:36:02.122Z",
+  "updatedAt": "2026-11-27T03:39:21.349Z",
   "intent": {
     "change": "One C4 HTML page",
     "smallest": "Skill + template + handoff",
@@ -56,9 +56,17 @@
       "tree": "bceb5f4a387f73d6",
       "runs": 1,
       "runtime": "v24.19.0"
+    },
+    "5": {
+      "ok": true,
+      "count": 372,
+      "at": "2026-11-27T03:39:16.074Z",
+      "tree": "c86d4e04c1bdc6a7",
+      "runs": 1,
+      "runtime": "v24.19.0"
     }
   },
-  "baseline": 367,
+  "baseline": 372,
   "baselineRuntime": "v24.19.0",
   "proofBase": "3d0c3a5952672729adbca2fddeb80fb04e458a3e",
   "sizeChecked": 64,
@@ -67,7 +75,8 @@
     "problems": [],
     "base": "3d0c3a5",
     "files": {
-      "tests/c4-model-page.test.mjs": "a3b1c7fdd0f4f702"
+      "tests/c4-model-page.test.mjs": "a3b1c7fdd0f4f702",
+      "tests/c4-model-page-edges.test.mjs": "db312fcfc05a259e"
     },
     "acs": [
       "AC-1",
@@ -82,13 +91,14 @@
       "AC-7 (by hand)"
     ],
     "perTest": false,
-    "at": "2026-11-26T11:32:35.306Z"
+    "at": "2026-11-27T03:39:20.981Z"
   },
   "lock": {
     "files": {
-      "tests/c4-model-page.test.mjs": "a3b1c7fdd0f4f702"
+      "tests/c4-model-page.test.mjs": "a3b1c7fdd0f4f702",
+      "tests/c4-model-page-edges.test.mjs": "db312fcfc05a259e"
     },
-    "at": "2026-11-26T11:32:35.306Z"
+    "at": "2026-11-27T03:39:20.981Z"
   },
   "lastPacketHead": "4d5bf03",
   "ledgerIds": []
