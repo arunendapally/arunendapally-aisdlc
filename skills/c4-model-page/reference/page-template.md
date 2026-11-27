@@ -21,7 +21,7 @@ Keep the CSS, the tab markup, the controls bars and the script as they are. They
 <style>
 :root {
   --bg: #f3f6f9; --surface: #fff; --fg: #14202e; --muted: #526274; --rule: #d3dbe4;
-  --accent: #0b6b63; --accent-soft: #d8ede9;
+  --accent: #0b6b63; --accent-soft: #d8ede9; --on-accent: #fff;
   --decided: #0b6b63; --decided-bg: #d8ede9;
   --verified: #1d4f8c; --verified-bg: #dbe8f7;
   --open: #8a5a00; --open-bg: #f8ead0;
@@ -32,7 +32,7 @@ Keep the CSS, the tab markup, the controls bars and the script as they are. They
 @media (prefers-color-scheme: dark) {
   :root:not([data-theme="light"]) {
     --bg: #0f1720; --surface: #17212c; --fg: #e6edf3; --muted: #9fb0c2; --rule: #2b3846;
-    --accent: #4fb3a7; --accent-soft: #16302d;
+    --accent: #4fb3a7; --accent-soft: #16302d; --on-accent: #0f1720;
     --decided: #7fd1c6; --decided-bg: #16302d;
     --verified: #9cc3f0; --verified-bg: #172a40;
     --open: #f0c574; --open-bg: #3a2c12;
@@ -41,7 +41,7 @@ Keep the CSS, the tab markup, the controls bars and the script as they are. They
 }
 :root[data-theme="dark"] {
   --bg: #0f1720; --surface: #17212c; --fg: #e6edf3; --muted: #9fb0c2; --rule: #2b3846;
-  --accent: #4fb3a7; --accent-soft: #16302d;
+  --accent: #4fb3a7; --accent-soft: #16302d; --on-accent: #0f1720;
   --decided: #7fd1c6; --decided-bg: #16302d;
   --verified: #9cc3f0; --verified-bg: #172a40;
   --open: #f0c574; --open-bg: #3a2c12;
@@ -64,7 +64,7 @@ a { color: var(--accent); }
 :focus-visible { outline: 2px solid var(--accent); outline-offset: 2px; }
 nav[role="tablist"] { display: flex; flex-wrap: wrap; gap: 6px; border-bottom: 1px solid var(--rule); padding-bottom: 8px; }
 nav a { text-decoration: none; color: var(--muted); padding: 6px 12px; border: 1px solid var(--rule); border-radius: 6px; font-size: .85rem; background: var(--surface); }
-nav a[aria-selected="true"] { color: #fff; background: var(--accent); border-color: var(--accent); }
+nav a[aria-selected="true"] { color: var(--on-accent); background: var(--accent); border-color: var(--accent); }
 section[role="tabpanel"] { display: grid; gap: 16px; }
 [hidden] { display: none !important; }
 .diagram { background: var(--surface); border: 1px solid var(--rule); border-radius: 6px; padding: 10px; display: grid; gap: 8px; }
@@ -279,7 +279,7 @@ sequenceDiagram
 </main>
 
 <script type="module">
-import mermaid from 'https://cdn.jsdelivr.net/npm/mermaid@11/dist/mermaid.esm.min.mjs'
+import mermaid from 'https://cdn.jsdelivr.net/npm/mermaid@11.17.2/dist/mermaid.esm.min.mjs'
 
 const root = document.documentElement
 const dark = root.dataset.theme === 'dark' || (root.dataset.theme !== 'light' && matchMedia('(prefers-color-scheme: dark)').matches)
@@ -301,13 +301,14 @@ function frame(box) {
   const pan = (dx, dy) => { x += dx; y += dy; draw() }
   // Fit whenever the frame changes size, until the reader moves the diagram themselves.
   let moved = false
-  new ResizeObserver(() => moved || fit()).observe(box)
+  new ResizeObserver(() => box.clientWidth && !moved && fit()).observe(box)
   const pts = new Map(); let span = null
-  box.addEventListener('pointerdown', e => { box.setPointerCapture(e.pointerId); pts.set(e.pointerId, e); span = null; moved = true })
+  box.addEventListener('pointerdown', e => { box.setPointerCapture(e.pointerId); pts.set(e.pointerId, e); span = null })
   box.addEventListener('pointermove', e => {
     const prev = pts.get(e.pointerId)
     if (!prev) return
     pts.set(e.pointerId, e)
+    moved = true
     if (pts.size === 1) return pan(e.clientX - prev.clientX, e.clientY - prev.clientY)
     const [a, b] = [...pts.values()], r = box.getBoundingClientRect()
     const d = Math.hypot(a.clientX - b.clientX, a.clientY - b.clientY)
@@ -326,11 +327,16 @@ function frame(box) {
   box.addEventListener('dblclick', fit)
   const keys = { '+': () => zoom(1.25), '=': () => zoom(1.25), '-': () => zoom(0.8), '0': fit,
     ArrowLeft: () => pan(40, 0), ArrowRight: () => pan(-40, 0), ArrowUp: () => pan(0, 40), ArrowDown: () => pan(0, -40) }
-  box.addEventListener('keydown', e => { if (keys[e.key]) { e.preventDefault(); moved = true; keys[e.key]() } })
+  box.addEventListener('keydown', e => { if (keys[e.key]) { e.preventDefault(); moved = e.key !== '0'; keys[e.key]() } })
   const acts = { in: () => zoom(1.25), out: () => zoom(0.8), fit, one,
     full: () => document.fullscreenElement ? document.exitFullscreen() : box.parentElement.requestFullscreen() }
-  bar.addEventListener('click', e => { moved = true; acts[e.target.closest('button')?.dataset.act]?.() })
-  document.addEventListener('fullscreenchange', () => requestAnimationFrame(fit))
+  bar.addEventListener('click', e => {
+    const act = e.target.closest('button')?.dataset.act
+    if (act in acts) { moved = act !== 'fit' && act !== 'full'; acts[act]() }
+  })
+  // iPhone Safari cannot show a diagram full screen: hide the button there.
+  for (const b of bar.querySelectorAll('button')) if (b.dataset.act === 'full' && !document.fullscreenEnabled) b.hidden = true
+  document.addEventListener('fullscreenchange', () => requestAnimationFrame(() => { if (box.clientWidth) { moved = false; fit() } }))
   fit()
 }
 

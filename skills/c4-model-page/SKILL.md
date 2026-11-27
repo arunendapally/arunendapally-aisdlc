@@ -45,7 +45,7 @@ Copy the whole HTML block from [reference/page-template.md](reference/page-templ
 - Node text: `id["<b>Name</b><br/>tech or repo<br/>one-line responsibility"]`, HTML-escaped inside `pre.mermaid` (`&lt;b&gt;`). Databases `id[("...")]`, people `id(["..."])`.
 - Arrows: `a -->|"verb data"| b` for calls, `==>` for writes that create or move state, `-.->` for read-only or unchanged. One arrow per line, label in `|"..."|`.
 - The five `classDef` lines on every flowchart, and colours set with `class id1,id2 <name>` lines: person (dark blue), new (teal), changing (amber), unchanged (grey), outside (purple dashed, outside this journey). Colour is change status, not layer. The `.key` legend sits under every flowchart.
-- Every arrow between containers (not from a person) is a Calls row, and every Calls row is an arrow. Every system in the Changes table is drawn new or changing, or grey when it says No change.
+- Every arrow between containers (not from a person) is a Calls row, and every Calls row is an arrow. Every system in the Changes table is drawn new or changing, or grey (or purple, when it sits outside the journey) when it says No change.
 
 **Basis pills:** `decided` (teal), `verified` (blue: checked against code or a contract), `open` (amber: needs someone's agreement; name who).
 

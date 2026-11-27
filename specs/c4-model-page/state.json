@@ -37,7 +37,7 @@
   },
   "retries": {},
   "kinds": [],
-  "updatedAt": "2026-11-26T11:32:35.771Z",
+  "updatedAt": "2026-11-26T11:36:02.122Z",
   "intent": {
     "change": "One C4 HTML page",
     "smallest": "Skill + template + handoff",
@@ -89,5 +89,7 @@
       "tests/c4-model-page.test.mjs": "a3b1c7fdd0f4f702"
     },
     "at": "2026-11-26T11:32:35.306Z"
-  }
+  },
+  "lastPacketHead": "4d5bf03",
+  "ledgerIds": []
 }
