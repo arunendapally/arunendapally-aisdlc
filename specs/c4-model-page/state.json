@@ -1,0 +1,164 @@
+{
+  "feature": "c4-model-page",
+  "lane": "light",
+  "stage": 5,
+  "branch": "feature/c4-model-page",
+  "createdAt": "2026-11-26T11:06:50.644Z",
+  "stages": {
+    "1": {
+      "enteredAt": "2026-11-26T11:06:50.644Z",
+      "leftAt": "2026-11-26T11:12:31.737Z"
+    },
+    "4": {
+      "enteredAt": "2026-11-26T11:12:31.737Z",
+      "leftAt": "2026-11-26T11:32:15.824Z"
+    },
+    "5": {
+      "enteredAt": "2026-11-26T11:32:15.824Z",
+      "leftAt": "2026-11-27T03:41:57.858Z"
+    }
+  },
+  "gates": {
+    "1": {
+      "status": "approved",
+      "by": "checks: feature branch",
+      "requestedAt": "2026-11-26T11:12:31.511Z",
+      "approvedAt": "2026-11-26T11:12:31.511Z",
+      "auto": true,
+      "fingerprint": "63a276123532ba3c"
+    },
+    "4": {
+      "status": "approved",
+      "by": "checks: checks (gate green, small diff)",
+      "requestedAt": "2026-11-26T11:32:14.823Z",
+      "approvedAt": "2026-11-26T11:32:14.823Z",
+      "auto": true,
+      "fingerprint": "55295b5da3d530cc"
+    },
+    "5": {
+      "status": "approved",
+      "by": "checks: checks (gate green, review clean)",
+      "requestedAt": "2026-11-27T03:41:56.485Z",
+      "approvedAt": "2026-11-27T03:41:56.485Z",
+      "auto": true,
+      "fingerprint": "ac0a6cdcdfa86ea1"
+    }
+  },
+  "retries": {},
+  "kinds": [],
+  "updatedAt": "2026-11-27T04:32:27.939Z",
+  "intent": {
+    "change": "One C4 HTML page",
+    "smallest": "Skill + template + handoff",
+    "dropIf": "dont know, you decide",
+    "by": "Arun Endapally",
+    "at": "2026-11-26T11:10:37.646Z"
+  },
+  "revisions": {
+    "1": 1
+  },
+  "gateRuns": {
+    "4": {
+      "ok": true,
+      "count": 367,
+      "at": "2026-11-26T11:32:00.272Z",
+      "tree": "bceb5f4a387f73d6",
+      "runs": 1,
+      "runtime": "v24.19.0"
+    },
+    "5": {
+      "ok": true,
+      "count": 372,
+      "at": "2026-11-27T04:32:27.562Z",
+      "tree": "bcc0c6a520a6afc6",
+      "runs": 1,
+      "runtime": "v24.19.0"
+    }
+  },
+  "baseline": 372,
+  "baselineRuntime": "v24.19.0",
+  "proofBase": "3d0c3a5952672729adbca2fddeb80fb04e458a3e",
+  "sizeChecked": 64,
+  "proof": {
+    "ok": true,
+    "problems": [],
+    "base": "3d0c3a5",
+    "files": {
+      "tests/c4-model-page.test.mjs": "a3b1c7fdd0f4f702",
+      "tests/c4-model-page-edges.test.mjs": "db312fcfc05a259e"
+    },
+    "acs": [
+      "AC-1",
+      "AC-2",
+      "AC-3",
+      "AC-4",
+      "AC-5",
+      "AC-6",
+      "AC-8"
+    ],
+    "due": [
+      "AC-7 (by hand)"
+    ],
+    "perTest": false,
+    "at": "2026-11-27T03:39:20.981Z"
+  },
+  "lock": {
+    "files": {
+      "tests/c4-model-page.test.mjs": "a3b1c7fdd0f4f702",
+      "tests/c4-model-page-edges.test.mjs": "db312fcfc05a259e"
+    },
+    "at": "2026-11-27T03:39:20.981Z"
+  },
+  "lastPacketHead": "34da27e",
+  "ledgerIds": [
+    "F1",
+    "F2",
+    "F3",
+    "F4",
+    "F5",
+    "F6",
+    "F7",
+    "F8",
+    "F9",
+    "F10",
+    "F11"
+  ],
+  "riskTier": "medium",
+  "reviewedSha": "34da27ed6299b2645ec6b9e9e80eb861a8c3b0c1",
+  "reviewedFiles": [
+    "README.md",
+    "changelog.d/c4-model-page.md",
+    "commands/design.md",
+    "skills/c4-model-page/SKILL.md",
+    "skills/c4-model-page/check.mjs",
+    "skills/c4-model-page/reference/page-template.md",
+    "specs/c4-model-page/acceptance.feature",
+    "specs/c4-model-page/pr.md",
+    "specs/c4-model-page/prd.md",
+    "specs/c4-model-page/review-packet.md",
+    "specs/c4-model-page/review.md",
+    "specs/c4-model-page/state.json",
+    "specs/c4-model-page/tasks.md",
+    "specs/c4-model-page/test-matrix.md",
+    "tests/c4-model-page-edges.test.mjs",
+    "tests/c4-model-page.test.mjs"
+  ],
+  "reviewedHashes": {
+    "README.md": "11e34a4959964838",
+    "changelog.d/c4-model-page.md": "49ec629610be6c94",
+    "commands/design.md": "bda8eb841345874c",
+    "skills/c4-model-page/SKILL.md": "71e5ec465a8c4e5f",
+    "skills/c4-model-page/check.mjs": "6d0a4758793d02df",
+    "skills/c4-model-page/reference/page-template.md": "01a21fbe1968b4bb",
+    "tests/c4-model-page-edges.test.mjs": "db312fcfc05a259e",
+    "tests/c4-model-page.test.mjs": "a3b1c7fdd0f4f702"
+  },
+  "closedAt": "2026-11-27T03:41:57.858Z",
+  "outcome": {
+    "metric": "full-lane dogfood features whose Design approver opened the C4 page before deciding",
+    "owner": "Arun, plugin owner",
+    "due": "2027-01-31T00:00:00.000Z",
+    "status": "open",
+    "openedAt": "2026-11-27T03:41:57.859Z"
+  }
+}
